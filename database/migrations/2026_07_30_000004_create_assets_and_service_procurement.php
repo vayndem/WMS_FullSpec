@@ -70,7 +70,7 @@ return new class extends Migration
             $table->decimal('book_value_after', 18, 2);
             $table->text('reason')->nullable();
             $table->unsignedBigInteger('posted_by')
-                ->comment('ID user eksternal Accounting type 33 yang memposting penyusutan');
+                ->comment('ID user lokal Accounting type 33 yang memposting penyusutan');
             $table->unsignedBigInteger('journal_id')->nullable();
             $table->timestamps();
             $table->foreign('asset_id')->references('id')->on('assets')->restrictOnDelete();
@@ -143,7 +143,7 @@ return new class extends Migration
             $table->boolean('is_cancelled')->default(false)->after('status')
                 ->comment('0=dokumen aktif, 1=dokumen penerimaan dibatalkan');
             $table->unsignedBigInteger('cancelled_by')->nullable()->after('is_cancelled')
-                ->comment('ID user eksternal yang membatalkan penerimaan');
+                ->comment('ID user lokal yang membatalkan penerimaan');
             $table->timestamp('cancelled_at')->nullable()->after('cancelled_by');
             $table->text('cancellation_reason')->nullable()->after('cancelled_at');
         });

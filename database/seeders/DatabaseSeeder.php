@@ -18,6 +18,8 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call(UserSeeder::class);
+
         // Konfigurasi master dan data transaksi simulasi dibuat otomatis agar
         // migrate:fresh --seed langsung menghasilkan lingkungan uji yang utuh.
         TaxRate::updateOrCreate(

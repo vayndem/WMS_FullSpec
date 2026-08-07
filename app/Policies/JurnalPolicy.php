@@ -3,41 +3,41 @@
 namespace App\Policies;
 
 use App\Models\Jurnal;
-use App\Models\ApiUser;
+use App\Models\User;
 
 class JurnalPolicy
 {
-    public function viewAny(ApiUser $user): bool
+    public function viewAny(User $user): bool
     {
         return (int) $user->type === 33;
     }
 
-    public function view(ApiUser $user, Jurnal $jurnal): bool
+    public function view(User $user, Jurnal $jurnal): bool
     {
         return (int) $user->type === 33;
     }
 
-    public function create(ApiUser $user): bool
+    public function create(User $user): bool
     {
         return (int) $user->type === 33;
     }
 
-    public function update(ApiUser $user, Jurnal $jurnal): bool
+    public function update(User $user, Jurnal $jurnal): bool
     {
         return (int) $user->type === 33 && $jurnal->isManual() && $jurnal->isDraft();
     }
 
-    public function delete(ApiUser $user, Jurnal $jurnal): bool
+    public function delete(User $user, Jurnal $jurnal): bool
     {
         return (int) $user->type === 33 && $jurnal->isManual() && $jurnal->isDraft();
     }
 
-    public function post(ApiUser $user, Jurnal $jurnal): bool
+    public function post(User $user, Jurnal $jurnal): bool
     {
         return (int) $user->type === 33 && $jurnal->isManual() && $jurnal->isDraft();
     }
 
-    public function reverse(ApiUser $user, Jurnal $jurnal): bool
+    public function reverse(User $user, Jurnal $jurnal): bool
     {
         return (int) $user->type === 33 && $jurnal->isManual() && $jurnal->status === 'POSTED';
     }

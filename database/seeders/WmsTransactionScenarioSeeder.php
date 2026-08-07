@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\AccountingSetting;
 use App\Models\AdminNamagudang;
-use App\Models\ApiUser;
+use App\Models\User;
 use App\Models\Bahan;
 use App\Models\ChartOfAccount;
 use App\Models\Invoicelpb;
@@ -34,11 +34,9 @@ class WmsTransactionScenarioSeeder extends Seeder
 {
     public function run(): void
     {
-        Auth::setUser(new ApiUser([
-            'id' => 5,
-            'name' => 'WMS Demo Seeder',
-            'type' => 5,
-        ]));
+        $purchasingUser = User::where('email', 'purchasing@wms.local')->firstOrFail();
+        $warehouseUser = User::where('email', 'warehouse@wms.local')->firstOrFail();
+        Auth::setUser($purchasingUser);
 
         if (Pembelian::where('notes', 'PO demo diterima parsial 17 dari 20 KG')->exists()) {
             $this->command?->warn('Skenario transaksi DEMO sudah tersedia; tidak dibuat ulang.');
@@ -50,7 +48,7 @@ class WmsTransactionScenarioSeeder extends Seeder
         $opnameService = app(StockOpnameService::class);
         $numbers = app(DocumentNumberService::class);
 
-        DB::transaction(function () use ($accounting, $opnameService, $numbers) {
+        DB::transaction(function () use ($accounting, $opnameService, $numbers, $purchasingUser, $warehouseUser) {
             $category = KategoriBahan::where('katnama', 'Bahan Baku Paper')->firstOrFail();
             $warehouse = AdminNamagudang::where('nama', 'Gudang Utama')->firstOrFail();
             $supplier = Supplier::where('nama', 'PT. Global Supply Indonesia')->firstOrFail();
@@ -268,17 +266,9 @@ class WmsTransactionScenarioSeeder extends Seeder
                 'reason' => 'Selisih hitung demo',
                 'notes' => 'Gunakan untuk mencoba approve/reject',
             ]);
-            Auth::setUser(new ApiUser([
-                'id' => 14,
-                'name' => 'Gudang Demo Seeder',
-                'type' => 14,
-            ]));
+            Auth::setUser($warehouseUser);
             $opnameService->confirmPhysical($opname);
-            Auth::setUser(new ApiUser([
-                'id' => 5,
-                'name' => 'WMS Demo Seeder',
-                'type' => 5,
-            ]));
+            Auth::setUser($purchasingUser);
 
             // Keep variables explicitly used so future scenario additions cannot
             // accidentally remove the second GRNI receipt or PO linkage.

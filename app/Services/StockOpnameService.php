@@ -74,7 +74,7 @@ class StockOpnameService
             if ($opname->status !== StockOpname::APPROVED) {
                 throw new RuntimeException('Hanya stock opname approved yang dapat diposting.');
             }
-            if ($opname->details->contains(fn ($detail) => !$detail->physical_confirmed_at || !$detail->valuation_confirmed_at)) {
+            if ($opname->details->contains(fn($detail) => !$detail->physical_confirmed_at || !$detail->valuation_confirmed_at)) {
                 throw new RuntimeException('Konfirmasi fisik Gudang dan valuasi Accounting harus lengkap sebelum posting.');
             }
 

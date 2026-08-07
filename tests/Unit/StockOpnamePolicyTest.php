@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Models\ApiUser;
+use App\Models\User;
 use App\Models\StockOpname;
 use App\Policies\StockOpnamePolicy;
 use PHPUnit\Framework\TestCase;
@@ -12,7 +12,7 @@ class StockOpnamePolicyTest extends TestCase
     public function test_type_fourteen_controls_physical_count_and_submit(): void
     {
         $policy = new StockOpnamePolicy();
-        $warehouse = new ApiUser(['type' => 14]);
+        $warehouse = new User(['type' => 14]);
         $opname = new StockOpname(['status' => StockOpname::DRAFT]);
 
         $this->assertTrue($policy->create($warehouse));
@@ -27,7 +27,7 @@ class StockOpnamePolicyTest extends TestCase
     public function test_type_thirty_three_only_approves_submitted_document(): void
     {
         $policy = new StockOpnamePolicy();
-        $accounting = new ApiUser(['type' => 33]);
+        $accounting = new User(['type' => 33]);
         $opname = new StockOpname(['status' => StockOpname::SUBMITTED]);
 
         $this->assertTrue($policy->approve($accounting, $opname));

@@ -3,31 +3,31 @@
 namespace App\Policies;
 
 use App\Models\Debit;
-use App\Models\ApiUser;
+use App\Models\User;
 
 class DebitPolicy
 {
-    public function viewAny(ApiUser $user): bool
+    public function viewAny(User $user): bool
     {
         return (int) $user->type === 33;
     }
 
-    public function view(ApiUser $user, Debit $debit): bool
+    public function view(User $user, Debit $debit): bool
     {
         return (int) $user->type === 33;
     }
 
-    public function create(ApiUser $user): bool
+    public function create(User $user): bool
     {
         return (int) $user->type === 33;
     }
 
-    public function update(ApiUser $user, Debit $debit): bool
+    public function update(User $user, Debit $debit): bool
     {
         return (int) $user->type === 33;
     }
 
-    public function delete(ApiUser $user, Debit $debit): bool
+    public function delete(User $user, Debit $debit): bool
     {
         return (int) $user->type === 33;
     }

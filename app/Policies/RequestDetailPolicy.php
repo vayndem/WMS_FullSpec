@@ -2,17 +2,17 @@
 
 namespace App\Policies;
 
+use App\Models\RequestDetail;
 use App\Models\User;
-use App\Models\Npk;
 
-class NpkPolicy
+class RequestDetailPolicy
 {
     public function viewAny(User $user): bool
     {
         return in_array((int) $user->type, [5, 14, 33], true);
     }
 
-    public function view(User $user, Npk $npk): bool
+    public function view(User $user, RequestDetail $requestdetail): bool
     {
         return in_array((int) $user->type, [5, 14, 33], true);
     }
@@ -22,26 +22,21 @@ class NpkPolicy
         return in_array((int) $user->type, [5, 14, 33], true);
     }
 
-    public function update(User $user, Npk $npk): bool
+    public function update(User $user, RequestDetail $requestdetail): bool
     {
         if (!in_array((int) $user->type, [5, 14, 33], true)) {
             return false;
         }
 
-        return (int) $npk->close === 0 && $npk->status_posting !== 'POSTED';
+        return strtolower((string) optional($requestdetail->request)->status) === 'pending';
     }
 
-    public function delete(User $user, Npk $npk): bool
+    public function delete(User $user, RequestDetail $requestdetail): bool
     {
         if (!in_array((int) $user->type, [5, 14, 33], true)) {
             return false;
         }
 
-        return (int) $npk->close === 0 && $npk->status_posting !== 'POSTED';
-    }
-
-    public function viewFinancials(User $user): bool
-    {
-        return in_array((int) $user->type, [5, 33], true);
+        return strtolower((string) optional($requestdetail->request)->status) === 'pending';
     }
 }

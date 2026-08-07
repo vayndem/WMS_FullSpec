@@ -3,31 +3,31 @@
 namespace App\Policies;
 
 use App\Models\KategoriBahan;
-use App\Models\ApiUser;
+use App\Models\User;
 
 class KategoriBahanPolicy
 {
-    public function viewAny(ApiUser $user): bool
+    public function viewAny(User $user): bool
     {
         return (int) $user->type === 33;
     }
 
-    public function view(ApiUser $user, KategoriBahan $kategoriBahan): bool
+    public function view(User $user, KategoriBahan $kategoriBahan): bool
     {
         return (int) $user->type === 33;
     }
 
-    public function create(ApiUser $user): bool
+    public function create(User $user): bool
     {
         return (int) $user->type === 33;
     }
 
-    public function update(ApiUser $user, KategoriBahan $kategoriBahan): bool
+    public function update(User $user, KategoriBahan $kategoriBahan): bool
     {
         return (int) $user->type === 33;
     }
 
-    public function delete(ApiUser $user, KategoriBahan $kategoriBahan): bool
+    public function delete(User $user, KategoriBahan $kategoriBahan): bool
     {
         return (int) $user->type === 33
             && !$kategoriBahan->bahan()->exists()

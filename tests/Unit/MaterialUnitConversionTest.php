@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Models\ApiUser;
+use App\Models\User;
 use App\Models\Bahan;
 use App\Policies\BahanPolicy;
 use Tests\TestCase;
@@ -11,7 +11,7 @@ class MaterialUnitConversionTest extends TestCase
 {
     public function test_small_unit_is_converted_to_base_stock_quantity(): void
     {
-        $material = new Bahan([
+        $material = (new Bahan())->forceFill([
             'satuan' => 'barrel',
             'berat_kecil' => 10,
             'satuan_kecil' => 'kaleng',
@@ -24,7 +24,7 @@ class MaterialUnitConversionTest extends TestCase
 
     public function test_material_without_small_unit_uses_base_quantity(): void
     {
-        $material = new Bahan([
+        $material = (new Bahan())->forceFill([
             'satuan' => 'kg',
             'berat_kecil' => 1,
             'satuan_kecil' => null,
@@ -41,7 +41,7 @@ class MaterialUnitConversionTest extends TestCase
         $material = new Bahan();
 
         foreach ([5, 14, 33] as $type) {
-            $user = new ApiUser(['type' => $type]);
+            $user = new User(['type' => $type]);
             $this->assertTrue($policy->create($user));
             $this->assertTrue($policy->update($user, $material));
             $this->assertFalse($policy->delete($user, $material));

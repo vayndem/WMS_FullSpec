@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Models\ApiUser;
+use App\Models\User;
 use App\Models\Lpb;
 use App\Models\Npk;
 use App\Models\Request as RequestModel;
@@ -17,9 +17,9 @@ use PHPUnit\Framework\TestCase;
 
 class WarehouseRolePolicyTest extends TestCase
 {
-    private function warehouse(): ApiUser
+    private function warehouse(): User
     {
-        return new ApiUser(['id' => 14, 'name' => 'Gudang', 'type' => 14]);
+        return new User(['id' => 14, 'name' => 'Gudang', 'type' => 14]);
     }
 
     public function test_type_fourteen_can_run_warehouse_documents(): void

@@ -6,7 +6,6 @@ use App\Models\Request as RequestModel;
 use App\Models\RequestDetail;
 use App\Models\Bahan;
 use App\Models\AdminNamagudang;
-use App\Models\AdminKategoribahan;
 use App\Http\Requests\StorerequestRequest;
 use App\Http\Requests\UpdaterequestRequest;
 use Illuminate\Http\Request;
@@ -93,7 +92,7 @@ class RequestController extends Controller
 
         $bahans = Bahan::orderBy('nama', 'asc')->get();
         $gudangs = AdminNamagudang::all();
-        $kategoris = AdminKategoribahan::all();
+        $kategoris = KategoriBahan::orderBy('katnama')->get();
         $documentNumber = $this->numbers->internal('REQ', 'PO');
 
         return view('request.create', compact('bahans', 'gudangs', 'kategoris', 'documentNumber'));

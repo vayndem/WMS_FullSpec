@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Request as RequestModel;
 use App\Models\Pembelian;
 use App\Models\Lpb;
@@ -24,52 +24,42 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $request->validate([
-            'email' => 'required',
-            'password' => 'required',
+        $credentials = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
         ]);
 
-        $response = Http::post('http://192.168.0.2/api/login', [
-            'email' => $request->email,
-            'password' => $request->password,
-        ]);
-
-        if ($response->successful()) {
-            $data = $response->json();
-            if (isset($data['token'])) {
-                session(['jwt_token' => $data['token']]);
-                session(['user_data' => $data['user']]);
-
-                return redirect()->route('dashboard');
-            }
-            return back()->withErrors('Token tidak ditemukan.');
+        if (!Auth::attempt($credentials, $request->boolean('remember'))) {
+            return back()
+                ->withErrors(['email' => 'Email atau password tidak valid.'])
+                ->onlyInput('email');
         }
 
-        return back()->withErrors('Login gagal: ' . $response->body());
+        $request->session()->regenerate();
+
+        return redirect()->intended(route('dashboard'));
     }
 
     public function dashboard()
     {
-        $user = session('user_data');
+        $user = Auth::user();
 
-        if ($user['type'] == 5) {
+        if ((int) $user->type === 5) {
             return view('purchasing.dashboard', array_merge(
                 compact('user'),
                 $this->purchasingDashboardData()
             ));
-        } else if ($user['type'] == 13) {
+        } else if ((int) $user->type === 13) {
             return view('finance.payment-dashboard', array_merge(
                 compact('user'),
                 $this->paymentDashboardData()
             ));
-        } else if ($user['type'] == 15) {
-            return redirect()->route('bahan_produksi.dashboard');
-        } else if (in_array($user['type'], [11, 14, 29])) {
+        } else if ((int) $user->type === 14) {
             return view('gudang.dashboard', array_merge(
                 compact('user'),
                 $this->warehouseDashboardData()
             ));
-        } else if (in_array($user['type'], [15, 33])) {
+        } else if ((int) $user->type === 33) {
             return view('accouting.dashboard', compact('user'));
         } else {
             return view('dashboard', compact('user'));
@@ -101,8 +91,7 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->session()->forget('jwt_token');
-        $request->session()->forget('user_data');
+        Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 

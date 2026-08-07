@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('no_sj', 250);
             $table->integer('id_user');
             $table->tinyInteger('flag')->default(0)
-                ->comment('Flag proses legacy LPB; 0=aktif/belum diproses lanjutan');
+                ->comment('Flag proses LPB; 0=aktif/belum diproses lanjutan');
             $table->string('no_invoice', 50)->nullable();
             $table->integer('status')->default(0)
                 ->comment('Status proses LPB; gunakan document_type dan is_cancelled untuk klasifikasi baru');

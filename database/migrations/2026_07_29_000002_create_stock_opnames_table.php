@@ -20,11 +20,11 @@ return new class extends Migration
             $table->unsignedBigInteger('submitted_by')->nullable();
             $table->timestamp('submitted_at')->nullable();
             $table->unsignedBigInteger('approved_by')->nullable()
-                ->comment('ID user eksternal Accounting type 33 yang menyetujui valuasi');
+                ->comment('ID user lokal Accounting type 33 yang menyetujui valuasi');
             $table->timestamp('approved_at')->nullable();
             $table->text('approval_note')->nullable();
             $table->unsignedBigInteger('posted_by')->nullable()
-                ->comment('ID user eksternal yang memposting hasil opname');
+                ->comment('ID user lokal yang memposting hasil opname');
             $table->timestamp('posted_at')->nullable();
             $table->timestamps();
             $table->foreign('warehouse_id')->references('id')->on('admin_namagudang')->onDelete('restrict');

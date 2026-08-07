@@ -43,7 +43,8 @@
                                     <div class="mb-3">
                                         <label class="form-label" for="email">Email</label>
                                         <input class="form-control" type="email" name="email" id="email"
-                                            placeholder="nama@perusahaan.com" autocomplete="email" required>
+                                            value="{{ old('email') }}" placeholder="nama@perusahaan.com"
+                                            autocomplete="email" autofocus required>
                                     </div>
 
                                     <!-- Password Input -->

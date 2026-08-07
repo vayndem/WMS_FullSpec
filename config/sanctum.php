@@ -35,7 +35,6 @@ return [
 
     'guards' => [
         'web',
-        'api_token', // <-- TAMBAHKAN BARIS INI
     ],
 
     /*

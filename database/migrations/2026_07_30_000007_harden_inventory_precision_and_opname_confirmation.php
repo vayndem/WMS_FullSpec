@@ -52,11 +52,11 @@ return new class extends Migration
             $table->decimal('physical_quantity', 18, 6)->change();
             $table->decimal('difference_quantity', 18, 6)->change();
             $table->unsignedBigInteger('physical_confirmed_by')->nullable()->after('notes')
-                ->comment('ID user eksternal Gudang type 14 yang mengonfirmasi kuantitas fisik');
+                ->comment('ID user lokal Gudang type 14 yang mengonfirmasi kuantitas fisik');
             $table->timestamp('physical_confirmed_at')->nullable()->after('physical_confirmed_by')
                 ->comment('Waktu konfirmasi kuantitas fisik oleh Gudang');
             $table->unsignedBigInteger('valuation_confirmed_by')->nullable()->after('physical_confirmed_at')
-                ->comment('ID user eksternal Accounting type 33 yang mengonfirmasi harga/valuasi');
+                ->comment('ID user lokal Accounting type 33 yang mengonfirmasi harga/valuasi');
             $table->timestamp('valuation_confirmed_at')->nullable()->after('valuation_confirmed_by')
                 ->comment('Waktu konfirmasi harga/valuasi oleh Accounting');
         });

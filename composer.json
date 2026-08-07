@@ -13,7 +13,6 @@
         "laravel/tinker": "^2.8",
         "maatwebsite/excel": "^3.1",
         "tecnickcom/tcpdf": "^6.8",
-        "tymon/jwt-auth": "^2.1",
         "yajra/laravel-datatables-oracle": "^10.11"
     },
     "require-dev": {

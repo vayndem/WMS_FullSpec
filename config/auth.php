@@ -40,14 +40,6 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
-        'api_token' => [
-            'driver' => 'sanctum',
-            'provider' => 'api_users',
-        ],
-        'api_jwt' => [
-            'driver' => 'jwt',
-            'provider' => 'api_users', // Pastikan provider ini menunjuk ke AksesApiModel
-        ],
     ],
 
     /*
@@ -71,10 +63,6 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => App\Models\User::class,
-        ],
-        'api_users' => [
-            'driver' => 'eloquent',
-            'model' => App\Models\AksesApiModel::class,
         ],
         // 'users' => [
         //     'driver' => 'database',

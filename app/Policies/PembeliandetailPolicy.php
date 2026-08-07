@@ -2,27 +2,27 @@
 
 namespace App\Policies;
 
-use App\Models\ApiUser;
+use App\Models\User;
 use App\Models\Pembeliandetail;
 
 class PembeliandetailPolicy
 {
-    public function viewAny(ApiUser $user): bool
+    public function viewAny(User $user): bool
     {
         return in_array((int) $user->type, [5, 33]);
     }
 
-    public function view(ApiUser $user, Pembeliandetail $pembeliandetail): bool
+    public function view(User $user, Pembeliandetail $pembeliandetail): bool
     {
         return in_array((int) $user->type, [5, 33]);
     }
 
-    public function create(ApiUser $user): bool
+    public function create(User $user): bool
     {
         return in_array((int) $user->type, [5, 33]);
     }
 
-    public function update(ApiUser $user, Pembeliandetail $pembeliandetail): bool
+    public function update(User $user, Pembeliandetail $pembeliandetail): bool
     {
         if (!in_array((int) $user->type, [5, 33])) {
             return false;
@@ -31,7 +31,7 @@ class PembeliandetailPolicy
         return (int) $pembeliandetail->pembelian->kunci === 0;
     }
 
-    public function delete(ApiUser $user, Pembeliandetail $pembeliandetail): bool
+    public function delete(User $user, Pembeliandetail $pembeliandetail): bool
     {
         if (!in_array((int) $user->type, [5, 33])) {
             return false;

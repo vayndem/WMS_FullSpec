@@ -2,24 +2,24 @@
 
 namespace App\Policies;
 
-use App\Models\ApiUser;
+use App\Models\User;
 use App\Models\ServiceBap;
 
 class ServiceBapPolicy
 {
-    public function viewAny(ApiUser $user): bool
+    public function viewAny(User $user): bool
     {
         return in_array((int)$user->type, [5, 14, 33], true);
     }
-    public function view(ApiUser $user, ServiceBap $bap): bool
+    public function view(User $user, ServiceBap $bap): bool
     {
         return $this->viewAny($user) && $bap->document_type === 'SERVICE_BAP';
     }
-    public function create(ApiUser $user): bool
+    public function create(User $user): bool
     {
         return $this->viewAny($user);
     }
-    public function cancel(ApiUser $user, ServiceBap $bap): bool
+    public function cancel(User $user, ServiceBap $bap): bool
     {
         return in_array((int)$user->type, [5, 33], true)
             && $this->view($user, $bap)
@@ -27,7 +27,7 @@ class ServiceBapPolicy
             && !$bap->invoiceReceipts()->exists();
     }
 
-    public function viewFinancials(ApiUser $user): bool
+    public function viewFinancials(User $user): bool
     {
         return in_array((int)$user->type, [5, 33], true);
     }

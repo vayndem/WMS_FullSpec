@@ -15,7 +15,7 @@ return new class extends Migration
                 ->comment('Alur request: pending=menunggu persetujuan, approved=disetujui, rejected=ditolak');
             $table->text('catatan_approver')->nullable();
             $table->unsignedBigInteger('approved_by')->nullable()
-                ->comment('ID user eksternal yang menyetujui/menolak request');
+                ->comment('ID user lokal yang menyetujui/menolak request');
             $table->timestamp('approved_at')->nullable()
                 ->comment('Waktu keputusan persetujuan atau penolakan');
             $table->timestamps();

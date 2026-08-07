@@ -1,6 +1,6 @@
 <?php
 namespace Tests\Unit;
-use App\Models\ApiUser;
+use App\Models\User;
 use App\Models\Asset;
 use App\Models\AssetCategory;
 use App\Models\ServiceBap;
@@ -11,7 +11,7 @@ use App\Policies\ServiceBapPolicy;
 use App\Policies\ServicePurchasePolicy;
 use Tests\TestCase;
 class AssetAndServicePolicyTest extends TestCase {
-    private function user(int $type): ApiUser { return new ApiUser(['id'=>$type,'name'=>"Type {$type}",'type'=>$type]); }
+    private function user(int $type): User { return new User(['id'=>$type,'name'=>"Type {$type}",'type'=>$type]); }
     public function test_asset_visibility_and_financial_access_follow_roles(): void {
         $policy=new AssetPolicy();$asset=new Asset(['status'=>'ACTIVE']);
         foreach([1,5,13,33] as $type)$this->assertTrue($policy->view($this->user($type),$asset));

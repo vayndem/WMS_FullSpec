@@ -3,41 +3,41 @@
 namespace App\Policies;
 
 use App\Models\Supplier;
-use App\Models\ApiUser;
+use App\Models\User;
 
 class SupplierPolicy
 {
-    public function viewAny(?ApiUser $user): bool
+    public function viewAny(?User $user): bool
     {
         return true;
     }
 
-    public function view(?ApiUser $user, Supplier $supplier): bool
+    public function view(?User $user, Supplier $supplier): bool
     {
         return true;
     }
 
-    public function create(ApiUser $user): bool
+    public function create(User $user): bool
     {
         return in_array((int) $user->type, [5]);
     }
 
-    public function update(ApiUser $user, Supplier $supplier): bool
+    public function update(User $user, Supplier $supplier): bool
     {
         return in_array((int) $user->type, [5]);
     }
 
-    public function delete(ApiUser $user, Supplier $supplier): bool
+    public function delete(User $user, Supplier $supplier): bool
     {
         return in_array((int) $user->type, [5]);
     }
 
-    public function restore(ApiUser $user, Supplier $supplier): bool
+    public function restore(User $user, Supplier $supplier): bool
     {
         return in_array((int) $user->type, [5]);
     }
 
-    public function forceDelete(ApiUser $user, Supplier $supplier): bool
+    public function forceDelete(User $user, Supplier $supplier): bool
     {
         return in_array((int) $user->type, [5]);
     }

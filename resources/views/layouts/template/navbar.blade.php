@@ -60,19 +60,14 @@
                                 aria-expanded="false">
                                 <!-- Profile Circle with Initials -->
                                 <div class="profile-circle">
-                                    {{ strtoupper(substr($user['name'], 0, 1)) }}{{ strtoupper(substr(explode(' ', $user['name'])[1] ?? '', 0, 1)) }}
+                                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}{{ strtoupper(substr(explode(' ', auth()->user()->name)[1] ?? '', 0, 1)) }}
                                 </div>
                             </a>
-                            @if (session('user_data'))
+                            @auth
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
-                                    <li class="dropdown-item d-flex svg-icon">
-                                        <svg class="svg-icon me-2 text-primary" width="20"
-                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                            stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                                        </svg>
-                                        <a href="{{ route('sso.arsip') }}" target="_blank">Buka Arsip QA</a>
+                                    <li class="dropdown-item-text">
+                                        <strong>{{ auth()->user()->name }}</strong><br>
+                                        <small class="text-muted">{{ auth()->user()->email }}</small>
                                     </li>
 
                                     <li><hr class="dropdown-divider"></li>
@@ -92,7 +87,7 @@
                                             onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
                                     </li>
                                 </ul>
-                            @endif
+                            @endauth
                         </li>
                     </ul>
                 </div>

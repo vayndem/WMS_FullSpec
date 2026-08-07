@@ -22,7 +22,8 @@
                             href="{{ route('service-baps.report.pdf', request()->query()) }}"><i
                                 class="fa-solid fa-file-pdf"></i> PDF</a><input name="q" value="{{ request('q') }}"
                             onchange="this.form.submit()" class="form-control" style="max-width:280px"
-                            placeholder="Cari nomor BAP..."></form>
+                            placeholder="Cari nomor BAP...">
+                    </form>
                     <div class="table-responsive">
                         <table class="table table-hover"
                             data-row-start="{{ $baps->firstItem() ? $baps->firstItem() - 1 : 0 }}">

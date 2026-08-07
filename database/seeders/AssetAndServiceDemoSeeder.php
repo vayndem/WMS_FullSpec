@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\ApiUser;
+use App\Models\User;
 use App\Models\Asset;
 use App\Models\AssetCategory;
 use App\Models\ChartOfAccount;
@@ -23,7 +23,7 @@ class AssetAndServiceDemoSeeder extends Seeder
 {
     public function run(): void
     {
-        Auth::setUser(new ApiUser(['id' => 33, 'name' => 'Accounting Demo', 'type' => 33]));
+        Auth::setUser(User::where('email', 'accounting@wms.local')->firstOrFail());
         DB::transaction(function () {
             $numbers = app(DocumentNumberService::class);
             if (!Asset::where('name', '[DEMO] Laptop Accounting')->exists()) {
@@ -58,7 +58,7 @@ class AssetAndServiceDemoSeeder extends Seeder
                 ]);
             }
             if (!ServicePurchase::where('notes', 'PO jasa demo terpisah dari barang')->exists()) {
-                Auth::setUser(new ApiUser(['id' => 5, 'name' => 'Purchasing Demo', 'type' => 5]));
+                Auth::setUser(User::where('email', 'purchasing@wms.local')->firstOrFail());
                 $supplier = Supplier::where('nama', 'PT. Global Supply Indonesia')->firstOrFail();
                 $bank = ChartOfAccount::where('kode_akun', '1102')->firstOrFail();
                 $accounting = app(WmsAccountingService::class);

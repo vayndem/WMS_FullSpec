@@ -106,7 +106,7 @@ return new class extends Migration
             $table->boolean('is_void')->default(false)->after('status')
                 ->comment('0=invoice aktif, 1=invoice dibatalkan/void');
             $table->unsignedBigInteger('voided_by')->nullable()->after('is_void')
-                ->comment('ID user eksternal yang membatalkan invoice');
+                ->comment('ID user lokal yang membatalkan invoice');
             $table->timestamp('voided_at')->nullable()->after('voided_by');
             $table->text('void_reason')->nullable()->after('voided_at');
         });
@@ -116,7 +116,7 @@ return new class extends Migration
             $table->boolean('is_void')->default(false)->after('id_user_finance')
                 ->comment('0=pembayaran aktif, 1=pembayaran dibatalkan/void');
             $table->unsignedBigInteger('voided_by')->nullable()->after('is_void')
-                ->comment('ID user eksternal yang membatalkan pembayaran');
+                ->comment('ID user lokal yang membatalkan pembayaran');
             $table->timestamp('voided_at')->nullable()->after('voided_by');
             $table->text('void_reason')->nullable()->after('voided_at');
         });
@@ -125,9 +125,9 @@ return new class extends Migration
             $table->string('status', 20)->default('DRAFT')->after('reff_id')
                 ->comment('Status jurnal: DRAFT=belum posting, POSTED=terposting, REVERSED=telah dibalik');
             $table->unsignedBigInteger('created_by')->nullable()->after('status')
-                ->comment('ID user eksternal pembuat jurnal');
+                ->comment('ID user lokal pembuat jurnal');
             $table->unsignedBigInteger('posted_by')->nullable()->after('created_by')
-                ->comment('ID user eksternal yang memposting jurnal');
+                ->comment('ID user lokal yang memposting jurnal');
             $table->timestamp('posted_at')->nullable()->after('posted_by');
             $table->unsignedBigInteger('reversal_of_id')->nullable()->after('posted_at')
                 ->comment('ID jurnal asal yang dibalik; null untuk jurnal normal');
