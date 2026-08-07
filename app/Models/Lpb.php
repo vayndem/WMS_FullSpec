@@ -16,6 +16,7 @@ class Lpb extends Model
         'document_type',
         'tanggal',
         'no_po',
+        'gudang_id',
         'no_sj',
         'id_user',
         'flag',
@@ -45,6 +46,11 @@ class Lpb extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'id_user');
+    }
+
+    public function gudang()
+    {
+        return $this->belongsTo(Gudang::class);
     }
 
     public function invoiceReceipts()

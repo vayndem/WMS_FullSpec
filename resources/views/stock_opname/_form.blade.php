@@ -36,19 +36,20 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach ($materials as $material)
+                @foreach ($stocks as $stock)
+                    @php($material = $stock->bahan)
                     @php($detail = $selected->get($material->id))
-                    <tr class="material-row d-none" data-warehouse="{{ $material->tipe_gudang }}">
+                    <tr class="material-row d-none" data-warehouse="{{ $stock->gudang_id }}">
                         <td><input class="form-check-input item-check" type="checkbox" @checked($detail)>
                         </td>
                         <td><strong>{{ $material->nama }}</strong><small
                                 class="d-block text-muted">{{ $material->tipeBarang->katnama ?? '-' }}</small><input
                                 class="item-input" type="hidden" data-name="bahan_id" value="{{ $material->id }}"
                                 disabled></td>
-                        <td>{{ number_format($material->stok_onhand, 6, ',', '.') }} {{ $material->satuan }}</td>
+                        <td>{{ number_format($stock->stok_tersedia, 6, ',', '.') }} {{ $material->satuan }}</td>
                         <td><input class="form-control item-input" type="number" min="0" step=".000001"
                                 data-name="physical_quantity"
-                                value="{{ $detail?->physical_quantity ?? $material->stok_onhand }}" disabled required>
+                                value="{{ $detail?->physical_quantity ?? $stock->stok_tersedia }}" disabled required>
                         </td>
                         <td><input class="form-control item-input" data-name="reason" value="{{ $detail?->reason }}"
                                 disabled placeholder="Rusak/hilang/koreksi"></td>

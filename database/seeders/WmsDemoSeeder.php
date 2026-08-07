@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\AdminNamagudang;
+use App\Models\Gudang;
 use App\Models\Bahan;
 use App\Models\ChartOfAccount;
 use App\Models\InventoryLayer;
@@ -18,7 +18,7 @@ class WmsDemoSeeder extends Seeder
     {
         DB::transaction(function () {
             $category = KategoriBahan::where('katnama', 'Bahan Baku Paper')->firstOrFail();
-            $warehouse = AdminNamagudang::where('nama', 'Gudang Utama')->firstOrFail();
+            $warehouse = Gudang::where('nama', 'Gudang Utama')->firstOrFail();
 
             $material = Bahan::updateOrCreate(
                 ['nama' => '[DEMO] Kertas Rekonsiliasi'],

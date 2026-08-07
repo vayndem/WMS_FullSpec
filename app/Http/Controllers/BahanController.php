@@ -3,9 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Bahan;
-use App\Models\AdminNamagudang;
+use App\Models\Gudang;
 use App\Models\InventoryLayer;
 use App\Models\KategoriBahan;
+use App\Models\StokGudang;
 use App\Http\Requests\UpdateBahanRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -19,12 +20,21 @@ class BahanController extends Controller
         if ($request->ajax()) {
             $kategoriId = $request->input('kategori_id');
             $gudangId = $request->input('gudang_id');
+            $gudangNama = $gudangId
+                ? (Gudang::query()->whereKey($gudangId)->value('nama') ?? '-')
+                : 'Seluruh gudang';
 
             $financial = $request->user()->can('viewFinancials', Bahan::class);
             $layerSummary = InventoryLayer::query()
                 ->select('bahan_id')
                 ->selectRaw('COUNT(*) as layer_count')
                 ->selectRaw('SUM(remaining_quantity) as layer_quantity')
+                ->when($gudangId, fn ($query) => $query->where('gudang_id', $gudangId))
+                ->groupBy('bahan_id');
+            $stockSummary = StokGudang::query()->select('bahan_id')
+                ->selectRaw('SUM(stok_tersedia) as stok_tersedia')
+                ->selectRaw('SUM(stok_dipesan) as stok_dipesan')
+                ->when($gudangId, fn ($query) => $query->where('gudang_id', $gudangId))
                 ->groupBy('bahan_id');
             if ($financial) {
                 $layerSummary
@@ -32,19 +42,20 @@ class BahanController extends Controller
                     ->selectRaw('CASE WHEN SUM(remaining_quantity) > 0 THEN SUM(remaining_quantity * unit_cost) / SUM(remaining_quantity) ELSE 0 END as average_cost');
             }
 
-            $query = Bahan::with(['kategoriBahan', 'gudang', 'tipeBarang'])
+            $query = Bahan::with(['kategoriBahan', 'tipeBarang'])
                 ->leftJoinSub($layerSummary, 'layer_summary', 'layer_summary.bahan_id', '=', 'bahan.id')
+                ->leftJoinSub($stockSummary, 'stock_summary', 'stock_summary.bahan_id', '=', 'bahan.id')
                 ->select('bahan.*')
                 ->addSelect([
+                    DB::raw('COALESCE(stock_summary.stok_tersedia, 0) as stok_onhand'),
+                    DB::raw('COALESCE(stock_summary.stok_dipesan, 0) as stok_onpurchase'),
                     DB::raw('COALESCE(layer_summary.layer_count, 0) as layer_count'),
                     DB::raw('COALESCE(layer_summary.layer_quantity, 0) as layer_quantity'),
                 ])
                 ->when(!empty($kategoriId), function ($q) use ($kategoriId) {
                     return $q->where('kategori', $kategoriId);
                 })
-                ->when(!empty($gudangId), function ($q) use ($gudangId) {
-                    return $q->where('tipe_gudang', $gudangId);
-                });
+                ->when(!empty($gudangId), fn ($q) => $q->whereNotNull('stock_summary.bahan_id'));
 
             if ($financial) {
                 $query->addSelect([
@@ -57,9 +68,7 @@ class BahanController extends Controller
                 ->addColumn('kategori_nama', function ($row) {
                     return $row->kategoriBahan->katnama ?? '-';
                 })
-                ->addColumn('gudang_nama', function ($row) {
-                    return $row->gudang->nama ?? '-';
-                })
+                ->addColumn('gudang_nama', fn () => $gudangNama)
                 ->addColumn('tipe_barang_nama', function ($row) {
                     return $row->tipeBarang->katnama ?? '-';
                 })
@@ -74,7 +83,7 @@ class BahanController extends Controller
         }
 
         $kategoris = KategoriBahan::orderBy('katnama')->get();
-        $gudangs = AdminNamagudang::all();
+        $gudangs = Gudang::where('aktif', true)->orderBy('nama')->get();
 
         $financial = $request->user()->can('viewFinancials', Bahan::class);
 
@@ -85,9 +94,9 @@ class BahanController extends Controller
     {
         $this->authorize('view', $bahan);
 
-        $bahan->load(['kategoriBahan', 'gudang', 'tipeBarang']);
+        $bahan->load(['kategoriBahan', 'gudang', 'tipeBarang', 'stokGudangs.gudang']);
         $financial = request()->user()->can('viewFinancials', Bahan::class);
-        $layers = InventoryLayer::query()->where('bahan_id', $bahan->id)
+        $layers = InventoryLayer::query()->with('gudang')->where('bahan_id', $bahan->id)
             ->orderByDesc('transaction_date')->orderByDesc('id')
             ->get($financial
                 ? ['id', 'gudang_id', 'source_type', 'source_id', 'transaction_date', 'initial_quantity', 'remaining_quantity', 'unit_cost']
@@ -103,7 +112,7 @@ class BahanController extends Controller
         return view('bahan.edit', [
             'bahan' => $bahan,
             'kategoris' => KategoriBahan::orderBy('katnama')->get(),
-            'gudangs' => AdminNamagudang::orderBy('nama')->get(),
+            'gudangs' => Gudang::where('aktif', true)->orderBy('nama')->get(),
         ]);
     }
 

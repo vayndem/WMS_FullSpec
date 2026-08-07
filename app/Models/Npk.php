@@ -28,12 +28,12 @@ class Npk extends Model
 
     public function gudangAsal(): BelongsTo
     {
-        return $this->belongsTo(AdminNamagudang::class, 'id_gudang_asal');
+        return $this->belongsTo(Gudang::class, 'id_gudang_asal');
     }
 
     public function gudangTujuan(): BelongsTo
     {
-        return $this->belongsTo(AdminNamagudang::class, 'id_gudang_tujuan');
+        return $this->belongsTo(Gudang::class, 'id_gudang_tujuan');
     }
 
     public function allocations()

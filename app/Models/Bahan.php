@@ -27,12 +27,17 @@ class Bahan extends Model
 
     public function gudang(): BelongsTo
     {
-        return $this->belongsTo(AdminNamagudang::class, 'tipe_gudang');
+        return $this->belongsTo(Gudang::class, 'tipe_gudang');
     }
 
     public function inventoryLayers(): HasMany
     {
         return $this->hasMany(InventoryLayer::class, 'bahan_id');
+    }
+
+    public function stokGudangs(): HasMany
+    {
+        return $this->hasMany(StokGudang::class, 'bahan_id');
     }
 
     public function hasSmallUnit(): bool

@@ -35,6 +35,7 @@ class StorePembelianRequest extends FormRequest
             'no_po'                       => ['required', 'string', 'max:30', 'regex:/^\d{2}-\d{2}-[A-Z]{2}-(?:I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)-\d{3}$/', 'unique:pembelians,no_po'],
             'tanggal'                     => 'required|date',
             'supplier_id'                 => 'required|exists:suppliers,id',
+            'gudang_id'                   => 'required|exists:gudangs,id',
             'no_order'                    => 'nullable|string|max:250',
             'untuk_perhatian'             => 'nullable|string|max:250',
             'term'                        => 'nullable|string|max:250',

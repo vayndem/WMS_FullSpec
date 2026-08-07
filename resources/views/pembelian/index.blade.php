@@ -87,7 +87,8 @@
                 <div class="modal-header bg-primary text-white py-3">
                     <h5 class="modal-title fw-bold text-white" id="modalPembelianTitle"><i
                             class="fa-solid fa-cart-shopping me-2"></i>Buat Transaksi Pembelian Baru</h5>
-                    <button type="button" class="btn-close btn-close-white " data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white " data-bs-dismiss="modal"
+                        aria-label="Close"></button>
                 </div>
                 <form id="formPembelian">
                     @csrf
@@ -167,10 +168,11 @@
                                             <i class="fa-solid fa-truck-field text-primary me-2"></i>
                                             Pilih Supplier
                                         </h6>
-                                        <small class="text-muted">Cari berdasarkan nama, telepon, atau alamat supplier.</small>
+                                        <small class="text-muted">Cari berdasarkan nama, telepon, atau alamat
+                                            supplier.</small>
                                     </div>
-                                    <button type="button" class="btn btn-sm btn-light border"
-                                        data-bs-toggle="collapse" data-bs-target="#modalCariSupplier">
+                                    <button type="button" class="btn btn-sm btn-light border" data-bs-toggle="collapse"
+                                        data-bs-target="#modalCariSupplier">
                                         <i class="fa-solid fa-xmark me-1"></i>Tutup
                                     </button>
                                 </div>
@@ -188,6 +190,16 @@
                                     </table>
                                 </div>
                             </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="fw-bold">Gudang Tujuan <span class="text-danger">*</span></label>
+                                <select name="gudang_id" id="input_gudang_id" class="form-select" required>
+                                    <option value="">-- Pilih Gudang --</option>
+                                    @foreach ($gudangs as $gudang)
+                                        <option value="{{ $gudang->id }}">{{ $gudang->kode }} - {{ $gudang->nama }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
                         </div>
 
                         <hr class="my-4">
@@ -200,10 +212,11 @@
                                             <i class="fa-solid fa-boxes-stacked text-primary me-2"></i>
                                             Pilih Item Permintaan (Request ACC)
                                         </h6>
-                                        <small class="text-muted">Cari berdasarkan kode request atau nama barang, lalu pilih item yang akan dibeli.</small>
+                                        <small class="text-muted">Cari berdasarkan kode request atau nama barang, lalu
+                                            pilih item yang akan dibeli.</small>
                                     </div>
-                                    <button type="button" class="btn btn-sm btn-light border"
-                                        data-bs-toggle="collapse" data-bs-target="#modalCariPermintaan">
+                                    <button type="button" class="btn btn-sm btn-light border" data-bs-toggle="collapse"
+                                        data-bs-target="#modalCariPermintaan">
                                         <i class="fa-solid fa-xmark me-1"></i>Tutup
                                     </button>
                                 </div>
@@ -229,8 +242,8 @@
                         <div class="row">
                             <div class="col-lg-8 border-right">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h6 class="fw-bold text-dark mb-0"><i
-                                            class="fa-solid fa-list me-2"></i>Detail Item Pembelian</h6>
+                                    <h6 class="fw-bold text-dark mb-0"><i class="fa-solid fa-list me-2"></i>Detail Item
+                                        Pembelian</h6>
                                     <button type="button" class="btn btn-info btn-sm shadow-sm"
                                         id="btnBukaModalRequest">
                                         <i class="fa-solid fa-list-check me-1"></i> Cari dari Permintaan (Request)
@@ -582,7 +595,8 @@
                             name: 'harga_referensi',
                             orderable: false,
                             searchable: false,
-                            render: data => `${formatRupiah(data)}<small class="d-block text-muted">Rata-rata 5 LPB terakhir</small>`
+                            render: data =>
+                                `${formatRupiah(data)}<small class="d-block text-muted">Rata-rata 5 LPB terakhir</small>`
                         },
                         {
                             data: null,
@@ -690,6 +704,7 @@
                             $('#input_no_po').val(data.no_po);
                             $('#input_tanggal').val(data.tanggal);
                             $('#input_supplier_id').val(data.supplier_id);
+                            $('#input_gudang_id').val(data.gudang_id);
                             $('#input_supplier_nama').val(data.supplier ? data.supplier.nama : '-');
                             $('#input_no_order').val(data.no_order);
                             $('#input_untuk_perhatian').val(data.untuk_perhatian);
@@ -753,7 +768,8 @@
                             $('#modalTambahPembelian').modal('show');
                         },
                         error: function(err) {
-                            AppAlert.auto(err.responseJSON?.message || 'Gagal mengambil data pembelian.');
+                            AppAlert.auto(err.responseJSON?.message ||
+                                'Gagal mengambil data pembelian.');
                         }
                     });
                 });
@@ -761,23 +777,24 @@
                 $(document).on('click', '.btn-delete-po', function() {
                     let noPo = $(this).data('nopo');
                     AppAlert.confirm('Hapus transaksi PO (' + noPo + ')?').then(function(result) {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: "{{ url('pembelian') }}/" + noPo,
-                            type: "DELETE",
-                            data: {
-                                _token: "{{ csrf_token() }}"
-                            },
-                            success: function(res) {
-                                table.draw();
-                                AppAlert.auto(res.message);
-                            },
-                            error: function(err) {
-                                AppAlert.auto(err.responseJSON?.message ||
-                                    'Gagal menghapus data pembelian.');
-                            }
-                        });
-                    }});
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: "{{ url('pembelian') }}/" + noPo,
+                                type: "DELETE",
+                                data: {
+                                    _token: "{{ csrf_token() }}"
+                                },
+                                success: function(res) {
+                                    table.draw();
+                                    AppAlert.auto(res.message);
+                                },
+                                error: function(err) {
+                                    AppAlert.auto(err.responseJSON?.message ||
+                                        'Gagal menghapus data pembelian.');
+                                }
+                            });
+                        }
+                    });
                 });
 
                 $('#formPembelian').submit(function(e) {

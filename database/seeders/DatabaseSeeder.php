@@ -8,11 +8,16 @@ use App\Models\TipePembebanan;
 use App\Models\Supplier;
 use App\Models\Bahan;
 use App\Models\Kategoribahan;
-use App\Models\AdminNamagudang;
+use App\Models\Gudang;
 use App\Models\AccountingSetting;
 use App\Models\TaxRate;
 use App\Models\AssetCategory;
 use App\Models\ServiceCategory;
+use App\Models\StokGudang;
+use App\Models\MutasiStok;
+use App\Models\User;
+use App\Services\DocumentNumberService;
+use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
@@ -141,9 +146,9 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $gudang = AdminNamagudang::firstOrCreate(
-            ['nama' => 'Gudang Utama']
-        );
+        $gudang = Gudang::updateOrCreate(['kode' => 'GDG-UTAMA'], ['nama' => 'Gudang Utama', 'jenis' => Gudang::NORMAL, 'aktif' => true, 'boleh_penerimaan' => true, 'boleh_npk' => true, 'boleh_transfer' => true, 'boleh_opname' => true]);
+        Gudang::updateOrCreate(['kode' => 'GDG-CONSIDER'], ['nama' => 'Gudang Consider', 'jenis' => Gudang::CONSIDER, 'aktif' => true, 'boleh_penerimaan' => false, 'boleh_npk' => false, 'boleh_transfer' => true, 'boleh_opname' => true]);
+        Gudang::updateOrCreate(['kode' => 'GDG-RUSAK'], ['nama' => 'Gudang Rusak', 'jenis' => Gudang::RUSAK, 'aktif' => true, 'boleh_penerimaan' => false, 'boleh_npk' => false, 'boleh_transfer' => false, 'boleh_opname' => true]);
 
         $suppliers = [
             [
@@ -237,5 +242,54 @@ class DatabaseSeeder extends Seeder
             WmsTransactionScenarioSeeder::class,
             AssetAndServiceDemoSeeder::class,
         ]);
+
+        $this->syncMultiWarehouseDemoData();
+    }
+
+    private function syncMultiWarehouseDemoData(): void
+    {
+        $layerBalances = DB::table('inventory_layers')
+            ->select('gudang_id', 'bahan_id', DB::raw('SUM(remaining_quantity) as quantity'))
+            ->whereNotNull('gudang_id')->groupBy('gudang_id', 'bahan_id')->get();
+
+        foreach ($layerBalances as $row) {
+            StokGudang::updateOrCreate(
+                ['gudang_id' => $row->gudang_id, 'bahan_id' => $row->bahan_id],
+                ['stok_tersedia' => $row->quantity]
+            );
+        }
+
+        $ordered = DB::table('pembelian_details as d')->join('pembelians as p', 'p.no_po', '=', 'd.no_po')
+            ->select('p.gudang_id', 'd.bahan_id', DB::raw('SUM(GREATEST(d.jumlah - d.diterima, 0)) as quantity'))
+            ->where('p.status', '!=', 2)->whereNotNull('p.gudang_id')->groupBy('p.gudang_id', 'd.bahan_id')->get();
+        foreach ($ordered as $row) {
+            StokGudang::updateOrCreate(
+                ['gudang_id' => $row->gudang_id, 'bahan_id' => $row->bahan_id],
+                ['stok_dipesan' => $row->quantity]
+            );
+        }
+
+        $warehouseUser = User::where('type', 14)->first();
+        foreach (Gudang::all() as $gudang) {
+            if ($warehouseUser) {
+                DB::table('pembagian_gudangs')->updateOrInsert(
+                    ['user_id' => $warehouseUser->id, 'gudang_id' => $gudang->id],
+                    ['boleh_menerima' => true, 'boleh_npk' => true, 'boleh_transfer' => true, 'boleh_opname' => true, 'created_at' => now(), 'updated_at' => now()]
+                );
+            }
+        }
+
+        foreach (StokGudang::where('stok_tersedia', '>', 0)->get() as $stock) {
+            if (!MutasiStok::where('gudang_id', $stock->gudang_id)->where('bahan_id', $stock->bahan_id)->exists()) {
+                MutasiStok::create([
+                    'nomor_mutasi' => app(DocumentNumberService::class)->internal('MTS', 'STK'),
+                    'tanggal' => now(), 'jenis_mutasi' => 'SALDO_AWAL', 'gudang_id' => $stock->gudang_id,
+                    'bahan_id' => $stock->bahan_id, 'jumlah_masuk' => $stock->stok_tersedia, 'jumlah_keluar' => 0,
+                    'saldo_sebelum' => 0, 'saldo_setelah' => $stock->stok_tersedia, 'harga_satuan' => 0,
+                    'total_nilai' => 0, 'jenis_referensi' => 'SEEDER', 'referensi_id' => $stock->id,
+                    'user_id' => $warehouseUser?->id, 'keterangan' => 'Saldo awal multi-warehouse dari data demo',
+                ]);
+            }
+        }
     }
 }

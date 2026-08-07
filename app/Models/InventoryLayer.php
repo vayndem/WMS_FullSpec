@@ -28,4 +28,9 @@ class InventoryLayer extends Model
     {
         return $this->belongsTo(Bahan::class, 'bahan_id');
     }
+
+    public function gudang()
+    {
+        return $this->belongsTo(Gudang::class, 'gudang_id');
+    }
 }

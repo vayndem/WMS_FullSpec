@@ -26,7 +26,7 @@ class StorerequestRequest extends FormRequest
             'items.*.satuan'       => 'required|string|max:250',
             'items.*.berat_kecil'  => 'nullable|numeric|gt:0',
             'items.*.satuan_kecil' => 'nullable|string|max:11',
-            'items.*.tipe_gudang'  => 'required|exists:admin_namagudang,id',
+            'items.*.tipe_gudang'  => 'required|exists:gudangs,id',
             'items.*.tipe_barang'  => 'required|exists:kategoribahan,id',
         ];
     }

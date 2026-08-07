@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\AccountingSetting;
-use App\Models\AdminNamagudang;
+use App\Models\Gudang;
 use App\Models\User;
 use App\Models\Bahan;
 use App\Models\ChartOfAccount;
@@ -50,7 +50,7 @@ class WmsTransactionScenarioSeeder extends Seeder
 
         DB::transaction(function () use ($accounting, $opnameService, $numbers, $purchasingUser, $warehouseUser) {
             $category = KategoriBahan::where('katnama', 'Bahan Baku Paper')->firstOrFail();
-            $warehouse = AdminNamagudang::where('nama', 'Gudang Utama')->firstOrFail();
+            $warehouse = Gudang::where('nama', 'Gudang Utama')->firstOrFail();
             $supplier = Supplier::where('nama', 'PT. Global Supply Indonesia')->firstOrFail();
             $bank = ChartOfAccount::where('kode_akun', '1102')->firstOrFail();
             $date = today()->subDays(20);
@@ -133,6 +133,7 @@ class WmsTransactionScenarioSeeder extends Seeder
                 'no_po' => $numbers->financial('PO', $date),
                 'tanggal' => $date,
                 'supplier_id' => $supplier->id,
+                'gudang_id' => $warehouse->id,
                 'no_order' => $approvedRequest->no_request,
                 'untuk_perhatian' => 'Demo Purchasing',
                 'term' => '30 hari',
@@ -283,7 +284,7 @@ class WmsTransactionScenarioSeeder extends Seeder
         WmsAccountingService $accounting,
         Bahan $material,
         KategoriBahan $category,
-        AdminNamagudang $warehouse,
+        Gudang $warehouse,
         Pembelian $po,
         $date,
         float $quantity,
@@ -294,6 +295,7 @@ class WmsTransactionScenarioSeeder extends Seeder
             'id_lpb' => $number,
             'tanggal' => $date,
             'no_po' => $po->no_po,
+            'gudang_id' => $warehouse->id,
             'no_sj' => 'SJ-' . $number,
             'id_user' => 5,
             'flag' => 0,

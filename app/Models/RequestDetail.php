@@ -36,7 +36,7 @@ class RequestDetail extends Model
 
     public function gudang(): BelongsTo
     {
-        return $this->belongsTo(AdminNamagudang::class, 'tipe_gudang');
+        return $this->belongsTo(Gudang::class, 'tipe_gudang');
     }
 
     public function pembelianDetails(): HasMany

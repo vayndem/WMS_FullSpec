@@ -44,4 +44,9 @@ class User extends Authenticatable
         'password' => 'hashed',
         'type' => 'integer',
     ];
+
+    public function pembagianGudangs()
+    {
+        return $this->hasMany(PembagianGudang::class);
+    }
 }

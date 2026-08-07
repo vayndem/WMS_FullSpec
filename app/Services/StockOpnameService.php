@@ -8,6 +8,7 @@ use App\Models\Jurnal;
 use App\Models\StockOpname;
 use App\Models\StockOpnameDetail;
 use App\Models\ChartOfAccount;
+use App\Models\StokGudang;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -16,7 +17,8 @@ class StockOpnameService
 {
     public function __construct(
         private AccountingPeriodService $periods,
-        private DocumentNumberService $numbers
+        private DocumentNumberService $numbers,
+        private StokGudangService $stokGudang
     ) {}
 
     public function confirmPhysical(StockOpname $opname): void
@@ -81,10 +83,8 @@ class StockOpnameService
             $lines = [];
             foreach ($opname->details as $detail) {
                 $bahan = Bahan::lockForUpdate()->findOrFail($detail->bahan_id);
-                if ((int) $bahan->tipe_gudang !== (int) $opname->warehouse_id) {
-                    throw new RuntimeException("Gudang barang {$bahan->nama} tidak sesuai dokumen.");
-                }
-                if (abs((float) $bahan->stok_onhand - (float) $detail->system_quantity) > 0.000001) {
+                $saldo = StokGudang::where('gudang_id', $opname->warehouse_id)->where('bahan_id', $bahan->id)->lockForUpdate()->first();
+                if (!$saldo || abs((float) $saldo->stok_tersedia - (float) $detail->system_quantity) > 0.000001) {
                     throw new RuntimeException("Stok {$bahan->nama} berubah setelah penghitungan. Opname harus dihitung ulang.");
                 }
 
@@ -94,6 +94,7 @@ class StockOpnameService
                     $value = $this->fifoValue($detail, abs($difference), $opname->warehouse_id, true);
                     $this->line($lines, $detail->bahan->tipeBarang->coa_beban_selisih_opname_id, $value, 0, "Beban selisih opname {$bahan->nama}");
                     $this->line($lines, $detail->bahan->tipeBarang->coa_persediaan_id, 0, $value, "Pengurangan persediaan {$bahan->nama}");
+                    $this->stokGudang->keluar($opname->warehouse_id, $bahan->id, abs($difference), $detail->unit_cost, 'OPNAME_KELUAR', 'STOCK_OPNAME', $opname->id, $opname->number);
                 } elseif ($difference > 0) {
                     InventoryLayer::create([
                         'bahan_id' => $bahan->id,
@@ -107,8 +108,8 @@ class StockOpnameService
                     ]);
                     $this->line($lines, $detail->bahan->tipeBarang->coa_persediaan_id, $value, 0, "Penambahan persediaan {$bahan->nama}");
                     $this->line($lines, $detail->bahan->tipeBarang->coa_koreksi_opname_id, 0, $value, "Koreksi positif opname {$bahan->nama}");
+                    $this->stokGudang->masuk($opname->warehouse_id, $bahan->id, $difference, $detail->unit_cost, 'OPNAME_MASUK', 'STOCK_OPNAME', $opname->id, $opname->number);
                 }
-                $bahan->update(['stok_onhand' => $detail->physical_quantity]);
             }
 
             $debit = round(collect($lines)->sum('debit'), 2);

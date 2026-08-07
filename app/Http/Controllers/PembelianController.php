@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Pembelian;
 use App\Models\Bahan;
+use App\Models\Gudang;
 use App\Models\RequestDetail;
 use App\Http\Requests\StorePembelianRequest;
 use App\Http\Requests\UpdatePembelianRequest;
 use App\Policies\PembelianPolicy;
 use App\Services\DocumentNumberService;
+use App\Services\StokGudangService;
 use App\Traits\CalculatesPembelianTotals;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +19,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class PembelianController extends Controller
 {
-    public function __construct(private DocumentNumberService $numbers) {}
+    public function __construct(private DocumentNumberService $numbers, private StokGudangService $stokGudang) {}
     use CalculatesPembelianTotals;
 
     public function index(Request $request)
@@ -52,7 +54,8 @@ class PembelianController extends Controller
         }
 
         $documentNumber = $this->numbers->financial('PO');
-        return view('pembelian.index', compact('documentNumber'));
+        $gudangs = Gudang::where('aktif', true)->where('jenis', Gudang::NORMAL)->orderBy('nama')->get();
+        return view('pembelian.index', compact('documentNumber', 'gudangs'));
     }
 
     public function reportPdf(Request $request)
@@ -118,6 +121,7 @@ class PembelianController extends Controller
                 'no_po'           => $noPo,
                 'tanggal'         => $validated['tanggal'],
                 'supplier_id'     => $validated['supplier_id'],
+                'gudang_id'       => $validated['gudang_id'],
                 'no_order'        => $validated['no_order'] ?? '-',
                 'untuk_perhatian' => $validated['untuk_perhatian'] ?? '-',
                 'term'            => $validated['term'] ?? '-',
@@ -146,6 +150,7 @@ class PembelianController extends Controller
 
                 if (!empty($item['bahan_id'])) {
                     Bahan::where('id', $item['bahan_id'])->increment('planning', $item['jumlah']);
+                    $this->stokGudang->tambahPesanan((int) $validated['gudang_id'], (int) $item['bahan_id'], (float) $item['jumlah']);
                 }
 
                 if (!empty($item['request_detail_id'])) {
@@ -171,7 +176,7 @@ class PembelianController extends Controller
 
     public function show(Request $request, $no_po)
     {
-        $pembelian = Pembelian::where('no_po', $no_po)->with(['supplier', 'details.bahan', 'details.requestDetail'])->firstOrFail();
+        $pembelian = Pembelian::where('no_po', $no_po)->with(['supplier', 'gudang', 'details.bahan', 'details.requestDetail'])->firstOrFail();
         $this->authorize('view', $pembelian);
 
         if (!$request->expectsJson() && !$request->ajax()) {
@@ -192,6 +197,9 @@ class PembelianController extends Controller
         $validated = $request->validated();
 
         DB::transaction(function () use ($pembelian, $validated) {
+            if ((int) $pembelian->gudang_id !== (int) $validated['gudang_id'] && $pembelian->details->sum('diterima') > 0) {
+                abort(422, 'Gudang tujuan tidak dapat diubah setelah PO memiliki penerimaan.');
+            }
             $this->archiveHistoryIfNeeded($pembelian);
 
             $oldReqDetails = $pembelian->details->pluck('request_detail_id')->filter()->unique();
@@ -199,6 +207,7 @@ class PembelianController extends Controller
             foreach ($pembelian->details as $oldDetail) {
                 if ($oldDetail->bahan_id) {
                     Bahan::where('id', $oldDetail->bahan_id)->decrement('planning', $oldDetail->jumlah);
+                    $this->stokGudang->kurangiPesanan((int) $pembelian->gudang_id, (int) $oldDetail->bahan_id, max(0, (float) $oldDetail->jumlah - (float) $oldDetail->diterima));
                 }
             }
 
@@ -207,6 +216,7 @@ class PembelianController extends Controller
             $pembelian->update([
                 'tanggal'         => $validated['tanggal'],
                 'supplier_id'     => $validated['supplier_id'],
+                'gudang_id'       => $validated['gudang_id'],
                 'no_order'        => $validated['no_order'] ?? '-',
                 'untuk_perhatian' => $validated['untuk_perhatian'] ?? '-',
                 'term'            => $validated['term'] ?? '-',
@@ -238,6 +248,7 @@ class PembelianController extends Controller
 
                 if (!empty($item['bahan_id'])) {
                     Bahan::where('id', $item['bahan_id'])->increment('planning', $item['jumlah']);
+                    $this->stokGudang->tambahPesanan((int) $validated['gudang_id'], (int) $item['bahan_id'], (float) $item['jumlah']);
                 }
 
                 if (!empty($item['request_detail_id'])) {
@@ -276,6 +287,7 @@ class PembelianController extends Controller
             foreach ($pembelian->details as $detail) {
                 if ($detail->bahan_id) {
                     Bahan::where('id', $detail->bahan_id)->decrement('planning', $detail->jumlah);
+                    $this->stokGudang->kurangiPesanan((int) $pembelian->gudang_id, (int) $detail->bahan_id, max(0, (float) $detail->jumlah - (float) $detail->diterima));
                 }
             }
 
@@ -317,6 +329,7 @@ class PembelianController extends Controller
                 $selisih = $detail->jumlah - $detail->diterima;
                 if ($selisih > 0 && $detail->bahan_id) {
                     Bahan::where('id', $detail->bahan_id)->decrement('stok_onpurchase', $selisih);
+                    $this->stokGudang->kurangiPesanan((int) $pembelian->gudang_id, (int) $detail->bahan_id, (float) $selisih);
                 }
             }
         });

@@ -45,7 +45,7 @@
                             <div class="table-responsive">
                                 <table class="table table-hover table-striped mb-0" id="table-lpb" width="100%"
                                     cellspacing="0" data-report-url="{{ route('lpb.report.pdf') }}"
-                                    data-filter-columns="1:id_lpb,3:tanggal,4:no_po,5:supplier_nama,6:no_sj,7:user_nama">
+                                    data-filter-columns="1:id_lpb,3:tanggal,4:no_po,5:supplier_nama,6:gudang_nama,7:no_sj,8:user_nama">
                                     <thead class="bg-light text-uppercase font-size-12">
                                         <tr>
                                             <th width="5%" class="text-center py-3"></th>
@@ -54,6 +54,7 @@
                                             <th width="12%" class="py-3">Tanggal</th>
                                             <th width="15%" class="py-3">No PO</th>
                                             <th class="py-3">Supplier</th>
+                                            <th class="py-3">Gudang</th>
                                             <th width="12%" class="py-3">No SJ</th>
                                             <th width="12%" class="py-3">Petugas</th>
                                             <th width="15%" class="text-center py-3 pe-4">Aksi</th>
@@ -197,6 +198,11 @@
                         {
                             data: 'supplier_nama',
                             name: 'supplier_nama',
+                            className: 'align-middle'
+                        },
+                        {
+                            data: 'gudang_nama',
+                            name: 'gudang_nama',
                             className: 'align-middle'
                         },
                         {

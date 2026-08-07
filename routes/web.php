@@ -27,6 +27,14 @@ use App\Http\Controllers\StockOpnameController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TaxRateController;
 use App\Http\Controllers\TipePembebananController;
+use App\Http\Controllers\GudangController;
+use App\Http\Controllers\StokGudangController;
+use App\Http\Controllers\PembagianGudangController;
+use App\Http\Controllers\PengaturanBahanGudangController;
+use App\Http\Controllers\TransferGudangController;
+use App\Http\Controllers\PemeriksaanConsiderController;
+use App\Http\Controllers\MutasiStokController;
+use App\Http\Controllers\RekonsiliasiGudangController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -37,6 +45,18 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [AuthController::class, 'dashboard'])->name('dashboard');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    Route::resource('gudangs', GudangController::class)->except('destroy');
+    Route::resource('stok-gudangs', StokGudangController::class)->only(['index', 'show']);
+    Route::resource('pembagian-gudangs', PembagianGudangController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('pengaturan-bahan-gudangs', PengaturanBahanGudangController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::post('transfer-gudangs/{transfer_gudang}/submit', [TransferGudangController::class, 'submit'])->name('transfer-gudangs.submit');
+    Route::post('transfer-gudangs/{transfer_gudang}/confirm', [TransferGudangController::class, 'confirm'])->name('transfer-gudangs.confirm');
+    Route::resource('transfer-gudangs', TransferGudangController::class);
+    Route::post('pemeriksaan-considers/{pemeriksaan_consider}/confirm', [PemeriksaanConsiderController::class, 'confirm'])->name('pemeriksaan-considers.confirm');
+    Route::resource('pemeriksaan-considers', PemeriksaanConsiderController::class);
+    Route::resource('mutasi-stoks', MutasiStokController::class)->only('index');
+    Route::get('rekonsiliasi-gudangs', [RekonsiliasiGudangController::class, 'index'])->name('rekonsiliasi-gudangs.index');
 
     Route::get('supplier/data-table', [SupplierController::class, 'dataTable'])->name('supplier.dataTable');
     Route::get('supplier-report/pdf', [SupplierController::class, 'reportPdf'])->name('supplier.report.pdf');

@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Request as RequestModel;
 use App\Models\RequestDetail;
 use App\Models\Bahan;
-use App\Models\AdminNamagudang;
+use App\Models\Gudang;
 use App\Http\Requests\StorerequestRequest;
 use App\Http\Requests\UpdaterequestRequest;
 use Illuminate\Http\Request;
@@ -91,7 +91,7 @@ class RequestController extends Controller
         $this->authorize('create', RequestModel::class);
 
         $bahans = Bahan::orderBy('nama', 'asc')->get();
-        $gudangs = AdminNamagudang::all();
+        $gudangs = Gudang::where('aktif', true)->orderBy('nama')->get();
         $kategoris = KategoriBahan::orderBy('katnama')->get();
         $documentNumber = $this->numbers->internal('REQ', 'PO');
 

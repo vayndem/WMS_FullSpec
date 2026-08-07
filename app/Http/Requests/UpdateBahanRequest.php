@@ -31,7 +31,7 @@ class UpdateBahanRequest extends FormRequest
             'satuan' => ['required', 'string', 'max:50'],
             'berat_kecil' => ['nullable', 'numeric', 'gt:0', 'max:1000000000'],
             'satuan_kecil' => ['nullable', 'string', 'max:11', 'different:satuan'],
-            'tipe_gudang' => ['required', 'integer', 'exists:admin_namagudang,id'],
+            'tipe_gudang' => ['required', 'integer', 'exists:gudangs,id'],
             'planning' => ['nullable', 'numeric', 'min:0'],
         ];
     }

@@ -179,6 +179,25 @@ tests/                      unit dan feature tests
 | Rekonsiliasi | `AccountingReconciliationController` | read model inventory/accounting | — |
 | Fixed asset | asset controllers | asset tables | asset accounting |
 | Procurement jasa | service controllers | service category/PO/BAP tables | WMS accounting at invoice |
+| Multi-warehouse | warehouse controllers | `gudangs`, `stok_gudangs`, transfer, mutasi, Consider | stok, transfer, pemeriksaan, rekonsiliasi |
+
+### 6.1 Multi-warehouse v1
+
+Jenis gudang aktif adalah `NORMAL`, `CONSIDER`, dan `RUSAK`. `gudangs` menggantikan master `admin_namagudang`. Saldo operasional disimpan pada `stok_gudangs` dengan unique key `(gudang_id, bahan_id)`, sementara `bahan.stok_onhand` dipertahankan sementara sebagai cache agregat kompatibilitas.
+
+Tabel utama:
+
+- `gudangs`: master dan capability gudang;
+- `stok_gudangs`: tersedia, direservasi, dan dipesan per barang–gudang;
+- `pembagian_gudangs`: kesiapan pembatasan user per gudang; v1 belum membatasi sesama type 14;
+- `pengaturan_bahan_gudangs`: minimum, maksimum, safety stock, dan reorder point;
+- `mutasi_stoks`: ledger immutable seluruh perubahan saldo;
+- `transfer_gudangs`, `detail_transfer_gudangs`, `alokasi_transfer_gudangs`: dokumen serta penjagaan cost layer transfer;
+- `pemeriksaan_considers`, `detail_pemeriksaan_considers`: keputusan baik/rusak yang final.
+
+Posting stok selalu berada di `DB::transaction()`, mengunci `stok_gudangs` dan `inventory_layers`, lalu memperbarui saldo, layer, mutasi, dan jurnal terkait secara atomik. Transfer biasa dilarang dari Gudang Consider/Rusak, dan tujuan Rusak hanya dapat dicapai melalui konfirmasi pemeriksaan Consider.
+
+Satu PO memiliki satu `gudang_id`. LPB mewarisi gudang PO; NPK wajib memiliki gudang asal; stock opname membaca snapshot dari `stok_gudangs`. Rekonsiliasi membandingkan saldo per gudang dengan total remaining quantity layer pada gudang yang sama.
 
 ## 7. Domain flow dan invariant
 
@@ -195,7 +214,7 @@ tests/                      unit dan feature tests
 - LPB mengacu ke PO dan surat jalan.
 - Penerimaan tidak boleh melebihi outstanding PO.
 - Detail menyimpan bahan, kategori, lot, qty, harga, pemakaian, dan sisa.
-- Posting menambah `bahan.stok_onhand` serta membuat `inventory_layers`.
+- Posting menambah `stok_gudangs` pada gudang PO, membuat `inventory_layers` pada gudang yang sama, dan menyegarkan `bahan.stok_onhand` sebagai cache agregat kompatibilitas.
 - Jurnal LPB:
 
 | Debit | Kredit | Amount |
@@ -206,7 +225,7 @@ tests/                      unit dan feature tests
 
 - Input dapat memakai base unit atau small unit.
 - Konversi disimpan sebagai snapshot `jumlah_stok` dan `satuan_transaksi`.
-- Layer dengan tanggal/ID tertua dikonsumsi lebih dahulu.
+- Hanya saldo dan layer pada gudang asal NPK yang dapat dikonsumsi; layer dengan tanggal/ID tertua dikonsumsi lebih dahulu.
 - Alokasi disimpan di `npk_stock_allocations`.
 - Update/delete mengembalikan saldo layer sebelum kalkulasi ulang.
 - Jurnal NPK: debit beban kategori, kredit persediaan berdasarkan biaya FIFO.
@@ -281,7 +300,8 @@ Guardrail:
 | Kelompok | Tabel |
 |---|---|
 | Auth/framework | `users`, `password_reset_tokens`, `personal_access_tokens`, `failed_jobs` |
-| Master | `suppliers`, `admin_namagudang`, `bahan`, `kategoribahan`, `tipe_pembebanans` |
+| Master | `suppliers`, `gudangs`, `bahan`, `kategoribahan`, `tipe_pembebanans` |
+| Multi-gudang | `stok_gudangs`, `pembagian_gudangs`, `pengaturan_bahan_gudangs`, `mutasi_stoks`, `transfer_gudangs`, `detail_transfer_gudangs`, `alokasi_transfer_gudangs`, `pemeriksaan_considers`, `detail_pemeriksaan_considers` |
 | Request | `requests`, `request_details` |
 | Purchase | `pembelians`, `pembelian_details`, purchase history tables |
 | Receipt | `lpbs`, `lpbdetails` |

@@ -20,10 +20,11 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\WmsAccountingService;
 use App\Models\InventoryLayer;
 use App\Services\DocumentNumberService;
+use App\Services\StokGudangService;
 
 class LpbController extends Controller
 {
-    public function __construct(private WmsAccountingService $accounting, private DocumentNumberService $numbers) {}
+    public function __construct(private WmsAccountingService $accounting, private DocumentNumberService $numbers, private StokGudangService $stokGudang) {}
     public function index(Request $request)
     {
         $this->authorize('viewAny', Lpb::class);
@@ -31,6 +32,7 @@ class LpbController extends Controller
         if ($request->ajax()) {
             $query = Lpb::with([
                 'pembelian.supplier',
+                'gudang',
                 'user',
                 'details.bahan',
                 'details.kategori',
@@ -41,11 +43,11 @@ class LpbController extends Controller
 
             $receiptType = strtoupper((string) $request->input('jenis_lpb', ''));
             if (in_array($receiptType, ['3', 'SERVICE_BAP'], true)) {
-                $query->where(fn ($builder) => $builder
+                $query->where(fn($builder) => $builder
                     ->where('jenis_lpb', 3)
                     ->orWhere('document_type', 'SERVICE_BAP'));
             } elseif (in_array($receiptType, ['1', 'GOODS'], true)) {
-                $query->where(fn ($builder) => $builder
+                $query->where(fn($builder) => $builder
                     ->where('jenis_lpb', 1)
                     ->orWhere('document_type', 'GOODS')
                     ->orWhereNull('document_type'));
@@ -62,15 +64,19 @@ class LpbController extends Controller
                         $user->where('name', 'like', "%{$keyword}%");
                     });
                 })
+                ->filterColumn('gudang_nama', function ($query, $keyword) {
+                    $query->whereHas('gudang', fn($gudang) => $gudang->where('nama', 'like', "%{$keyword}%"));
+                })
                 ->addIndexColumn()
                 ->addColumn('supplier_nama', function ($row) {
                     return $row->pembelian->supplier->nama ?? '-';
                 })
+                ->addColumn('gudang_nama', fn($row) => $row->gudang->nama ?? '-')
                 ->addColumn('user_nama', function ($row) {
                     return $row->user->name ?? 'User #' . $row->id_user;
                 })
-                ->addColumn('jenis_lpb_label', fn ($row) =>
-                    $row->document_type === 'SERVICE_BAP' ? 'BAP Jasa' : 'LPB Barang')
+                ->addColumn('jenis_lpb_label', fn($row) =>
+                $row->document_type === 'SERVICE_BAP' ? 'BAP Jasa' : 'LPB Barang')
                 ->addColumn('can_update', function ($row) use ($request) {
                     return $request->user()->can('update', $row);
                 })
@@ -98,7 +104,7 @@ class LpbController extends Controller
                         'katnama' => $detail->kategori->katnama,
                     ] : null,
                 ]));
-                $table->editColumn('service_details', fn ($row) => $row->serviceDetails->map(fn ($detail) => [
+                $table->editColumn('service_details', fn($row) => $row->serviceDetails->map(fn($detail) => [
                     'id' => $detail->id,
                     'progress_percent' => $detail->progress_percent,
                     'department_cost_center' => $detail->department_cost_center,
@@ -116,7 +122,7 @@ class LpbController extends Controller
                         'id' => $detail->kategori->id,
                         'katnama' => $detail->kategori->katnama,
                     ] : null,
-                    'allocations' => $detail->allocations->map(fn ($allocation) => [
+                    'allocations' => $detail->allocations->map(fn($allocation) => [
                         'datapesanan_code' => $allocation->datapesanan_code,
                         'percentage' => $allocation->percentage,
                     ])->values(),
@@ -136,15 +142,15 @@ class LpbController extends Controller
 
         $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
         $search = trim((string) $request->input('search', ''));
-        $query = Lpb::with(['pembelian.supplier', 'user'])->latest('tanggal');
+        $query = Lpb::with(['pembelian.supplier', 'gudang', 'user'])->latest('tanggal');
 
         $receiptType = strtoupper((string) $request->input('jenis_lpb', ''));
         if (in_array($receiptType, ['3', 'SERVICE_BAP'], true)) {
-            $query->where(fn ($builder) => $builder
+            $query->where(fn($builder) => $builder
                 ->where('jenis_lpb', 3)
                 ->orWhere('document_type', 'SERVICE_BAP'));
         } elseif (in_array($receiptType, ['1', 'GOODS'], true)) {
-            $query->where(fn ($builder) => $builder
+            $query->where(fn($builder) => $builder
                 ->where('jenis_lpb', 1)
                 ->orWhere('document_type', 'GOODS')
                 ->orWhereNull('document_type'));
@@ -167,6 +173,9 @@ class LpbController extends Controller
         if ($filters->has('supplier_nama')) {
             $query->whereHas('pembelian.supplier', fn($supplier) => $supplier->where('nama', 'like', "%{$filters['supplier_nama']}%"));
         }
+        if ($filters->has('gudang_nama')) {
+            $query->whereHas('gudang', fn($gudang) => $gudang->where('nama', 'like', "%{$filters['gudang_nama']}%"));
+        }
         if ($filters->has('user_nama')) {
             $query->whereHas('user', fn($user) => $user->where('name', 'like', "%{$filters['user_nama']}%"));
         }
@@ -177,6 +186,7 @@ class LpbController extends Controller
             'tanggal' => $row->tanggal,
             'no_po' => $row->no_po,
             'supplier_nama' => $row->pembelian->supplier->nama ?? '-',
+            'gudang_nama' => $row->gudang->nama ?? '-',
             'no_sj' => $row->no_sj ?: '-',
             'user_nama' => $row->user->name ?? "User #{$row->id_user}",
         ]);
@@ -189,6 +199,7 @@ class LpbController extends Controller
                 ['key' => 'tanggal', 'label' => 'Tanggal', 'align' => 'left'],
                 ['key' => 'no_po', 'label' => 'No PO', 'align' => 'left'],
                 ['key' => 'supplier_nama', 'label' => 'Supplier', 'align' => 'left'],
+                ['key' => 'gudang_nama', 'label' => 'Gudang', 'align' => 'left'],
                 ['key' => 'no_sj', 'label' => 'No SJ', 'align' => 'left'],
                 ['key' => 'user_nama', 'label' => 'Petugas', 'align' => 'left'],
             ],
@@ -216,7 +227,7 @@ class LpbController extends Controller
     public function getPoDetail($no_po)
     {
         $this->authorize('create', Lpb::class);
-        $po = Pembelian::where('no_po', $no_po)->with(['supplier', 'details.bahan'])->firstOrFail();
+        $po = Pembelian::where('no_po', $no_po)->with(['supplier', 'gudang', 'details.bahan'])->firstOrFail();
 
         $items = $po->details->map(function ($detail) {
             $selisih = $detail->jumlah - $detail->diterima;
@@ -236,6 +247,7 @@ class LpbController extends Controller
             'po'      => [
                 'no_po' => $po->no_po,
                 'supplier' => ['nama' => $po->supplier->nama ?? '-'],
+                'gudang' => ['id' => $po->gudang_id, 'nama' => $po->gudang->nama ?? '-'],
             ],
             'items'   => $items
         ]);
@@ -279,6 +291,7 @@ class LpbController extends Controller
                 'id_lpb'      => $idLpb,
                 'tanggal'     => $validated['tanggal'],
                 'no_po'       => $validated['no_po'],
+                'gudang_id'   => $po->gudang_id,
                 'no_sj'       => $validated['no_sj'],
                 'id_user'     => $user->id,
                 'flag'        => 0,
@@ -297,8 +310,10 @@ class LpbController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
                 $lockedRemaining = (float) $poDetail->jumlah - (float) $poDetail->diterima;
-                if ((float) $item['jumlah_barang_diterima'] > $lockedRemaining
-                    && empty($validated['confirm_over_receive'])) {
+                if (
+                    (float) $item['jumlah_barang_diterima'] > $lockedRemaining
+                    && empty($validated['confirm_over_receive'])
+                ) {
                     abort(422, 'Jumlah penerimaan berubah atau melebihi sisa PO. Periksa kembali lalu konfirmasi over-receive.');
                 }
                 $bahan = Bahan::findOrFail($item['id_bahan']);
@@ -320,7 +335,7 @@ class LpbController extends Controller
                 ]);
                 InventoryLayer::create([
                     'bahan_id' => $item['id_bahan'],
-                    'gudang_id' => $bahan->tipe_gudang,
+                    'gudang_id' => $po->gudang_id,
                     'source_type' => 'LPB_DETAIL',
                     'source_id' => $lpbDetail->id,
                     'transaction_date' => $lpb->tanggal,
@@ -329,7 +344,7 @@ class LpbController extends Controller
                     'unit_cost' => $unitPrice,
                 ]);
 
-                Bahan::where('id', $item['id_bahan'])->increment('stok_onhand', $item['jumlah_barang_diterima']);
+                $this->stokGudang->masuk((int) $po->gudang_id, (int) $item['id_bahan'], (float) $item['jumlah_barang_diterima'], $unitPrice, 'PENERIMAAN', 'LPB', $lpb->id, $lpb->id_lpb);
 
                 if ($poDetail) {
                     $poDetail->increment('diterima', $item['jumlah_barang_diterima']);
@@ -339,6 +354,7 @@ class LpbController extends Controller
 
                     if ($potongOnPurchase > 0) {
                         Bahan::where('id', $item['id_bahan'])->decrement('stok_onpurchase', $potongOnPurchase);
+                        $this->stokGudang->kurangiPesanan((int) $po->gudang_id, (int) $item['id_bahan'], (float) $potongOnPurchase);
                     }
                 }
             }

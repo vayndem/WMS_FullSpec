@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Npk;
 use App\Models\Bahan;
-use App\Models\AdminNamagudang;
+use App\Models\Gudang;
 use App\Models\Jurnal;
 use App\Http\Requests\StoreNpkRequest;
 use App\Http\Requests\UpdateNpkRequest;
@@ -14,10 +14,11 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\WmsAccountingService;
 use App\Services\AccountingPeriodService;
 use App\Services\DocumentNumberService;
+use App\Services\StokGudangService;
 
 class NpkController extends Controller
 {
-    public function __construct(private WmsAccountingService $accounting, private AccountingPeriodService $periods, private DocumentNumberService $numbers) {}
+    public function __construct(private WmsAccountingService $accounting, private AccountingPeriodService $periods, private DocumentNumberService $numbers, private StokGudangService $stokGudang) {}
     public function index(Request $request)
     {
         $this->authorize('viewAny', Npk::class);
@@ -69,8 +70,8 @@ class NpkController extends Controller
                 ->make(true);
         }
 
-        $bahans = Bahan::with('kategoriBahan')->orderBy('nama', 'asc')->get();
-        $gudangs = AdminNamagudang::orderBy('nama', 'asc')->get();
+        $bahans = Bahan::with(['kategoriBahan', 'stokGudangs'])->orderBy('nama', 'asc')->get();
+        $gudangs = Gudang::where('aktif', true)->where('boleh_npk', true)->where('jenis', Gudang::NORMAL)->orderBy('nama')->get();
 
         return view('npk.index', compact('bahans', 'gudangs', 'financial'));
     }
@@ -149,8 +150,8 @@ class NpkController extends Controller
     {
         $this->authorize('create', Npk::class);
 
-        $bahans = Bahan::orderBy('nama', 'asc')->get();
-        $gudangs = AdminNamagudang::orderBy('nama', 'asc')->get();
+        $bahans = Bahan::with('stokGudangs')->orderBy('nama', 'asc')->get();
+        $gudangs = Gudang::where('aktif', true)->where('boleh_npk', true)->where('jenis', Gudang::NORMAL)->orderBy('nama')->get();
         $documentNumber = $this->numbers->external('NPK');
 
         return view('npk.create', compact('bahans', 'gudangs', 'documentNumber'));
@@ -176,11 +177,9 @@ class NpkController extends Controller
             $npk = Npk::create($validated);
 
             if ($isKeluar) {
-                if ((float) $bahan->stok_onhand < (float) $npk->jumlah_stok) {
-                    throw new \RuntimeException('Stok on hand tidak mencukupi.');
-                }
+                $this->stokGudang->saldo((int) $npk->id_gudang_asal, (int) $npk->id_barang);
                 $this->accounting->consumeStock($npk);
-                $bahan->decrement('stok_onhand', $npk->jumlah_stok);
+                $this->stokGudang->keluar((int) $npk->id_gudang_asal, (int) $npk->id_barang, (float) $npk->jumlah_stok, (float) $npk->harga_satuan, 'PENGELUARAN', 'NPK', $npk->id, $npk->kode);
                 $this->accounting->postNpk($npk->fresh());
             }
 
@@ -224,8 +223,8 @@ class NpkController extends Controller
             );
         }
 
-        $bahans = Bahan::orderBy('nama', 'asc')->get();
-        $gudangs = AdminNamagudang::orderBy('nama', 'asc')->get();
+        $bahans = Bahan::with('stokGudangs')->orderBy('nama', 'asc')->get();
+        $gudangs = Gudang::where('aktif', true)->where('boleh_npk', true)->where('jenis', Gudang::NORMAL)->orderBy('nama')->get();
 
         return view('npk.edit', compact('npk', 'bahans', 'gudangs'));
     }
@@ -252,11 +251,9 @@ class NpkController extends Controller
             $npk->update($validated);
 
             if ($willClose) {
-                if ((float) $bahan->stok_onhand < (float) $npk->jumlah_stok) {
-                    throw new \RuntimeException('Stok on hand tidak mencukupi.');
-                }
+                $this->stokGudang->saldo((int) $npk->id_gudang_asal, (int) $npk->id_barang);
                 $this->accounting->consumeStock($npk);
-                $bahan->decrement('stok_onhand', $npk->jumlah_stok);
+                $this->stokGudang->keluar((int) $npk->id_gudang_asal, (int) $npk->id_barang, (float) $npk->jumlah_stok, (float) $npk->harga_satuan, 'PENGELUARAN', 'NPK', $npk->id, $npk->kode);
                 $this->accounting->postNpk($npk->fresh());
             }
         });

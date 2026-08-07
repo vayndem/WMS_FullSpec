@@ -5,7 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ApproveStockOpnameRequest;
 use App\Http\Requests\StoreStockOpnameRequest;
 use App\Http\Requests\UpdateStockOpnameRequest;
-use App\Models\AdminNamagudang;
+use App\Models\Gudang;
+use App\Models\StokGudang;
 use App\Models\Bahan;
 use App\Models\StockOpname;
 use App\Services\StockOpnameService;
@@ -252,12 +253,13 @@ class StockOpnameController extends Controller
     {
         $opname->details()->delete();
         foreach ($items as $item) {
-            $bahan = Bahan::whereKey($item['bahan_id'])->where('tipe_gudang', $opname->warehouse_id)->firstOrFail();
+            $bahan = Bahan::whereKey($item['bahan_id'])->firstOrFail();
+            $saldo = StokGudang::where('gudang_id', $opname->warehouse_id)->where('bahan_id', $bahan->id)->firstOrFail();
             $opname->details()->create([
                 'bahan_id' => $bahan->id,
-                'system_quantity' => $bahan->stok_onhand,
+                'system_quantity' => $saldo->stok_tersedia,
                 'physical_quantity' => $item['physical_quantity'],
-                'difference_quantity' => (float) $item['physical_quantity'] - (float) $bahan->stok_onhand,
+                'difference_quantity' => (float) $item['physical_quantity'] - (float) $saldo->stok_tersedia,
                 'physical_confirmed_by' => null,
                 'physical_confirmed_at' => null,
                 'valuation_confirmed_by' => null,
@@ -278,8 +280,8 @@ class StockOpnameController extends Controller
     private function formData(): array
     {
         return [
-            'warehouses' => AdminNamagudang::orderBy('nama')->get(),
-            'materials' => Bahan::with('tipeBarang')->orderBy('nama')->get(),
+            'warehouses' => Gudang::where('aktif', true)->where('boleh_opname', true)->orderBy('nama')->get(),
+            'stocks' => StokGudang::with('bahan.tipeBarang')->where('stok_tersedia', '>', 0)->orderBy('gudang_id')->orderBy('bahan_id')->get(),
         ];
     }
 }

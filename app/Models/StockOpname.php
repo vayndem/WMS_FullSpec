@@ -45,6 +45,6 @@ class StockOpname extends Model
 
     public function warehouse()
     {
-        return $this->belongsTo(AdminNamagudang::class, 'warehouse_id');
+        return $this->belongsTo(Gudang::class, 'warehouse_id');
     }
 }

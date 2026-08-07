@@ -41,6 +41,7 @@ class UpdatePembelianRequest extends FormRequest
         return [
             'tanggal'                     => 'required|date',
             'supplier_id'                 => 'required|exists:suppliers,id',
+            'gudang_id'                   => 'required|exists:gudangs,id',
             'no_order'                    => 'nullable|string|max:250',
             'untuk_perhatian'             => 'nullable|string|max:250',
             'term'                        => 'nullable|string|max:250',

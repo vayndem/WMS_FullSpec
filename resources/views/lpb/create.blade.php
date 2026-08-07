@@ -13,86 +13,95 @@
                 <input type="hidden" name="confirm_over_receive" id="confirm_over_receive" value="0">
                 <div class="modal-body">
                     <div class="create-section">
-                    <div class="create-section__title"><i class="fa-solid fa-truck-ramp-box"></i>Dokumen Penerimaan</div>
-                    <div class="row mb-3">
-                        <div class="col-md-4 mb-3">
-                            <label class="fw-bold">Nomor LPB</label>
-                            <input type="text" class="form-control bg-white" name="id_lpb"
-                                value="{{ $documentNumber }}" readonly>
+                        <div class="create-section__title"><i class="fa-solid fa-truck-ramp-box"></i>Dokumen Penerimaan
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="fw-bold">Nomor PO <span class="text-danger">*</span></label>
-                            <select class="form-select" name="no_po" id="modal_select_no_po" required data-app-picker
-                                data-placeholder="Cari nomor PO atau supplier...">
-                                <option value="">-- Pilih / Cari PO --</option>
-                                @foreach ($pos as $po)
-                                    <option value="{{ $po->no_po }}"
-                                        data-subtitle="{{ $po->supplier->nama ?? 'Supplier tidak tersedia' }}"
-                                        data-meta="{{ $po->tanggal ?? '-' }} · {{ $po->details->count() }} item"
-                                        data-badge="PO Barang">{{ $po->no_po }}</option>
-                                @endforeach
-                            </select>
+                        <div class="row mb-3">
+                            <div class="col-md-4 mb-3">
+                                <label class="fw-bold">Nomor LPB</label>
+                                <input type="text" class="form-control bg-white" name="id_lpb"
+                                    value="{{ $documentNumber }}" readonly>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="fw-bold">Nomor PO <span class="text-danger">*</span></label>
+                                <select class="form-select" name="no_po" id="modal_select_no_po" required
+                                    data-app-picker data-placeholder="Cari nomor PO atau supplier...">
+                                    <option value="">-- Pilih / Cari PO --</option>
+                                    @foreach ($pos as $po)
+                                        <option value="{{ $po->no_po }}"
+                                            data-subtitle="{{ $po->supplier->nama ?? 'Supplier tidak tersedia' }}"
+                                            data-meta="{{ $po->tanggal ?? '-' }} · {{ $po->details->count() }} item"
+                                            data-badge="PO Barang">{{ $po->no_po }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="fw-bold">Tanggal Terima <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" name="tanggal" value="{{ date('Y-m-d') }}"
+                                    required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="fw-bold">No. Surat Jalan <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="no_sj"
+                                    placeholder="Masukkan No. SJ..." required>
+                            </div>
+                            <div class="col-md-4 mb-3 mb-0">
+                                <label class="fw-bold">No. Invoice</label>
+                                <input type="text" class="form-control" name="no_invoice"
+                                    placeholder="Opsi Tambahan...">
+                            </div>
+                            <div class="col-md-4 mb-3 mb-0">
+                                <label class="fw-bold">Jenis LPB</label>
+                                <select class="form-control" name="jenis_lpb">
+                                    <option value="1">Reguler</option>
+                                    <option value="2">Pengganti / Retur</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3 mb-0">
+                                <label class="fw-bold">Supplier</label>
+                                <input type="text" class="form-control bg-light" id="modal_supplier_nama" readonly
+                                    placeholder="Terisi dari PO">
+                            </div>
+                            <div class="col-md-4 mb-3 mb-0">
+                                <label class="fw-bold">Gudang Tujuan PO</label>
+                                <input type="text" class="form-control bg-light" id="modal_gudang_nama" readonly
+                                    placeholder="Terisi dari PO">
+                            </div>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="fw-bold">Tanggal Terima <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control" name="tanggal" value="{{ date('Y-m-d') }}"
-                                required>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="fw-bold">No. Surat Jalan <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="no_sj" placeholder="Masukkan No. SJ..."
-                                required>
-                        </div>
-                        <div class="col-md-4 mb-3 mb-0">
-                            <label class="fw-bold">No. Invoice</label>
-                            <input type="text" class="form-control" name="no_invoice" placeholder="Opsi Tambahan...">
-                        </div>
-                        <div class="col-md-4 mb-3 mb-0">
-                            <label class="fw-bold">Jenis LPB</label>
-                            <select class="form-control" name="jenis_lpb">
-                                <option value="1">Reguler</option>
-                                <option value="2">Pengganti / Retur</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4 mb-3 mb-0">
-                            <label class="fw-bold">Supplier</label>
-                            <input type="text" class="form-control bg-light" id="modal_supplier_nama" readonly
-                                placeholder="Terisi dari PO">
-                        </div>
-                    </div>
 
                     </div>
                     <div class="create-section">
-                    <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-list-check me-2 text-primary"></i>Rincian
-                        Item Diterima</h6>
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-sm mb-0" id="modal-table-items">
-                            <thead class="bg-light text-uppercase font-size-12">
-                                <tr>
-                                    <th width="4%" class="text-center">#</th>
-                                    <th>Nama Bahan</th>
-                                    <th width="18%">Kategori Barang <span class="text-danger">*</span></th>
-                                    <th width="10%" class="text-center">Qty PO</th>
-                                    <th width="10%" class="text-center">Diterima</th>
-                                    <th width="10%" class="text-center">Sisa</th>
-                                    <th width="14%" class="text-center">Terima Fisik <span
-                                            class="text-danger">*</span></th>
-                                    <th width="14%">Lot Number</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td colspan="8" class="text-center text-muted py-3">Pilih Nomor PO terlebih
-                                        dahulu.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                        <h6 class="fw-bold text-dark mb-3"><i
+                                class="fa-solid fa-list-check me-2 text-primary"></i>Rincian
+                            Item Diterima</h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm mb-0" id="modal-table-items">
+                                <thead class="bg-light text-uppercase font-size-12">
+                                    <tr>
+                                        <th width="4%" class="text-center">#</th>
+                                        <th>Nama Bahan</th>
+                                        <th width="18%">Kategori Barang <span class="text-danger">*</span></th>
+                                        <th width="10%" class="text-center">Qty PO</th>
+                                        <th width="10%" class="text-center">Diterima</th>
+                                        <th width="10%" class="text-center">Sisa</th>
+                                        <th width="14%" class="text-center">Terima Fisik <span
+                                                class="text-danger">*</span></th>
+                                        <th width="14%">Lot Number</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="8" class="text-center text-muted py-3">Pilih Nomor PO terlebih
+                                            dahulu.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary fw-bold"><i class="fa-solid fa-floppy-disk me-1"></i>
+                    <button type="submit" class="btn btn-primary fw-bold"><i
+                            class="fa-solid fa-floppy-disk me-1"></i>
                         Simpan LPB</button>
                 </div>
             </form>
@@ -111,6 +120,7 @@
                     '<tr><td colspan="8" class="text-center text-muted py-3">Pilih Nomor PO terlebih dahulu.</td></tr>'
                 );
                 $('#modal_supplier_nama').val('');
+                $('#modal_gudang_nama').val('');
                 return;
             }
 
@@ -122,6 +132,8 @@
                     if (res.success) {
                         $('#modal_supplier_nama').val(res.po.supplier ? res.po.supplier
                             .nama : '-');
+                        $('#modal_gudang_nama').val(res.po.gudang ? res.po.gudang.nama :
+                            '-');
 
                         let rows = '';
                         $.each(res.items, function(i, item) {

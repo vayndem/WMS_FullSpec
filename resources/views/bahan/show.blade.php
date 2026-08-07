@@ -54,6 +54,15 @@
                 @endforeach
             </div>
 
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3">Posisi per Gudang</h5>
+                    <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Gudang</th><th>Jenis</th><th class="text-end">Tersedia</th><th class="text-end">Reservasi</th><th class="text-end">Bebas</th><th class="text-end">Dipesan</th></tr></thead><tbody>
+                    @forelse($bahan->stokGudangs as $stok)<tr><td>{{ $stok->gudang->nama ?? '-' }}</td><td>{{ $stok->gudang->jenis ?? '-' }}</td><td class="text-end">{{ number_format((float)$stok->stok_tersedia,6,',','.') }}</td><td class="text-end">{{ number_format((float)$stok->stok_direservasi,6,',','.') }}</td><td class="text-end">{{ number_format((float)$stok->stok_bebas,6,',','.') }}</td><td class="text-end">{{ number_format((float)$stok->stok_dipesan,6,',','.') }}</td></tr>@empty<tr><td colspan="6" class="text-center text-muted">Belum memiliki saldo gudang.</td></tr>@endforelse
+                    </tbody></table></div>
+                </div>
+            </div>
+
             <div class="row g-3 mb-4">
                 <div class="col-12 col-lg-5">
                     <div class="card border-0 shadow-sm h-100">
@@ -125,6 +134,7 @@
                             <thead>
                                 <tr>
                                     <th>Tanggal</th>
+                                    <th>Gudang</th>
                                     <th>Sumber</th>
                                     <th>Referensi</th>
                                     <th class="text-end">Jumlah awal</th>
@@ -139,6 +149,7 @@
                                 @forelse($layers as $layer)
                                     <tr>
                                         <td>{{ $layer->transaction_date?->format('d-m-Y') }}</td>
+                                        <td>{{ $layer->gudang->nama ?? '-' }}</td>
                                         <td><span
                                                 class="badge bg-primary-subtle text-primary">{{ $layer->source_type }}</span>
                                         </td>
@@ -157,7 +168,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="{{ $financial ? 7 : 5 }}" class="text-center text-muted py-4">Belum
+                                        <td colspan="{{ $financial ? 8 : 6 }}" class="text-center text-muted py-4">Belum
                                             ada layer persediaan.</td>
                                     </tr>
                                 @endforelse

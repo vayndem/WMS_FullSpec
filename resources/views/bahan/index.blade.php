@@ -35,7 +35,7 @@
                             </select>
                         </div>
                         <div class="col-12 col-md-5">
-                            <label for="filter_gudang" class="form-label">Gudang utama bahan</label>
+                            <label for="filter_gudang" class="form-label">Posisi gudang</label>
                             <select id="filter_gudang" class="form-select">
                                 <option value="">Semua gudang</option>
                                 @foreach ($gudangs as $gudang)

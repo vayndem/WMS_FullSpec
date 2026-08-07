@@ -290,6 +290,24 @@
                     </li>
                 @endcan
 
+                @can('viewAny', App\Models\Gudang::class)
+                    <li class="{{ request()->routeIs('gudangs.*','stok-gudangs.*','pembagian-gudangs.*','pengaturan-bahan-gudangs.*','transfer-gudangs.*','pemeriksaan-considers.*','mutasi-stoks.*','rekonsiliasi-gudangs.*') ? 'active' : '' }}">
+                        <a href="#multi-gudang" class="collapsed svg-icon" data-bs-toggle="collapse">
+                            <i class="fa-solid fa-warehouse"></i><span class="ms-2">Multi Gudang</span>
+                        </a>
+                        <ul id="multi-gudang" class="submenu collapse {{ request()->routeIs('gudangs.*','stok-gudangs.*','pembagian-gudangs.*','pengaturan-bahan-gudangs.*','transfer-gudangs.*','pemeriksaan-considers.*','mutasi-stoks.*','rekonsiliasi-gudangs.*') ? 'show' : '' }}" data-bs-parent="#mm-sidebar-toggle">
+                            <li><a href="{{ route('gudangs.index') }}"><span>Master Gudang</span></a></li>
+                            <li><a href="{{ route('stok-gudangs.index') }}"><span>Saldo & Kartu Stok</span></a></li>
+                            <li><a href="{{ route('transfer-gudangs.index') }}"><span>Transfer Gudang</span></a></li>
+                            <li><a href="{{ route('pemeriksaan-considers.index') }}"><span>Pemeriksaan Consider</span></a></li>
+                            <li><a href="{{ route('mutasi-stoks.index') }}"><span>Mutasi Stok</span></a></li>
+                            <li><a href="{{ route('rekonsiliasi-gudangs.index') }}"><span>Rekonsiliasi</span></a></li>
+                            <li><a href="{{ route('pengaturan-bahan-gudangs.index') }}"><span>Planning Gudang</span></a></li>
+                            <li><a href="{{ route('pembagian-gudangs.index') }}"><span>Pembagian Gudang</span></a></li>
+                        </ul>
+                    </li>
+                @endcan
+
                 @can('viewAny', App\Models\StockOpname::class)
                     <li class="{{ request()->routeIs('stock-opname.*') ? 'active' : '' }}">
                         <a href="{{ route('stock-opname.index') }}" class="svg-icon">
