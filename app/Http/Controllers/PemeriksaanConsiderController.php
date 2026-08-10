@@ -1,16 +1,79 @@
 <?php
+
 namespace App\Http\Controllers;
-use App\Http\Requests\StorePemeriksaanConsiderRequest; use App\Http\Requests\UpdatePemeriksaanConsiderRequest; use App\Models\Bahan; use App\Models\Gudang; use App\Models\PemeriksaanConsider; use App\Services\DocumentNumberService; use App\Services\PemeriksaanConsiderService; use Illuminate\Support\Facades\Auth; use Illuminate\Support\Facades\DB;
+
+use App\Http\Requests\StorePemeriksaanConsiderRequest;
+use App\Http\Requests\UpdatePemeriksaanConsiderRequest;
+use App\Models\Bahan;
+use App\Models\Gudang;
+use App\Models\PemeriksaanConsider;
+use App\Services\DocumentNumberService;
+use App\Services\PemeriksaanConsiderService;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
 class PemeriksaanConsiderController extends Controller
 {
-    public function __construct(private DocumentNumberService $numbers,private PemeriksaanConsiderService $service){}
-    public function index(){ $this->authorize('viewAny',PemeriksaanConsider::class);return view('pemeriksaan_considers.index',['rows'=>PemeriksaanConsider::with(['gudangConsider','gudangBaik','gudangRusak'])->latest('tanggal')->paginate(50)]);}
-    public function create(){ $this->authorize('create',PemeriksaanConsider::class);return view('pemeriksaan_considers.form',$this->formData()+['pemeriksaan'=>new PemeriksaanConsider(['nomor_pemeriksaan'=>$this->numbers->internal('CNS','QC'),'tanggal'=>today()])]);}
-    public function store(StorePemeriksaanConsiderRequest $r){$m=DB::transaction(function()use($r){$d=$r->validated();$details=$d['details'];unset($d['details']);$d+=['status'=>PemeriksaanConsider::DRAFT,'dibuat_oleh'=>Auth::id()];$m=PemeriksaanConsider::create($d);$m->details()->createMany($details);return$m;});return redirect()->route('pemeriksaan-considers.show',$m)->with('success','Draft pemeriksaan dibuat.');}
-    public function show(PemeriksaanConsider $pemeriksaanConsider){$this->authorize('view',$pemeriksaanConsider);return view('pemeriksaan_considers.show',['pemeriksaan'=>$pemeriksaanConsider->load(['gudangConsider','gudangBaik','gudangRusak','details.bahan'])]);}
-    public function edit(PemeriksaanConsider $pemeriksaanConsider){$this->authorize('update',$pemeriksaanConsider);return view('pemeriksaan_considers.form',$this->formData()+['pemeriksaan'=>$pemeriksaanConsider->load('details')]);}
-    public function update(UpdatePemeriksaanConsiderRequest $r,PemeriksaanConsider $pemeriksaanConsider){DB::transaction(function()use($r,$pemeriksaanConsider){$d=$r->validated();$details=$d['details'];unset($d['details']);$pemeriksaanConsider->update($d);$pemeriksaanConsider->details()->delete();$pemeriksaanConsider->details()->createMany($details);});return redirect()->route('pemeriksaan-considers.show',$pemeriksaanConsider)->with('success','Pemeriksaan diperbarui.');}
-    public function destroy(PemeriksaanConsider $pemeriksaanConsider){$this->authorize('delete',$pemeriksaanConsider);$pemeriksaanConsider->delete();return redirect()->route('pemeriksaan-considers.index')->with('success','Draft pemeriksaan dihapus.');}
-    public function confirm(PemeriksaanConsider $pemeriksaanConsider){$this->authorize('confirm',$pemeriksaanConsider);$this->service->konfirmasi($pemeriksaanConsider);return back()->with('success','Pemeriksaan dikonfirmasi. Keputusan rusak bersifat final.');}
-    private function formData():array{return['consider'=>Gudang::where('jenis',Gudang::CONSIDER)->where('aktif',true)->get(),'normal'=>Gudang::where('jenis',Gudang::NORMAL)->where('aktif',true)->get(),'rusak'=>Gudang::where('jenis',Gudang::RUSAK)->where('aktif',true)->get(),'bahans'=>Bahan::orderBy('nama')->get()];}
+    public function __construct(private DocumentNumberService $numbers, private PemeriksaanConsiderService $service) {}
+    public function index()
+    {
+        $this->authorize('viewAny', PemeriksaanConsider::class);
+        return view('pemeriksaan_considers.index', ['rows' => PemeriksaanConsider::with(['gudangConsider', 'gudangBaik', 'gudangRusak'])->latest('tanggal')->paginate(50)]);
+    }
+    public function create()
+    {
+        $this->authorize('create', PemeriksaanConsider::class);
+        return view('pemeriksaan_considers.form', $this->formData() + ['pemeriksaan' => new PemeriksaanConsider(['nomor_pemeriksaan' => $this->numbers->internal('CNS', 'QC'), 'tanggal' => today()])]);
+    }
+    public function store(StorePemeriksaanConsiderRequest $r)
+    {
+        $m = DB::transaction(function () use ($r) {
+            $d = $r->validated();
+            $details = $d['details'];
+            unset($d['details']);
+            $d += ['status' => PemeriksaanConsider::DRAFT, 'dibuat_oleh' => Auth::id()];
+            $m = PemeriksaanConsider::create($d);
+            $m->details()->createMany($details);
+            return $m;
+        });
+        return redirect()->route('pemeriksaan-considers.show', $m)->with('success', 'Draft pemeriksaan dibuat.');
+    }
+    public function show(PemeriksaanConsider $pemeriksaanConsider)
+    {
+        $this->authorize('view', $pemeriksaanConsider);
+        return view('pemeriksaan_considers.show', ['pemeriksaan' => $pemeriksaanConsider->load(['gudangConsider', 'gudangBaik', 'gudangRusak', 'details.bahan'])]);
+    }
+    public function edit(PemeriksaanConsider $pemeriksaanConsider)
+    {
+        $this->authorize('update', $pemeriksaanConsider);
+        return view('pemeriksaan_considers.form', $this->formData() + ['pemeriksaan' => $pemeriksaanConsider->load('details')]);
+    }
+    public function update(UpdatePemeriksaanConsiderRequest $r, PemeriksaanConsider $pemeriksaanConsider)
+    {
+        DB::transaction(function () use ($r, $pemeriksaanConsider) {
+            $d = $r->validated();
+            $details = $d['details'];
+            unset($d['details']);
+            $pemeriksaanConsider->update($d);
+            $pemeriksaanConsider->details()->delete();
+            $pemeriksaanConsider->details()->createMany($details);
+        });
+        return redirect()->route('pemeriksaan-considers.show', $pemeriksaanConsider)->with('success', 'Pemeriksaan diperbarui.');
+    }
+    public function destroy(PemeriksaanConsider $pemeriksaanConsider)
+    {
+        $this->authorize('delete', $pemeriksaanConsider);
+        $pemeriksaanConsider->delete();
+        return redirect()->route('pemeriksaan-considers.index')->with('success', 'Draft pemeriksaan dihapus.');
+    }
+    public function confirm(PemeriksaanConsider $pemeriksaanConsider)
+    {
+        $this->authorize('confirm', $pemeriksaanConsider);
+        $this->service->konfirmasi($pemeriksaanConsider);
+        return back()->with('success', 'Pemeriksaan dikonfirmasi. Keputusan rusak bersifat final.');
+    }
+    private function formData(): array
+    {
+        return ['consider' => Gudang::where('jenis', Gudang::CONSIDER)->where('aktif', true)->get(), 'normal' => Gudang::where('jenis', Gudang::NORMAL)->where('aktif', true)->get(), 'rusak' => Gudang::where('jenis', Gudang::RUSAK)->where('aktif', true)->get(), 'bahans' => Bahan::orderBy('nama')->get()];
+    }
 }

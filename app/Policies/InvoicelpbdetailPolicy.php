@@ -3,34 +3,32 @@
 namespace App\Policies;
 
 use App\Models\User;
-use App\Models\invoicelpbdetail;
-use Illuminate\Auth\Access\Response;
+use App\Models\Invoicelpbdetail;
 
 class InvoicelpbdetailPolicy
 {
-
     public function viewAny(User $user): bool
     {
-        return in_array((int) $user->type, [5, 13]);
+        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_FINANCE]);
     }
 
-    public function view(User $user, invoicelpbdetail $invoice): bool
+    public function view(User $user, Invoicelpbdetail $invoice): bool
     {
-        return in_array((int) $user->type, [5, 13]);
+        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_FINANCE]);
     }
 
     public function create(User $user): bool
     {
-        return (int) $user->type === 5;
+        return $user->isPurchasing();
     }
 
-    public function update(User $user, invoicelpbdetail $invoice): bool
+    public function update(User $user, Invoicelpbdetail $invoice): bool
     {
-        return (int) $user->type === 13;
+        return $user->isFinance();
     }
 
-    public function delete(User $user, invoicelpbdetail $invoice): bool
+    public function delete(User $user, Invoicelpbdetail $invoice): bool
     {
-        return (int) $user->type === 13;
+        return $user->isFinance();
     }
 }

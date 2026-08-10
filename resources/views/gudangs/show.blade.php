@@ -3,8 +3,10 @@
     <div class="content-page">
         <div class="container-fluid">
             <div class="d-flex justify-content-between mb-4">
-                <h4>{{ $gudang->kode }} - {{ $gudang->nama }}</h4><a href="{{ route('gudangs.edit', $gudang) }}"
-                    class="btn btn-warning">Edit</a>
+                <h4>{{ $gudang->kode }} - {{ $gudang->nama }}</h4>
+                @can('update', $gudang)
+                    <a href="{{ route('gudangs.edit', $gudang) }}" class="btn btn-warning">Edit</a>
+                @endcan
             </div>@include('warehouse_partials.alerts')<div class="card card-body">
                 <dl class="row">
                     <dt class="col-md-3">Jenis</dt>

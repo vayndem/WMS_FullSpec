@@ -1,3 +1,44 @@
 <?php
-namespace App\Policies; use App\Models\PemeriksaanConsider; use App\Models\User;
-class PemeriksaanConsiderPolicy { private function ok(User $u):bool{return (int)$u->type===14;} public function viewAny(User $u):bool{return $this->ok($u);} public function view(User $u,PemeriksaanConsider $m):bool{return $this->ok($u);} public function create(User $u):bool{return $this->ok($u);} public function update(User $u,PemeriksaanConsider $m):bool{return $this->ok($u)&&$m->status===PemeriksaanConsider::DRAFT;} public function delete(User $u,PemeriksaanConsider $m):bool{return $this->update($u,$m);} public function confirm(User $u,PemeriksaanConsider $m):bool{return $this->update($u,$m);} }
+
+namespace App\Policies;
+
+use App\Models\PemeriksaanConsider;
+use App\Models\User;
+
+class PemeriksaanConsiderPolicy
+{
+    private function ok(User $user): bool
+    {
+        return $user->isWarehouse();
+    }
+
+    public function viewAny(User $user): bool
+    {
+        return $this->ok($user);
+    }
+
+    public function view(User $user, PemeriksaanConsider $model): bool
+    {
+        return $this->ok($user);
+    }
+
+    public function create(User $user): bool
+    {
+        return $this->ok($user);
+    }
+
+    public function update(User $user, PemeriksaanConsider $model): bool
+    {
+        return $this->ok($user) && $model->status === PemeriksaanConsider::DRAFT;
+    }
+
+    public function delete(User $user, PemeriksaanConsider $model): bool
+    {
+        return $this->update($user, $model);
+    }
+
+    public function confirm(User $user, PemeriksaanConsider $model): bool
+    {
+        return $this->update($user, $model);
+    }
+}

@@ -9,7 +9,17 @@ class TransferGudangPolicy
 {
     private function ok(User $u): bool
     {
-        return (int)$u->type === 14;
+        return $u->isWarehouseOperator();
+    }
+
+    private function canAccessTransfer(User $u, TransferGudang $m): bool
+    {
+        if (!$u->isProduction()) {
+            return true;
+        }
+
+        return $u->canAccessGudang((int) $m->gudang_asal_id, 'transfer')
+            || $u->canAccessGudang((int) $m->gudang_tujuan_id, 'transfer');
     }
     public function viewAny(User $u): bool
     {
@@ -17,7 +27,7 @@ class TransferGudangPolicy
     }
     public function view(User $u, TransferGudang $m): bool
     {
-        return $this->ok($u);
+        return $this->ok($u) && $this->canAccessTransfer($u, $m);
     }
     public function create(User $u): bool
     {
@@ -25,7 +35,7 @@ class TransferGudangPolicy
     }
     public function update(User $u, TransferGudang $m): bool
     {
-        return $this->ok($u) && $m->status === TransferGudang::DRAFT;
+        return $this->ok($u) && $this->canAccessTransfer($u, $m) && $m->status === TransferGudang::DRAFT;
     }
     public function delete(User $u, TransferGudang $m): bool
     {
@@ -37,6 +47,6 @@ class TransferGudangPolicy
     }
     public function confirm(User $u, TransferGudang $m): bool
     {
-        return $this->ok($u) && $m->status === TransferGudang::DIAJUKAN;
+        return $this->ok($u) && $this->canAccessTransfer($u, $m) && $m->status === TransferGudang::DIAJUKAN;
     }
 }

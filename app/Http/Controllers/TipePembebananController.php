@@ -35,12 +35,12 @@ class TipePembebananController extends Controller
     {
         $this->authorize('viewAny', TipePembebanan::class);
 
-        $filters = collect($request->input('filters', []))->filter(fn ($value) => $value !== '');
+        $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
         $search = trim((string) $request->input('search', ''));
         $query = TipePembebanan::query()->orderBy('nama_tipe');
 
         if ($search !== '') {
-            $query->where(fn ($q) => $q->where('nama_tipe', 'like', "%{$search}%")
+            $query->where(fn($q) => $q->where('nama_tipe', 'like', "%{$search}%")
                 ->orWhere('keterangan', 'like', "%{$search}%"));
         }
 
@@ -50,7 +50,7 @@ class TipePembebananController extends Controller
             }
         }
 
-        $rows = $query->limit(5000)->get()->map(fn ($row) => [
+        $rows = $query->limit(5000)->get()->map(fn($row) => [
             'nama_tipe' => $row->nama_tipe,
             'keterangan' => $row->keterangan ?: '-',
         ]);

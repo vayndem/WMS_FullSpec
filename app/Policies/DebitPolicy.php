@@ -9,26 +9,26 @@ class DebitPolicy
 {
     public function viewAny(User $user): bool
     {
-        return (int) $user->type === 33;
+        return $user->isAccounting();
     }
 
     public function view(User $user, Debit $debit): bool
     {
-        return (int) $user->type === 33;
+        return $user->isAccounting();
     }
 
     public function create(User $user): bool
     {
-        return (int) $user->type === 33;
+        return $user->isAccounting();
     }
 
     public function update(User $user, Debit $debit): bool
     {
-        return (int) $user->type === 33;
+        return $user->isAccounting();
     }
 
     public function delete(User $user, Debit $debit): bool
     {
-        return (int) $user->type === 33;
+        return $user->isAccounting();
     }
 }

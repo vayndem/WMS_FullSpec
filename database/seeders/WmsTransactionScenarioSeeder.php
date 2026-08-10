@@ -254,7 +254,7 @@ class WmsTransactionScenarioSeeder extends Seeder
                 'warehouse_id' => $warehouse->id,
                 'cutoff_at' => now(),
                 'status' => StockOpname::SUBMITTED,
-                'notes' => 'Opname demo menunggu approval type 33',
+                'notes' => 'Opname demo menunggu approval role Accounting',
                 'created_by' => 14,
                 'submitted_by' => 14,
                 'submitted_at' => now(),

@@ -9,6 +9,7 @@ use App\Models\Pembeliandetail;
 use App\Models\Bahan;
 use App\Models\Jurnal;
 use App\Models\KategoriBahan;
+use App\Models\User;
 use App\Http\Requests\StoreLpbRequest;
 use App\Http\Requests\UpdateLpbRequest;
 use App\Http\Requests\StoreLpbDetailRequest;
@@ -84,7 +85,7 @@ class LpbController extends Controller
                     return $request->user()->can('delete', $row);
                 });
 
-            if (!in_array((int) $request->user()->type, [5, 33], true)) {
+            if (!$request->user()->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING])) {
                 $table->editColumn('pembelian', fn($row) => [
                     'no_po' => $row->no_po,
                     'supplier' => ['nama' => $row->pembelian->supplier->nama ?? '-'],
@@ -132,7 +133,7 @@ class LpbController extends Controller
             return $table->make(true);
         }
 
-        $financial = in_array((int) $request->user()->type, [5, 33], true);
+        $financial = $request->user()->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING]);
         return view('lpb.index', compact('financial'));
     }
 
@@ -391,11 +392,11 @@ class LpbController extends Controller
         if (!$request->expectsJson() && !$request->ajax()) {
             return view('lpb.show-page', [
                 'lpb' => $lpbData,
-                'financial' => in_array((int) $request->user()->type, [5, 33], true),
+                'financial' => $request->user()->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING]),
             ]);
         }
 
-        if (!in_array((int) $request->user()->type, [5, 33], true)) {
+        if (!$request->user()->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING])) {
             $lpbData->details->each->makeHidden(['harga', 'nilai_awal']);
             $lpbData->serviceDetails->each->makeHidden(['amount']);
             $lpbData->unsetRelation('pembelian');

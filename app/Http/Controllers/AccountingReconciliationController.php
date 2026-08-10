@@ -64,18 +64,43 @@ class AccountingReconciliationController extends Controller
         }
 
         $checks = collect([
-            ['key' => 'stock', 'label' => 'Stok on hand vs layer', 'total' => (int) $stock->total_rows,
-                'invalid' => (int) $stock->invalid_rows, 'amount' => $financial ? (float) $stock->inventory_value : null],
-            ['key' => 'journal', 'label' => 'Keseimbangan jurnal', 'total' => (int) $journal->total_rows,
-                'invalid' => (int) $journal->invalid_rows, 'amount' => null],
-            ['key' => 'invoice', 'label' => 'Sisa tagihan invoice', 'total' => (int) $invoice->total_rows,
-                'invalid' => (int) $invoice->invalid_rows, 'amount' => $financial ? (float) $invoice->outstanding : null],
-            ['key' => 'grni', 'label' => 'LPB Barang belum ditagih vs saldo GRNI', 'total' => 1,
+            [
+                'key' => 'stock',
+                'label' => 'Stok on hand vs layer',
+                'total' => (int) $stock->total_rows,
+                'invalid' => (int) $stock->invalid_rows,
+                'amount' => $financial ? (float) $stock->inventory_value : null
+            ],
+            [
+                'key' => 'journal',
+                'label' => 'Keseimbangan jurnal',
+                'total' => (int) $journal->total_rows,
+                'invalid' => (int) $journal->invalid_rows,
+                'amount' => null
+            ],
+            [
+                'key' => 'invoice',
+                'label' => 'Sisa tagihan invoice',
+                'total' => (int) $invoice->total_rows,
+                'invalid' => (int) $invoice->invalid_rows,
+                'amount' => $financial ? (float) $invoice->outstanding : null
+            ],
+            [
+                'key' => 'grni',
+                'label' => 'LPB Barang belum ditagih vs saldo GRNI',
+                'total' => 1,
                 'invalid' => abs($grniExpected - $grniLedger) <= .01 ? 0 : 1,
-                'amount' => $financial ? $grniLedger : null, 'expected' => $financial ? $grniExpected : null],
-            ['key' => 'ap', 'label' => 'Invoice belum lunas vs hutang supplier', 'total' => 1,
+                'amount' => $financial ? $grniLedger : null,
+                'expected' => $financial ? $grniExpected : null
+            ],
+            [
+                'key' => 'ap',
+                'label' => 'Invoice belum lunas vs hutang supplier',
+                'total' => 1,
                 'invalid' => $apLedger !== null && abs((float) $invoice->outstanding - $apLedger) <= .01 ? 0 : 1,
-                'amount' => $financial ? $apLedger : null, 'expected' => $financial ? (float) $invoice->outstanding : null],
+                'amount' => $financial ? $apLedger : null,
+                'expected' => $financial ? (float) $invoice->outstanding : null
+            ],
         ]);
 
         return view('accounting_reconciliation.index', compact('checks', 'financial'));
@@ -92,7 +117,10 @@ class AccountingReconciliationController extends Controller
                 DB::table('inventory_layers')->select('bahan_id')
                     ->selectRaw('SUM(remaining_quantity) layer_quantity')
                     ->selectRaw('SUM(remaining_quantity * unit_cost) inventory_value')->groupBy('bahan_id'),
-                'layers', 'layers.bahan_id', '=', 'bahan.id'
+                'layers',
+                'layers.bahan_id',
+                '=',
+                'bahan.id'
             )->select('bahan.id', 'bahan.nama', 'bahan.stok_onhand')
                 ->selectRaw('COALESCE(layers.layer_quantity,0) layer_quantity')
                 ->selectRaw('COALESCE(bahan.stok_onhand,0)-COALESCE(layers.layer_quantity,0) difference')

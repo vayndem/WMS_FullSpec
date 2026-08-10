@@ -38,8 +38,12 @@
                                     <td class="text-end">{{ number_format($r->stok_direservasi, 6, ',', '.') }}</td>
                                     <td class="text-end">{{ number_format($r->stok_bebas, 6, ',', '.') }}</td>
                                     <td class="text-end">{{ number_format($r->stok_dipesan, 6, ',', '.') }}</td>
-                                    <td><a href="{{ route('stok-gudangs.show', $r) }}"
-                                            class="btn btn-sm btn-outline-primary">Kartu</a></td>
+                                    <td>
+                                        @can('view', $r)
+                                            <a href="{{ route('stok-gudangs.show', $r) }}"
+                                                class="btn btn-sm btn-outline-primary">Kartu</a>
+                                        @endcan
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>

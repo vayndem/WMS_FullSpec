@@ -42,7 +42,7 @@
                                         <option value="{{ $bahan->id }}" data-unit="{{ $bahan->satuan }}"
                                             data-small-unit="{{ $bahan->hasSmallUnit() ? $bahan->satuan_kecil : '' }}"
                                             data-factor="{{ $bahan->hasSmallUnit() ? $bahan->berat_kecil : 1 }}"
-                                            data-stocks='@json($bahan->stokGudangs->pluck("stok_tersedia", "gudang_id"))'
+                                            data-stocks='@json($bahan->stokGudangs->pluck('stok_tersedia', 'gudang_id'))'
                                             data-subtitle="{{ $bahan->kategoriBahan->katnama ?? 'Kategori belum ditentukan' }}"
                                             data-meta="Stok {{ number_format((float) $bahan->stok_onhand, 6, ',', '.') }} {{ $bahan->satuan }}{{ $bahan->hasSmallUnit() ? ' · 1 ' . $bahan->satuan . ' = ' . number_format((float) $bahan->berat_kecil, 6, ',', '.') . ' ' . $bahan->satuan_kecil : '' }}"
                                             data-search="{{ $bahan->satuan }} {{ $bahan->satuan_kecil }}">
@@ -61,7 +61,8 @@
                                             {{ $gudang->nama }}</option>
                                     @endforeach
                                 </select>
-                                <small id="npk_stock_help" class="text-muted">Pilih gudang dan barang untuk melihat saldo.</small>
+                                <small id="npk_stock_help" class="text-muted">Pilih gudang dan barang untuk melihat
+                                    saldo.</small>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold text-dark small text-uppercase">Gudang Tujuan</label>
@@ -128,13 +129,15 @@
     }
     document.querySelector('#npk_bahan')?.addEventListener('change', refreshNpkUnit);
     refreshNpkUnit();
+
     function refreshNpkStock() {
         const option = document.querySelector('#npk_bahan')?.selectedOptions[0];
         const warehouse = document.querySelector('#npk_gudang')?.value;
         const help = document.querySelector('#npk_stock_help');
         if (!option || !warehouse || !help) return;
         const stocks = JSON.parse(option.dataset.stocks || '{}');
-        help.textContent = `Saldo gudang: ${Number(stocks[warehouse] || 0).toLocaleString('id-ID')} ${option.dataset.unit || ''}`;
+        help.textContent =
+            `Saldo gudang: ${Number(stocks[warehouse] || 0).toLocaleString('id-ID')} ${option.dataset.unit || ''}`;
     }
     document.querySelector('#npk_bahan')?.addEventListener('change', refreshNpkStock);
     document.querySelector('#npk_gudang')?.addEventListener('change', refreshNpkStock);

@@ -23,7 +23,7 @@ class StoreJurnalRequest extends FormRequest
             'reff_id'          => 'nullable|integer',
             'details'          => 'required|array|min:2',
             'details.*.coa_id' => ['required', 'integer', Rule::exists('chart_of_accounts', 'id')->where(
-                fn ($query) => $query->where('is_active', 1)->where('is_postable', 1)
+                fn($query) => $query->where('is_active', 1)->where('is_postable', 1)
             )],
             'details.*.debit'  => 'nullable|numeric|min:0',
             'details.*.kredit' => 'nullable|numeric|min:0',

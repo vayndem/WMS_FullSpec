@@ -5,26 +5,26 @@
         <div class="container-fluid">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
                 <div>
-                    <h3 class="fw-bold mb-1">Dashboard Gudang</h3>
-                    <p class="text-muted mb-0">Ringkasan penerimaan, pemakaian, dan pemeriksaan stok hari ini.</p>
+                    <h3 class="fw-bold mb-1">Dashboard Produksi</h3>
+                    <p class="text-muted mb-0">Ringkasan pemakaian, transfer, dan opname untuk gudang produksi.</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
-                    @can('create', App\Models\Lpb::class)
-                        <a href="{{ route('lpb.index', ['create' => 1]) }}" class="btn btn-primary">
-                            <i class="fa-solid fa-box-open me-1"></i> Terima Barang
+                    @can('create', App\Models\Npk::class)
+                        <a href="{{ route('npk.index', ['create' => 1]) }}" class="btn btn-primary">
+                            <i class="fa-solid fa-arrow-right-from-bracket me-1"></i> Buat NPK
                         </a>
                     @endcan
-                    @can('create', App\Models\ServiceBap::class)
-                        <a href="{{ route('service-baps.create') }}" class="btn btn-outline-primary">
-                            <i class="fa-solid fa-clipboard-check me-1"></i> Buat BAP Jasa
+                    @can('create', App\Models\TransferGudang::class)
+                        <a href="{{ route('transfer-gudangs.create') }}" class="btn btn-outline-primary">
+                            <i class="fa-solid fa-right-left me-1"></i> Buat Transfer
                         </a>
                     @endcan
                 </div>
             </div>
 
             <div class="row g-3 mb-4">
-                @foreach ([['label' => 'Master Bahan', 'value' => $warehouseMetrics['total_materials'], 'icon' => 'boxes-stacked', 'color' => 'primary'], ['label' => 'Perlu Perhatian', 'value' => $warehouseMetrics['stock_attention'], 'icon' => 'triangle-exclamation', 'color' => 'warning'], ['label' => 'Penerimaan Hari Ini', 'value' => $warehouseMetrics['receipts_today'], 'icon' => 'box-open', 'color' => 'success'], ['label' => 'NPK Hari Ini', 'value' => $warehouseMetrics['issues_today'], 'icon' => 'arrow-right-from-bracket', 'color' => 'info'], ['label' => 'Opname Aktif', 'value' => $warehouseMetrics['open_opnames'], 'icon' => 'clipboard-check', 'color' => 'primary'], ['label' => 'BAP Jasa Hari Ini', 'value' => $warehouseMetrics['service_baps_today'], 'icon' => 'screwdriver-wrench', 'color' => 'secondary']] as $metric)
-                    <div class="col-6 col-xl-2">
+                @foreach ([['label' => 'Gudang Tugas', 'value' => $productionMetrics['assigned_warehouses'], 'icon' => 'warehouse', 'color' => 'primary'], ['label' => 'NPK Hari Ini', 'value' => $productionMetrics['issues_today'], 'icon' => 'arrow-right-from-bracket', 'color' => 'info'], ['label' => 'Transfer Aktif', 'value' => $productionMetrics['transfers_in_progress'], 'icon' => 'right-left', 'color' => 'warning'], ['label' => 'Opname Aktif', 'value' => $productionMetrics['open_opnames'], 'icon' => 'clipboard-check', 'color' => 'success']] as $metric)
+                    <div class="col-6 col-xl-3">
                         <div class="card border-0 shadow-sm h-100">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start gap-2">
@@ -32,8 +32,7 @@
                                         <div class="text-muted small mb-2">{{ $metric['label'] }}</div>
                                         <div class="fs-3 fw-bold">{{ number_format($metric['value']) }}</div>
                                     </div>
-                                    <span
-                                        class="rounded-circle bg-{{ $metric['color'] }}-subtle text-{{ $metric['color'] }} p-3">
+                                    <span class="rounded-circle bg-{{ $metric['color'] }}-subtle text-{{ $metric['color'] }} p-3">
                                         <i class="fa-solid fa-{{ $metric['icon'] }}"></i>
                                     </span>
                                 </div>
@@ -48,36 +47,32 @@
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
                             <div>
-                                <h5 class="fw-bold mb-1">Penerimaan Terbaru</h5>
-                                <small class="text-muted">Barang dan jasa yang terakhir diterima</small>
+                                <h5 class="fw-bold mb-1">Transfer Terbaru</h5>
+                                <small class="text-muted">Perpindahan stok yang melibatkan gudang produksi</small>
                             </div>
-                            <a href="{{ route('lpb.index') }}" class="btn btn-sm btn-light border">Lihat semua</a>
+                            <a href="{{ route('transfer-gudangs.index') }}" class="btn btn-sm btn-light border">Lihat semua</a>
                         </div>
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">
                                 <thead>
                                     <tr>
-                                        <th>Dokumen</th>
+                                        <th>Nomor</th>
                                         <th>Tanggal</th>
-                                        <th>Supplier</th>
-                                        <th>Jenis</th>
+                                        <th>Rute</th>
+                                        <th>Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @forelse ($recentReceipts as $receipt)
+                                    @forelse ($recentTransfers as $transfer)
                                         <tr>
-                                            <td><a class="fw-semibold"
-                                                    href="{{ route('lpb.show', $receipt) }}">{{ $receipt->id_lpb }}</a></td>
-                                            <td>{{ $receipt->tanggal?->format('d-m-Y') }}</td>
-                                            <td>{{ $receipt->pembelian->supplier->nama ?? '-' }}</td>
-                                            <td><span class="badge bg-primary-subtle text-primary-emphasis">
-                                                    {{ $receipt->document_type === 'SERVICE_BAP' ? 'BAP Jasa' : 'LPB Barang' }}
-                                                </span></td>
+                                            <td class="fw-semibold text-primary">{{ $transfer->nomor_transfer }}</td>
+                                            <td>{{ \Illuminate\Support\Carbon::parse($transfer->tanggal)->format('d-m-Y') }}</td>
+                                            <td>{{ $transfer->asal_nama ?? '-' }} -> {{ $transfer->tujuan_nama ?? '-' }}</td>
+                                            <td><span class="badge bg-primary-subtle text-primary-emphasis">{{ $transfer->status }}</span></td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="4" class="text-center text-muted py-4">Belum ada penerimaan.
-                                            </td>
+                                            <td colspan="4" class="text-center text-muted py-4">Belum ada transfer.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -90,8 +85,8 @@
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
                             <div>
-                                <h5 class="fw-bold mb-1">Pemakaian Terbaru</h5>
-                                <small class="text-muted">Barang yang terakhir dikeluarkan melalui NPK</small>
+                                <h5 class="fw-bold mb-1">NPK Terbaru</h5>
+                                <small class="text-muted">Pemakaian bahan dari gudang produksi</small>
                             </div>
                             <a href="{{ route('npk.index') }}" class="btn btn-sm btn-light border">Lihat semua</a>
                         </div>
@@ -102,18 +97,16 @@
                                         <th>NPK</th>
                                         <th>Tanggal</th>
                                         <th>Barang</th>
-                                        <th class="text-end">Jumlah</th>
+                                        <th>Gudang</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse ($recentIssues as $issue)
                                         <tr>
                                             <td class="fw-semibold text-primary">{{ $issue->kode }}</td>
-                                            <td>{{ \Illuminate\Support\Carbon::parse($issue->tanggal)->format('d-m-Y') }}
-                                            </td>
+                                            <td>{{ \Illuminate\Support\Carbon::parse($issue->tanggal)->format('d-m-Y') }}</td>
                                             <td>{{ $issue->barang->nama ?? '-' }}</td>
-                                            <td class="text-end fw-semibold">
-                                                {{ number_format($issue->jumlah, 2, ',', '.') }}</td>
+                                            <td>{{ $issue->gudangAsal->nama ?? '-' }}</td>
                                         </tr>
                                     @empty
                                         <tr>
@@ -130,12 +123,12 @@
     </div>
 
     @include('layouts.template.page-help', [
-        'title' => 'Dashboard Gudang',
+        'title' => 'Dashboard Produksi',
         'items' => [
-            'Gunakan Penerimaan untuk mencatat LPB barang atau BAP jasa.',
-            'Gunakan NPK untuk mencatat barang yang dipakai atau dikeluarkan.',
-            'Stock Opname digunakan untuk membandingkan stok sistem dengan hasil hitung fisik.',
-            'Dashboard gudang hanya menampilkan kuantitas dan aktivitas, tanpa harga atau nilai uang.',
+            'Transfer dari gudang utama ke gudang produksi dicatat melalui transfer gudang.',
+            'NPK dari gudang produksi menjadi titik mulai pengurangan stok dan pembebanan biaya.',
+            'Stock opname tetap dilakukan per gudang agar saldo produksi tetap akurat.',
+            'Dashboard produksi hanya menampilkan aktivitas gudang yang memang di-assign ke user ini.',
         ],
     ])
 @endsection

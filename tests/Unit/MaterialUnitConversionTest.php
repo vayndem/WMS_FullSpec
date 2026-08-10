@@ -35,12 +35,12 @@ class MaterialUnitConversionTest extends TestCase
         $this->assertNull($material->smallUnitEquivalent(2.5));
     }
 
-    public function test_types_five_fourteen_and_thirty_three_can_update_material(): void
+    public function test_purchasing_warehouse_and_accounting_can_update_material(): void
     {
         $policy = new BahanPolicy();
         $material = new Bahan();
 
-        foreach ([5, 14, 33] as $type) {
+        foreach ([User::ROLE_PURCHASING, User::ROLE_WAREHOUSE, User::ROLE_ACCOUNTING] as $type) {
             $user = new User(['type' => $type]);
             $this->assertTrue($policy->create($user));
             $this->assertTrue($policy->update($user, $material));

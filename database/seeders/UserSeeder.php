@@ -10,10 +10,12 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         $users = [
-            ['name' => 'Purchasing Demo', 'email' => 'purchasing@wms.local', 'type' => 5],
-            ['name' => 'Finance Demo', 'email' => 'finance@wms.local', 'type' => 13],
-            ['name' => 'Warehouse Demo', 'email' => 'warehouse@wms.local', 'type' => 14],
-            ['name' => 'Accounting Demo', 'email' => 'accounting@wms.local', 'type' => 33],
+            ['name' => 'SuperAdmin', 'email' => 'superadmin@wms.local', 'type' => User::ROLE_SUPER_ADMIN],
+            ['name' => 'Purchasing Demo', 'email' => 'purchasing@wms.local', 'type' => User::ROLE_PURCHASING],
+            ['name' => 'Finance Demo', 'email' => 'finance@wms.local', 'type' => User::ROLE_FINANCE],
+            ['name' => 'Warehouse Demo', 'email' => 'warehouse@wms.local', 'type' => User::ROLE_WAREHOUSE],
+            ['name' => 'Accounting Demo', 'email' => 'accounting@wms.local', 'type' => User::ROLE_ACCOUNTING],
+            ['name' => 'Produksi Demo', 'email' => 'produksi@wms.local', 'type' => User::ROLE_PRODUCTION],
         ];
 
         foreach ($users as $attributes) {

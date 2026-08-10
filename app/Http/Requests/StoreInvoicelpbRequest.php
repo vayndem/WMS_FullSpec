@@ -57,9 +57,11 @@ class StoreInvoicelpbRequest extends FormRequest
                 ->get();
 
             $supplierIds = $lpbs->pluck('pembelian.supplier_id')->filter()->unique();
-            if ($lpbs->count() !== count($this->input('lpb_ids', []))
+            if (
+                $lpbs->count() !== count($this->input('lpb_ids', []))
                 || $supplierIds->count() !== 1
-                || (int) $supplierIds->first() !== (int) $this->input('kode_supplier')) {
+                || (int) $supplierIds->first() !== (int) $this->input('kode_supplier')
+            ) {
                 $validator->errors()->add(
                     'lpb_ids',
                     'LPB/BAP harus tersedia dan seluruhnya berasal dari supplier yang dipilih.'

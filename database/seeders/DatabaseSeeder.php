@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call(UserRoleSeeder::class);
         $this->call(UserSeeder::class);
 
         // Konfigurasi master dan data transaksi simulasi dibuat otomatis agar
@@ -147,6 +148,7 @@ class DatabaseSeeder extends Seeder
         );
 
         $gudang = Gudang::updateOrCreate(['kode' => 'GDG-UTAMA'], ['nama' => 'Gudang Utama', 'jenis' => Gudang::NORMAL, 'aktif' => true, 'boleh_penerimaan' => true, 'boleh_npk' => true, 'boleh_transfer' => true, 'boleh_opname' => true]);
+        $gudangProduksi = Gudang::updateOrCreate(['kode' => 'GDG-PRODUKSI'], ['nama' => 'Gudang Produksi', 'jenis' => Gudang::NORMAL, 'aktif' => true, 'boleh_penerimaan' => false, 'boleh_npk' => true, 'boleh_transfer' => true, 'boleh_opname' => true]);
         Gudang::updateOrCreate(['kode' => 'GDG-CONSIDER'], ['nama' => 'Gudang Consider', 'jenis' => Gudang::CONSIDER, 'aktif' => true, 'boleh_penerimaan' => false, 'boleh_npk' => false, 'boleh_transfer' => true, 'boleh_opname' => true]);
         Gudang::updateOrCreate(['kode' => 'GDG-RUSAK'], ['nama' => 'Gudang Rusak', 'jenis' => Gudang::RUSAK, 'aktif' => true, 'boleh_penerimaan' => false, 'boleh_npk' => false, 'boleh_transfer' => false, 'boleh_opname' => true]);
 
@@ -269,12 +271,24 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        $warehouseUser = User::where('type', 14)->first();
+        $warehouseUser = User::where('type', User::ROLE_WAREHOUSE)->first();
+        $productionUser = User::where('type', User::ROLE_PRODUCTION)->first();
         foreach (Gudang::all() as $gudang) {
             if ($warehouseUser) {
                 DB::table('pembagian_gudangs')->updateOrInsert(
                     ['user_id' => $warehouseUser->id, 'gudang_id' => $gudang->id],
                     ['boleh_menerima' => true, 'boleh_npk' => true, 'boleh_transfer' => true, 'boleh_opname' => true, 'created_at' => now(), 'updated_at' => now()]
+                );
+            }
+        }
+
+        if ($productionUser) {
+            $gudangProduksi = Gudang::where('kode', 'GDG-PRODUKSI')->first();
+
+            if ($gudangProduksi) {
+                DB::table('pembagian_gudangs')->updateOrInsert(
+                    ['user_id' => $productionUser->id, 'gudang_id' => $gudangProduksi->id],
+                    ['boleh_menerima' => false, 'boleh_npk' => true, 'boleh_transfer' => true, 'boleh_opname' => true, 'created_at' => now(), 'updated_at' => now()]
                 );
             }
         }

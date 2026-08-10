@@ -13,7 +13,9 @@ use App\Policies\AssetCategoryPolicy;
 use App\Policies\ServicePurchasePolicy;
 use App\Policies\ServiceBapPolicy;
 use App\Models\ServiceCategory;
+use App\Models\User;
 use App\Policies\ServiceCategoryPolicy;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -30,5 +32,9 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerPolicies();
+
+        Gate::before(function (User $user) {
+            return $user->isSuperAdmin() ? true : null;
+        });
     }
 }

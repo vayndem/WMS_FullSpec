@@ -54,7 +54,7 @@ class InvoicelpbController extends Controller
                 ->make(true);
         }
 
-        $paymentNumber = (int) $request->user()->type === 13
+        $paymentNumber = $request->user()->isFinance()
             ? $this->numbers->financial('PY')
             : null;
         return view('invoice_lpb.index', compact('paymentNumber'));

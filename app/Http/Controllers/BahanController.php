@@ -29,12 +29,12 @@ class BahanController extends Controller
                 ->select('bahan_id')
                 ->selectRaw('COUNT(*) as layer_count')
                 ->selectRaw('SUM(remaining_quantity) as layer_quantity')
-                ->when($gudangId, fn ($query) => $query->where('gudang_id', $gudangId))
+                ->when($gudangId, fn($query) => $query->where('gudang_id', $gudangId))
                 ->groupBy('bahan_id');
             $stockSummary = StokGudang::query()->select('bahan_id')
                 ->selectRaw('SUM(stok_tersedia) as stok_tersedia')
                 ->selectRaw('SUM(stok_dipesan) as stok_dipesan')
-                ->when($gudangId, fn ($query) => $query->where('gudang_id', $gudangId))
+                ->when($gudangId, fn($query) => $query->where('gudang_id', $gudangId))
                 ->groupBy('bahan_id');
             if ($financial) {
                 $layerSummary
@@ -55,7 +55,7 @@ class BahanController extends Controller
                 ->when(!empty($kategoriId), function ($q) use ($kategoriId) {
                     return $q->where('kategori', $kategoriId);
                 })
-                ->when(!empty($gudangId), fn ($q) => $q->whereNotNull('stock_summary.bahan_id'));
+                ->when(!empty($gudangId), fn($q) => $q->whereNotNull('stock_summary.bahan_id'));
 
             if ($financial) {
                 $query->addSelect([
@@ -68,7 +68,7 @@ class BahanController extends Controller
                 ->addColumn('kategori_nama', function ($row) {
                     return $row->kategoriBahan->katnama ?? '-';
                 })
-                ->addColumn('gudang_nama', fn () => $gudangNama)
+                ->addColumn('gudang_nama', fn() => $gudangNama)
                 ->addColumn('tipe_barang_nama', function ($row) {
                     return $row->tipeBarang->katnama ?? '-';
                 })

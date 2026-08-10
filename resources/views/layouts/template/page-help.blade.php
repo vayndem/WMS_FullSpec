@@ -1,6 +1,7 @@
 @php
     $routeName = request()->route()?->getName() ?? '';
     $userType = (int) (auth()->user()->type ?? 0);
+    $roleName = auth()->user()?->role_name ?? 'Unknown';
     $help = [
         'title' => 'Panduan Halaman',
         'intro' => 'Gunakan halaman ini sesuai hak akses Anda. Tombol yang tersedia mengikuti policy sistem.',
@@ -16,20 +17,20 @@
         'dashboard' => [
             'title' => 'Panduan Dashboard',
             'intro' =>
-                $userType === 5
+                $userType === \App\Models\User::ROLE_PURCHASING
                     ? 'Dashboard Purchasing merangkum pekerjaan dari request sampai invoice supplier.'
-                    : ($userType === 13
+                    : ($userType === \App\Models\User::ROLE_FINANCE
                         ? 'Dashboard pembayaran merangkum invoice supplier yang perlu dilunasi.'
                         : 'Dashboard menampilkan pintasan dan ringkasan sesuai hak akses Anda.'),
             'steps' =>
-                $userType === 5
+                $userType === \App\Models\User::ROLE_PURCHASING
                     ? [
                         'Periksa request yang masih pending.',
                         'Pantau PO yang belum diterima penuh.',
                         'Tindak lanjuti LPB yang belum memiliki invoice.',
                         'Perhatikan invoice jatuh tempo dan bahan di bawah planning.',
                     ]
-                    : ($userType === 13
+                    : ($userType === \App\Models\User::ROLE_FINANCE
                         ? [
                             'Dahulukan invoice yang terlambat atau segera jatuh tempo.',
                             'Klik Bayar pada invoice yang dipilih.',
@@ -61,9 +62,9 @@
                 'Laporkan status SELISIH melalui halaman Rekonsiliasi WMS.',
             ],
             'note' =>
-                $userType === 33
+                $userType === \App\Models\User::ROLE_ACCOUNTING
                     ? 'Accounting dapat melihat harga rata-rata dan nilai persediaan.'
-                    : 'Harga satuan dan nilai persediaan hanya dapat dilihat Accounting type 33.',
+                    : 'Harga satuan dan nilai persediaan hanya dapat dilihat role Accounting.',
         ],
         'request.' => [
             'title' => 'Panduan Request Barang',
@@ -116,7 +117,7 @@
                 'Catat pembayaran menggunakan akun yang ditandai sebagai Kas/Bank.',
             ],
             'note' =>
-                $userType === 13
+                $userType === \App\Models\User::ROLE_FINANCE
                     ? 'Anda hanya dapat mencatat atau membatalkan pembayaran. Header invoice dikelola Purchasing.'
                     : 'PPh 23 diakui pada saat pembayaran, bukan saat invoice diterima.',
         ],
@@ -164,11 +165,11 @@
         'stock-opname.' => [
             'title' => 'Panduan Stock Opname',
             'intro' =>
-                $userType === 33
+                $userType === \App\Models\User::ROLE_ACCOUNTING
                     ? 'Sebagai Accounting, isi harga selisih positif dan konfirmasi valuasi setelah Gudang mengunci hasil fisik.'
                     : 'Sebagai Gudang, buat opname, isi hasil fisik, lalu konfirmasikan kepada Accounting tanpa melihat harga.',
             'steps' =>
-                $userType === 33
+                $userType === \App\Models\User::ROLE_ACCOUNTING
                     ? [
                         'Buka detail opname berstatus SUBMITTED.',
                         'Harga selisih negatif dihitung otomatis dari layer FIFO.',
@@ -194,7 +195,7 @@
                 'Jalankan pemeriksaan kembali setelah koreksi.',
             ],
             'note' =>
-                $userType === 33
+                $userType === \App\Models\User::ROLE_ACCOUNTING
                     ? 'Accounting dapat melihat kuantitas dan nilai rupiah.'
                     : 'Nilai keuangan disembunyikan; Anda tetap dapat memeriksa kuantitas stok dan layer.',
         ],
@@ -276,7 +277,7 @@
         @endif
         <div class="page-help-role mt-4">
             <span>Hak akses aktif</span>
-            <strong>Type {{ $userType ?: '-' }}</strong>
+            <strong>{{ $roleName }} ({{ $userType }})</strong>
         </div>
     </div>
 </div>

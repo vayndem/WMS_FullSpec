@@ -9,7 +9,7 @@ class PembagianGudangPolicy
 {
     private function ok(User $u): bool
     {
-        return (int)$u->type === 14;
+        return $u->isWarehouse();
     }
     public function viewAny(User $u): bool
     {

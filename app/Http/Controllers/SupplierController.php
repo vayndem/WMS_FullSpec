@@ -56,7 +56,7 @@ class SupplierController extends Controller
     {
         $this->authorize('viewAny', Supplier::class);
 
-        $filters = collect($request->input('filters', []))->filter(fn ($value) => $value !== '');
+        $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
         $search = trim((string) $request->input('search', ''));
         $fields = ['nama', 'alamat', 'npwp', 'telp', 'up', 'pembayaran'];
         $query = Supplier::query()->orderBy('nama');
@@ -75,13 +75,13 @@ class SupplierController extends Controller
             }
         }
 
-        $columns = collect($fields)->map(fn ($field) => [
+        $columns = collect($fields)->map(fn($field) => [
             'key' => $field,
             'label' => $field === 'telp' ? 'Telepon' : ucfirst($field),
             'align' => 'left',
         ])->all();
-        $rows = $query->limit(5000)->get()->map(fn ($row) => collect($fields)
-            ->mapWithKeys(fn ($field) => [$field => $row->{$field} ?: '-'])->all());
+        $rows = $query->limit(5000)->get()->map(fn($row) => collect($fields)
+            ->mapWithKeys(fn($field) => [$field => $row->{$field} ?: '-'])->all());
 
         return Pdf::loadView('reports.table-pdf', [
             'title' => 'Daftar Supplier',

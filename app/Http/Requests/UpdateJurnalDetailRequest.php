@@ -29,7 +29,7 @@ class UpdateJurnalDetailRequest extends FormRequest
     {
         return [
             'coa_id'     => ['required', 'integer', Rule::exists('chart_of_accounts', 'id')->where(
-                fn ($query) => $query->where('is_active', 1)->where('is_postable', 1)
+                fn($query) => $query->where('is_active', 1)->where('is_postable', 1)
             )],
             'debit'      => 'nullable|numeric|min:0',
             'kredit'     => 'nullable|numeric|min:0',

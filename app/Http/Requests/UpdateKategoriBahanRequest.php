@@ -33,10 +33,15 @@ class UpdateKategoriBahanRequest extends FormRequest
     public function after(): array
     {
         return [function ($validator) {
-            foreach (['coa_persediaan_id' => ['ASET', 'DEBIT'], 'coa_beban_id' => ['BEBAN', 'DEBIT'],
-                'coa_clearing_lpb_id' => ['LIABILITAS', 'KREDIT'],
-                'coa_beban_selisih_opname_id' => ['BEBAN', 'DEBIT'],
-                'coa_koreksi_opname_id' => ['PENDAPATAN', 'KREDIT']] as $field => $expected) {
+            foreach (
+                [
+                    'coa_persediaan_id' => ['ASET', 'DEBIT'],
+                    'coa_beban_id' => ['BEBAN', 'DEBIT'],
+                    'coa_clearing_lpb_id' => ['LIABILITAS', 'KREDIT'],
+                    'coa_beban_selisih_opname_id' => ['BEBAN', 'DEBIT'],
+                    'coa_koreksi_opname_id' => ['PENDAPATAN', 'KREDIT']
+                ] as $field => $expected
+            ) {
                 $coa = \App\Models\ChartOfAccount::find($this->input($field));
                 if ($coa && (!$coa->is_active || !$coa->is_postable || $coa->kategori_akun !== $expected[0] || $coa->posisi_normal !== $expected[1])) {
                     $validator->errors()->add($field, 'Akun tidak aktif atau kategori/posisi normalnya tidak sesuai.');

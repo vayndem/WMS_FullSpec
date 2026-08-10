@@ -20,7 +20,7 @@ return new class extends Migration
             $table->unsignedBigInteger('submitted_by')->nullable();
             $table->timestamp('submitted_at')->nullable();
             $table->unsignedBigInteger('approved_by')->nullable()
-                ->comment('ID user lokal Accounting type 33 yang menyetujui valuasi');
+                ->comment('ID user lokal role Accounting yang menyetujui valuasi');
             $table->timestamp('approved_at')->nullable();
             $table->text('approval_note')->nullable();
             $table->unsignedBigInteger('posted_by')->nullable()

@@ -16,7 +16,7 @@ class UpdateServiceCategoryRequest extends FormRequest
     public function rules(): array
     {
         $available = Rule::exists('chart_of_accounts', 'id')
-            ->where(fn ($query) => $query->where('is_active', 1)->where('is_postable', 1));
+            ->where(fn($query) => $query->where('is_active', 1)->where('is_postable', 1));
 
         return [
             'expense_coa_id' => ['required', 'integer', $available],

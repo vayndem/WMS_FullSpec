@@ -42,7 +42,7 @@
             </div>
             @unless ($financial)
                 <div class="rounded-3 border border-info-subtle bg-info-subtle text-info-emphasis p-3 mt-4"><i
-                        class="fa-solid fa-shield-halved me-2"></i>Nilai rupiah hanya tersedia untuk Accounting (type 33).
+                        class="fa-solid fa-shield-halved me-2"></i>Nilai rupiah hanya tersedia untuk role Accounting.
                     Data kuantitas tetap dapat diperiksa.</div>
             @endunless
         </div>

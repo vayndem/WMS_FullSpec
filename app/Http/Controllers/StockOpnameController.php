@@ -26,8 +26,13 @@ class StockOpnameController extends Controller
     public function index(Request $request)
     {
         $this->authorize('viewAny', StockOpname::class);
+        $warehouseIds = $request->user()->accessibleGudangIds('opname');
+
         if ($request->ajax()) {
-            $query = StockOpname::with('warehouse')->withCount('details')->latest('cutoff_at');
+            $query = StockOpname::with('warehouse')
+                ->withCount('details')
+                ->when($request->user()->isProduction(), fn($builder) => $builder->whereIn('warehouse_id', $warehouseIds))
+                ->latest('cutoff_at');
             return datatables()->of($query)
                 ->filterColumn('warehouse_name', fn($builder, $keyword) => $builder->whereHas(
                     'warehouse',
@@ -58,6 +63,7 @@ class StockOpnameController extends Controller
         $opname = DB::transaction(function () use ($request) {
             $data = $request->validated();
             $this->periods->assertOpen($data['cutoff_at'], 'Stock opname');
+            abort_unless($request->user()->canAccessGudang((int) $data['warehouse_id'], 'opname'), 403);
             $this->ensureNoOpenOpname((int) $data['warehouse_id']);
             $opname = StockOpname::create([
                 'number' => $data['number'],
@@ -93,6 +99,7 @@ class StockOpnameController extends Controller
         DB::transaction(function () use ($request, $stockOpname) {
             $data = $request->validated();
             $this->periods->assertOpen($data['cutoff_at'], 'Stock opname');
+            abort_unless($request->user()->canAccessGudang((int) $data['warehouse_id'], 'opname'), 403);
             $stockOpname->update([
                 'warehouse_id' => $data['warehouse_id'],
                 'cutoff_at' => $data['cutoff_at'],
@@ -196,8 +203,7 @@ class StockOpnameController extends Controller
                     'system_quantity' => (float) $detail->system_quantity,
                     'physical_quantity' => (float) $detail->physical_quantity,
                     'difference_quantity' => (float) $detail->difference_quantity,
-                    'direction' => (float) $detail->difference_quantity > 0 ? 'PLUS' :
-                        ((float) $detail->difference_quantity < 0 ? 'MINUS' : 'MATCH'),
+                    'direction' => (float) $detail->difference_quantity > 0 ? 'PLUS' : ((float) $detail->difference_quantity < 0 ? 'MINUS' : 'MATCH'),
                     'reason' => $detail->reason,
                 ];
                 if ($financial) {
@@ -215,6 +221,9 @@ class StockOpnameController extends Controller
         $search = trim((string) $request->input('search', ''));
         $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
         $query = StockOpname::with('warehouse')->withCount('details')->latest('cutoff_at');
+        if ($request->user()->isProduction()) {
+            $query->whereIn('warehouse_id', $request->user()->accessibleGudangIds('opname'));
+        }
         if ($search !== '') {
             $query->where(fn($q) => $q->where('number', 'like', "%{$search}%")
                 ->orWhere('status', 'like', "%{$search}%")
@@ -279,9 +288,17 @@ class StockOpnameController extends Controller
 
     private function formData(): array
     {
+        $user = request()->user();
+        $warehouseIds = $user->accessibleGudangIds('opname');
+
         return [
-            'warehouses' => Gudang::where('aktif', true)->where('boleh_opname', true)->orderBy('nama')->get(),
-            'stocks' => StokGudang::with('bahan.tipeBarang')->where('stok_tersedia', '>', 0)->orderBy('gudang_id')->orderBy('bahan_id')->get(),
+            'warehouses' => Gudang::whereIn('id', $warehouseIds)->orderBy('nama')->get(),
+            'stocks' => StokGudang::with('bahan.tipeBarang')
+                ->whereIn('gudang_id', $warehouseIds)
+                ->where('stok_tersedia', '>', 0)
+                ->orderBy('gudang_id')
+                ->orderBy('bahan_id')
+                ->get(),
         ];
     }
 }

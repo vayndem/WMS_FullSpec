@@ -9,7 +9,8 @@
                     <p class="text-muted mb-0">Pusat kontrol keuangan dan persediaan WMS.</p>
                 </div>
                 <span class="badge rounded-pill bg-primary-subtle text-primary px-3 py-2">
-                    <i class="fa-solid fa-user-shield me-1"></i>Accounting · Type {{ $user['type'] ?? 33 }}
+                    <i class="fa-solid fa-user-shield me-1"></i>{{ $user->role_name ?? 'Accounting' }}
+                    ({{ $user->type ?? \App\Models\User::ROLE_ACCOUNTING }})
                 </span>
             </div>
 

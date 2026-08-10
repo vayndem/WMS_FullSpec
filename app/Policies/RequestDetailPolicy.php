@@ -9,22 +9,22 @@ class RequestDetailPolicy
 {
     public function viewAny(User $user): bool
     {
-        return in_array((int) $user->type, [5, 14, 33], true);
+        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_WAREHOUSE, User::ROLE_ACCOUNTING]);
     }
 
     public function view(User $user, RequestDetail $requestdetail): bool
     {
-        return in_array((int) $user->type, [5, 14, 33], true);
+        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_WAREHOUSE, User::ROLE_ACCOUNTING]);
     }
 
     public function create(User $user): bool
     {
-        return in_array((int) $user->type, [5, 14, 33], true);
+        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_WAREHOUSE, User::ROLE_ACCOUNTING]);
     }
 
     public function update(User $user, RequestDetail $requestdetail): bool
     {
-        if (!in_array((int) $user->type, [5, 14, 33], true)) {
+        if (!$user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_WAREHOUSE, User::ROLE_ACCOUNTING])) {
             return false;
         }
 
@@ -33,7 +33,7 @@ class RequestDetailPolicy
 
     public function delete(User $user, RequestDetail $requestdetail): bool
     {
-        if (!in_array((int) $user->type, [5, 14, 33], true)) {
+        if (!$user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_WAREHOUSE, User::ROLE_ACCOUNTING])) {
             return false;
         }
 

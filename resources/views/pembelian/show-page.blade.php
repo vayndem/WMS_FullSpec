@@ -37,7 +37,8 @@
                         </div>
                         <div class="col-6 col-lg-3">
                             <small class="text-muted d-block mb-1">Status</small>
-                            <span class="badge {{ (int) $pembelian->status === 2 ? 'bg-success' : 'bg-warning text-dark' }}">
+                            <span
+                                class="badge {{ (int) $pembelian->status === 2 ? 'bg-success' : 'bg-warning text-dark' }}">
                                 {{ (int) $pembelian->status === 2 ? 'Selesai' : 'Aktif' }}
                             </span>
                         </div>
@@ -75,15 +76,21 @@
                                             <small class="text-muted">{{ $detail->bahan->satuan ?? '' }}</small>
                                         </td>
                                         <td class="text-end">{{ number_format($ordered, 2, ',', '.') }}</td>
-                                        <td class="text-end text-success fw-semibold">{{ number_format($received, 2, ',', '.') }}</td>
-                                        <td class="text-end">{{ number_format(max(0, $ordered - $received), 2, ',', '.') }}</td>
-                                        <td class="text-end">Rp {{ number_format((float) $detail->harga, 0, ',', '.') }}</td>
+                                        <td class="text-end text-success fw-semibold">
+                                            {{ number_format($received, 2, ',', '.') }}</td>
+                                        <td class="text-end">{{ number_format(max(0, $ordered - $received), 2, ',', '.') }}
+                                        </td>
+                                        <td class="text-end">Rp {{ number_format((float) $detail->harga, 0, ',', '.') }}
+                                        </td>
                                         <td class="text-end fw-semibold pe-4">
-                                            Rp {{ number_format((float) ($detail->exclude ?? $ordered * $detail->harga), 0, ',', '.') }}
+                                            Rp
+                                            {{ number_format((float) ($detail->exclude ?? $ordered * $detail->harga), 0, ',', '.') }}
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="6" class="text-center text-muted py-5">Tidak ada detail PO.</td></tr>
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-5">Tidak ada detail PO.</td>
+                                    </tr>
                                 @endforelse
                             </tbody>
                             <tfoot class="table-light">

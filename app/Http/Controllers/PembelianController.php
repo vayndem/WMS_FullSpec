@@ -62,18 +62,18 @@ class PembelianController extends Controller
     {
         $this->authorize('viewAny', Pembelian::class);
 
-        $filters = collect($request->input('filters', []))->filter(fn ($value) => $value !== '');
+        $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
         $search = trim((string) $request->input('search', ''));
         $query = Pembelian::with('supplier')
-            ->when($request->filled('bulan') && $request->bulan !== '0', fn ($q) => $q->whereMonth('tanggal', $request->bulan))
-            ->when($request->filled('tahun'), fn ($q) => $q->whereYear('tanggal', $request->tahun))
+            ->when($request->filled('bulan') && $request->bulan !== '0', fn($q) => $q->whereMonth('tanggal', $request->bulan))
+            ->when($request->filled('tahun'), fn($q) => $q->whereYear('tanggal', $request->tahun))
             ->latest('tanggal');
 
         if ($search !== '') {
-            $query->where(fn ($q) => $q->where('no_po', 'like', "%{$search}%")
+            $query->where(fn($q) => $q->where('no_po', 'like', "%{$search}%")
                 ->orWhere('tanggal', 'like', "%{$search}%")
                 ->orWhere('grand_total', 'like', "%{$search}%")
-                ->orWhereHas('supplier', fn ($supplier) => $supplier->where('nama', 'like', "%{$search}%")));
+                ->orWhereHas('supplier', fn($supplier) => $supplier->where('nama', 'like', "%{$search}%")));
         }
 
         foreach (['no_po', 'tanggal', 'grand_total', 'status'] as $field) {
@@ -82,14 +82,14 @@ class PembelianController extends Controller
             }
         }
         if ($filters->has('nama')) {
-            $query->whereHas('supplier', fn ($supplier) => $supplier->where('nama', 'like', "%{$filters['nama']}%"));
+            $query->whereHas('supplier', fn($supplier) => $supplier->where('nama', 'like', "%{$filters['nama']}%"));
         }
 
-        $rows = $query->limit(5000)->get()->map(fn ($row) => [
+        $rows = $query->limit(5000)->get()->map(fn($row) => [
             'no_po' => $row->no_po,
             'tanggal' => $row->tanggal,
             'nama' => $row->supplier->nama ?? '-',
-            'grand_total' => 'Rp '.number_format($row->grand_total, 0, ',', '.'),
+            'grand_total' => 'Rp ' . number_format($row->grand_total, 0, ',', '.'),
             'status' => (int) $row->status === 2 ? 'Closed' : 'Open',
         ]);
 

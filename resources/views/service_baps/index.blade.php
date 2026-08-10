@@ -68,7 +68,7 @@
             'BAP menandai seluruh pekerjaan dalam PO Jasa mulai dikerjakan.',
             'Pembuatan BAP tidak membentuk jurnal.',
             'Saat BAP masuk invoice, pekerjaan menjadi selesai 100% dan beban/WIP serta hutang dijurnal.',
-            'BAP belum di-invoice dapat dibatalkan type 5 atau 33.',
+            'BAP belum di-invoice dapat dibatalkan oleh role Purchasing atau Accounting.',
         ],
     ])
 @endsection

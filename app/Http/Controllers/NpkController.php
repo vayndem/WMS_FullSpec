@@ -23,9 +23,11 @@ class NpkController extends Controller
     {
         $this->authorize('viewAny', Npk::class);
         $financial = $request->user()->can('viewFinancials', Npk::class);
+        $warehouseIds = $request->user()->accessibleGudangIds('npk');
 
         if ($request->ajax()) {
             $query = Npk::with(['barang', 'gudangAsal', 'gudangTujuan'])
+                ->when($request->user()->isProduction(), fn($builder) => $builder->whereIn('id_gudang_asal', $warehouseIds))
                 ->when($request->filled('close'), function ($query) use ($request) {
                     $query->where('close', $request->input('close'));
                 });
@@ -71,7 +73,7 @@ class NpkController extends Controller
         }
 
         $bahans = Bahan::with(['kategoriBahan', 'stokGudangs'])->orderBy('nama', 'asc')->get();
-        $gudangs = Gudang::where('aktif', true)->where('boleh_npk', true)->where('jenis', Gudang::NORMAL)->orderBy('nama')->get();
+        $gudangs = $this->availableWarehouses($request->user(), 'npk');
 
         return view('npk.index', compact('bahans', 'gudangs', 'financial'));
     }
@@ -151,7 +153,7 @@ class NpkController extends Controller
         $this->authorize('create', Npk::class);
 
         $bahans = Bahan::with('stokGudangs')->orderBy('nama', 'asc')->get();
-        $gudangs = Gudang::where('aktif', true)->where('boleh_npk', true)->where('jenis', Gudang::NORMAL)->orderBy('nama')->get();
+        $gudangs = $this->availableWarehouses(request()->user(), 'npk');
         $documentNumber = $this->numbers->external('NPK');
 
         return view('npk.create', compact('bahans', 'gudangs', 'documentNumber'));
@@ -161,6 +163,7 @@ class NpkController extends Controller
     {
         $validated = $request->validated();
         $this->periods->assertOpen($validated['tanggal'], 'NPK');
+        abort_unless($request->user()->canAccessGudang((int) $validated['id_gudang_asal'], 'npk'), 403);
 
         $npk = DB::transaction(function () use ($validated, $request) {
             $isKeluar = (int) $validated['close'] === 1;
@@ -224,7 +227,7 @@ class NpkController extends Controller
         }
 
         $bahans = Bahan::with('stokGudangs')->orderBy('nama', 'asc')->get();
-        $gudangs = Gudang::where('aktif', true)->where('boleh_npk', true)->where('jenis', Gudang::NORMAL)->orderBy('nama')->get();
+        $gudangs = $this->availableWarehouses(request()->user(), 'npk');
 
         return view('npk.edit', compact('npk', 'bahans', 'gudangs'));
     }
@@ -236,6 +239,7 @@ class NpkController extends Controller
 
         $validated = $request->validated();
         $this->periods->assertOpen($validated['tanggal'], 'NPK');
+        abort_unless($request->user()->canAccessGudang((int) $validated['id_gudang_asal'], 'npk'), 403);
 
         DB::transaction(function () use ($npk, $validated) {
             $willClose = (int) $validated['close'] === 1;
@@ -283,5 +287,13 @@ class NpkController extends Controller
     private function syncJurnalPengeluaranBarang(Npk $npk, ?string $oldKode = null): void
     {
         $this->accounting->postNpk($npk);
+    }
+
+    private function availableWarehouses($user, string $ability)
+    {
+        return Gudang::whereIn('id', $user->accessibleGudangIds($ability))
+            ->where('jenis', Gudang::NORMAL)
+            ->orderBy('nama')
+            ->get();
     }
 }

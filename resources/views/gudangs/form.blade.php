@@ -3,6 +3,9 @@
     <div class="content-page">
         <div class="container-fluid">
             <h4 class="mb-4">{{ $gudang->exists ? 'Edit' : 'Tambah' }} Gudang</h4>@include('warehouse_partials.alerts')
+            @php($ability = $gudang->exists ? 'update' : 'create')
+            @php($subject = $gudang->exists ? $gudang : App\Models\Gudang::class)
+            @can($ability, $subject)
             <form method="POST" action="{{ $gudang->exists ? route('gudangs.update', $gudang) : route('gudangs.store') }}"
                 class="card card-body">@csrf @if ($gudang->exists)
                     @method('PUT')
@@ -32,6 +35,7 @@
                 <div><button class="btn btn-primary">Simpan</button> <a href="{{ route('gudangs.index') }}"
                         class="btn btn-light">Batal</a></div>
             </form>
+            @endcan
         </div>
     </div>
 @endsection

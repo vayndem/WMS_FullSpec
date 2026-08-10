@@ -9,22 +9,22 @@ class PembeliandetailPolicy
 {
     public function viewAny(User $user): bool
     {
-        return in_array((int) $user->type, [5, 33]);
+        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING]);
     }
 
     public function view(User $user, Pembeliandetail $pembeliandetail): bool
     {
-        return in_array((int) $user->type, [5, 33]);
+        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING]);
     }
 
     public function create(User $user): bool
     {
-        return in_array((int) $user->type, [5, 33]);
+        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING]);
     }
 
     public function update(User $user, Pembeliandetail $pembeliandetail): bool
     {
-        if (!in_array((int) $user->type, [5, 33])) {
+        if (!$user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING])) {
             return false;
         }
 
@@ -33,7 +33,7 @@ class PembeliandetailPolicy
 
     public function delete(User $user, Pembeliandetail $pembeliandetail): bool
     {
-        if (!in_array((int) $user->type, [5, 33])) {
+        if (!$user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING])) {
             return false;
         }
 

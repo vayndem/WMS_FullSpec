@@ -70,7 +70,7 @@ return new class extends Migration
             $table->decimal('book_value_after', 18, 2);
             $table->text('reason')->nullable();
             $table->unsignedBigInteger('posted_by')
-                ->comment('ID user lokal Accounting type 33 yang memposting penyusutan');
+                ->comment('ID user lokal role Accounting yang memposting penyusutan');
             $table->unsignedBigInteger('journal_id')->nullable();
             $table->timestamps();
             $table->foreign('asset_id')->references('id')->on('assets')->restrictOnDelete();

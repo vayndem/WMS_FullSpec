@@ -6,7 +6,10 @@
                 <div>
                     <h4>Master Gudang</h4>
                     <p class="text-muted">Gudang Normal, Consider, dan Rusak</p>
-                </div><a href="{{ route('gudangs.create') }}" class="btn btn-primary">Tambah Gudang</a>
+                </div>
+                @can('create', App\Models\Gudang::class)
+                    <a href="{{ route('gudangs.create') }}" class="btn btn-primary">Tambah Gudang</a>
+                @endcan
             </div>
             @include('warehouse_partials.alerts')
             <div class="card">
@@ -31,10 +34,16 @@
                                     <td>{{ $g->aktif ? 'Aktif' : 'Nonaktif' }}</td>
                                     <td>{{ collect(['LPB' => $g->boleh_penerimaan, 'NPK' => $g->boleh_npk, 'Transfer' => $g->boleh_transfer, 'Opname' => $g->boleh_opname])->filter()->keys()->join(', ') }}
                                     </td>
-                                    <td><a href="{{ route('gudangs.show', $g) }}"
-                                            class="btn btn-sm btn-outline-primary">Detail</a> <a
-                                            href="{{ route('gudangs.edit', $g) }}"
-                                            class="btn btn-sm btn-outline-warning">Edit</a></td>
+                                    <td>
+                                        @can('view', $g)
+                                            <a href="{{ route('gudangs.show', $g) }}"
+                                                class="btn btn-sm btn-outline-primary">Detail</a>
+                                        @endcan
+                                        @can('update', $g)
+                                            <a href="{{ route('gudangs.edit', $g) }}"
+                                                class="btn btn-sm btn-outline-warning">Edit</a>
+                                        @endcan
+                                    </td>
                             </tr>@empty<tr>
                                     <td colspan="6" class="text-center text-muted">Belum ada gudang.</td>
                                 </tr>

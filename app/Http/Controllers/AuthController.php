@@ -44,22 +44,31 @@ class AuthController extends Controller
     {
         $user = Auth::user();
 
-        if ((int) $user->type === 5) {
+        if ($user->isSuperAdmin()) {
+            return view('dashboard', compact('user'));
+        }
+
+        if ($user->isPurchasing()) {
             return view('purchasing.dashboard', array_merge(
                 compact('user'),
                 $this->purchasingDashboardData()
             ));
-        } else if ((int) $user->type === 13) {
+        } else if ($user->isFinance()) {
             return view('finance.payment-dashboard', array_merge(
                 compact('user'),
                 $this->paymentDashboardData()
             ));
-        } else if ((int) $user->type === 14) {
+        } else if ($user->isWarehouse()) {
             return view('gudang.dashboard', array_merge(
                 compact('user'),
                 $this->warehouseDashboardData()
             ));
-        } else if ((int) $user->type === 33) {
+        } else if ($user->isProduction()) {
+            return view('produksi.dashboard', array_merge(
+                compact('user'),
+                $this->productionDashboardData($user)
+            ));
+        } else if ($user->isAccounting()) {
             return view('accouting.dashboard', compact('user'));
         } else {
             return view('dashboard', compact('user'));
@@ -86,6 +95,52 @@ class AuthController extends Controller
                 ->latest('tanggal')->latest('id')->limit(5)->get(),
             'recentIssues' => Npk::with('barang')
                 ->latest('tanggal')->latest('id')->limit(5)->get(),
+        ];
+    }
+
+    private function productionDashboardData($user): array
+    {
+        $warehouseIds = $user->accessibleGudangIds('npk');
+
+        return [
+            'productionMetrics' => [
+                'assigned_warehouses' => count($user->accessibleGudangIds()),
+                'issues_today' => Npk::whereIn('id_gudang_asal', $warehouseIds)->whereDate('tanggal', today())->count(),
+                'transfers_in_progress' => DB::table('transfer_gudangs')
+                    ->where(function ($query) use ($warehouseIds) {
+                        $query->whereIn('gudang_asal_id', $warehouseIds)
+                            ->orWhereIn('gudang_tujuan_id', $warehouseIds);
+                    })
+                    ->whereIn('status', ['DRAFT', 'DIAJUKAN'])
+                    ->count(),
+                'open_opnames' => StockOpname::whereIn('warehouse_id', $user->accessibleGudangIds('opname'))
+                    ->whereIn('status', [
+                        StockOpname::DRAFT,
+                        StockOpname::REJECTED,
+                        StockOpname::SUBMITTED,
+                        StockOpname::APPROVED,
+                    ])->count(),
+            ],
+            'recentIssues' => Npk::with(['barang', 'gudangAsal'])
+                ->whereIn('id_gudang_asal', $warehouseIds)
+                ->latest('tanggal')->latest('id')->limit(5)->get(),
+            'recentTransfers' => DB::table('transfer_gudangs as tg')
+                ->leftJoin('gudangs as asal', 'asal.id', '=', 'tg.gudang_asal_id')
+                ->leftJoin('gudangs as tujuan', 'tujuan.id', '=', 'tg.gudang_tujuan_id')
+                ->where(function ($query) use ($warehouseIds) {
+                    $query->whereIn('tg.gudang_asal_id', $warehouseIds)
+                        ->orWhereIn('tg.gudang_tujuan_id', $warehouseIds);
+                })
+                ->orderByDesc('tg.tanggal')
+                ->orderByDesc('tg.id')
+                ->limit(5)
+                ->get([
+                    'tg.nomor_transfer',
+                    'tg.tanggal',
+                    'tg.status',
+                    'asal.nama as asal_nama',
+                    'tujuan.nama as tujuan_nama',
+                ]),
         ];
     }
 

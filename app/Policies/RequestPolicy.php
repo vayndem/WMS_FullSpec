@@ -7,23 +7,38 @@ use App\Models\User;
 
 class RequestPolicy
 {
+    private function canViewRequests(User $user): bool
+    {
+        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_WAREHOUSE, User::ROLE_ACCOUNTING]);
+    }
+
+    private function canCreateRequests(User $user): bool
+    {
+        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_WAREHOUSE]);
+    }
+
+    private function canApproveRequests(User $user): bool
+    {
+        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING]);
+    }
+
     public function viewAny(User $user): bool
     {
-        return in_array((int) $user->type, [5, 14, 33], true);
+        return $this->canViewRequests($user);
     }
 
     public function create(User $user): bool
     {
-        return in_array((int) $user->type, [5, 14], true);
+        return $this->canCreateRequests($user);
     }
 
     public function view(User $user, RequestModel $requestModel): bool
     {
-        return in_array((int) $user->type, [5, 14, 33], true);
+        return $this->canViewRequests($user);
     }
 
     public function approve(User $user, RequestModel $requestModel): bool
     {
-        return in_array((int) $user->type, [5, 33]) && $requestModel->status === 'pending';
+        return $this->canApproveRequests($user) && $requestModel->status === 'pending';
     }
 }

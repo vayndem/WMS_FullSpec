@@ -19,17 +19,17 @@ class BahanPolicy
 
     public function viewFinancials(User $user): bool
     {
-        return (int) $user->type === 33;
+        return $user->isAccounting();
     }
 
     public function create(User $user): bool
     {
-        return in_array((int) $user->type, [5, 14, 33], true);
+        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_WAREHOUSE, User::ROLE_ACCOUNTING]);
     }
 
     public function update(User $user, Bahan $bahan): bool
     {
-        return in_array((int) $user->type, [5, 14, 33], true);
+        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_WAREHOUSE, User::ROLE_ACCOUNTING]);
     }
 
     public function delete(User $user, Bahan $bahan): bool

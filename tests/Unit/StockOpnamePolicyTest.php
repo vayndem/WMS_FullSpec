@@ -9,10 +9,10 @@ use PHPUnit\Framework\TestCase;
 
 class StockOpnamePolicyTest extends TestCase
 {
-    public function test_type_fourteen_controls_physical_count_and_submit(): void
+    public function test_warehouse_controls_physical_count_and_submit(): void
     {
         $policy = new StockOpnamePolicy();
-        $warehouse = new User(['type' => 14]);
+        $warehouse = new User(['type' => User::ROLE_WAREHOUSE]);
         $opname = new StockOpname(['status' => StockOpname::DRAFT]);
 
         $this->assertTrue($policy->create($warehouse));
@@ -24,10 +24,10 @@ class StockOpnamePolicyTest extends TestCase
         $this->assertFalse($policy->post($warehouse, $opname));
     }
 
-    public function test_type_thirty_three_only_approves_submitted_document(): void
+    public function test_accounting_only_approves_submitted_document(): void
     {
         $policy = new StockOpnamePolicy();
-        $accounting = new User(['type' => 33]);
+        $accounting = new User(['type' => User::ROLE_ACCOUNTING]);
         $opname = new StockOpname(['status' => StockOpname::SUBMITTED]);
 
         $this->assertTrue($policy->approve($accounting, $opname));

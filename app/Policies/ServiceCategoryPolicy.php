@@ -9,10 +9,10 @@ class ServiceCategoryPolicy
 {
     public function viewAny(User $user): bool
     {
-        return in_array((int)$user->type, [5, 33], true);
+        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING]);
     }
     public function update(User $user, ServiceCategory $category): bool
     {
-        return (int)$user->type === 33;
+        return $user->isAccounting();
     }
 }

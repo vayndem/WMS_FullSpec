@@ -17,14 +17,14 @@ class AssetCategoryPolicy
     }
     public function create(User $user): bool
     {
-        return (int)$user->type === 33;
+        return $user->isAccounting();
     }
     public function update(User $user, AssetCategory $category): bool
     {
-        return (int)$user->type === 33;
+        return $user->isAccounting();
     }
     public function delete(User $user, AssetCategory $category): bool
     {
-        return (int)$user->type === 33 && !$category->assets()->exists();
+        return $user->isAccounting() && !$category->assets()->exists();
     }
 }

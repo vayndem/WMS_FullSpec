@@ -2,7 +2,9 @@
 @section('content')
     <div class="content-page">
         <div class="container-fluid">
-            <h4>Pengaturan Bahan per Gudang</h4>@include('warehouse_partials.alerts')<form method="POST"
+            <h4>Pengaturan Bahan per Gudang</h4>@include('warehouse_partials.alerts')
+            @can('create', App\Models\PengaturanBahanGudang::class)
+            <form method="POST"
                 action="{{ route('pengaturan-bahan-gudangs.store') }}" class="card card-body mb-3">@csrf<div class="row g-2">
                     <div class="col-md-3"><select name="gudang_id" class="form-select" required>
                             @foreach ($gudangs as $g)
@@ -26,6 +28,7 @@
                     </div>
                 </div>
             </form>
+            @endcan
             <div class="card table-responsive">
                 <table class="table mb-0">
                     <thead>
@@ -36,6 +39,7 @@
                             <th>Maks</th>
                             <th>Safety</th>
                             <th>Reorder</th>
+                            <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -47,6 +51,15 @@
                                 <td>{{ $r->stok_maksimum }}</td>
                                 <td>{{ $r->stok_pengaman }}</td>
                                 <td>{{ $r->titik_pemesanan }}</td>
+                                <td>
+                                    @can('delete', $r)
+                                        <form method="POST" action="{{ route('pengaturan-bahan-gudangs.destroy', $r) }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Hapus pengaturan bahan gudang ini?')">Hapus</button>
+                                        </form>
+                                    @endcan
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>

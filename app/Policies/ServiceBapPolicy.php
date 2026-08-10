@@ -7,21 +7,34 @@ use App\Models\ServiceBap;
 
 class ServiceBapPolicy
 {
+    private function canViewServiceBaps(User $user): bool
+    {
+        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_WAREHOUSE, User::ROLE_ACCOUNTING]);
+    }
+
+    private function canViewServiceBapFinancials(User $user): bool
+    {
+        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING]);
+    }
+
     public function viewAny(User $user): bool
     {
-        return in_array((int)$user->type, [5, 14, 33], true);
+        return $this->canViewServiceBaps($user);
     }
+
     public function view(User $user, ServiceBap $bap): bool
     {
-        return $this->viewAny($user) && $bap->document_type === 'SERVICE_BAP';
+        return $this->canViewServiceBaps($user) && $bap->document_type === 'SERVICE_BAP';
     }
+
     public function create(User $user): bool
     {
-        return $this->viewAny($user);
+        return $this->canViewServiceBaps($user);
     }
+
     public function cancel(User $user, ServiceBap $bap): bool
     {
-        return in_array((int)$user->type, [5, 33], true)
+        return $this->canViewServiceBapFinancials($user)
             && $this->view($user, $bap)
             && !$bap->is_cancelled
             && !$bap->invoiceReceipts()->exists();
@@ -29,6 +42,6 @@ class ServiceBapPolicy
 
     public function viewFinancials(User $user): bool
     {
-        return in_array((int)$user->type, [5, 33], true);
+        return $this->canViewServiceBapFinancials($user);
     }
 }

@@ -15,7 +15,7 @@ class RequestdetailController extends Controller
         $this->authorize('viewAny', RequestDetail::class);
 
         if ($request->ajax()) {
-            $mayViewPrice = in_array((int) $request->user()->type, [5, 33], true);
+            $mayViewPrice = $request->user()->hasAnyRole([\App\Models\User::ROLE_PURCHASING, \App\Models\User::ROLE_ACCOUNTING]);
             $query = RequestDetail::with('bahan', 'request')
                 ->whereHas('request', function ($q) {
                     $q->where('status', 'approved');

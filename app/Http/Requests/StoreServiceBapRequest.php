@@ -52,8 +52,8 @@ class StoreServiceBapRequest extends FormRequest
             $po = \App\Models\ServicePurchase::with('serviceDetails')
                 ->where('no_po', $this->input('no_po'))->first();
             $submittedIds = collect($this->input('items', []))
-                ->pluck('service_po_detail_id')->map(fn ($id) => (int) $id)->sort()->values();
-            $expectedIds = $po?->serviceDetails->pluck('id')->map(fn ($id) => (int) $id)->sort()->values() ?? collect();
+                ->pluck('service_po_detail_id')->map(fn($id) => (int) $id)->sort()->values();
+            $expectedIds = $po?->serviceDetails->pluck('id')->map(fn($id) => (int) $id)->sort()->values() ?? collect();
             if (!$po || $submittedIds->all() !== $expectedIds->all()) {
                 $validator->errors()->add('items', 'BAP harus mencakup seluruh pekerjaan dalam satu PO Jasa.');
             }

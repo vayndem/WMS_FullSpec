@@ -9,36 +9,36 @@ class JurnalPolicy
 {
     public function viewAny(User $user): bool
     {
-        return (int) $user->type === 33;
+        return $user->isAccounting();
     }
 
     public function view(User $user, Jurnal $jurnal): bool
     {
-        return (int) $user->type === 33;
+        return $user->isAccounting();
     }
 
     public function create(User $user): bool
     {
-        return (int) $user->type === 33;
+        return $user->isAccounting();
     }
 
     public function update(User $user, Jurnal $jurnal): bool
     {
-        return (int) $user->type === 33 && $jurnal->isManual() && $jurnal->isDraft();
+        return $user->isAccounting() && $jurnal->isManual() && $jurnal->isDraft();
     }
 
     public function delete(User $user, Jurnal $jurnal): bool
     {
-        return (int) $user->type === 33 && $jurnal->isManual() && $jurnal->isDraft();
+        return $user->isAccounting() && $jurnal->isManual() && $jurnal->isDraft();
     }
 
     public function post(User $user, Jurnal $jurnal): bool
     {
-        return (int) $user->type === 33 && $jurnal->isManual() && $jurnal->isDraft();
+        return $user->isAccounting() && $jurnal->isManual() && $jurnal->isDraft();
     }
 
     public function reverse(User $user, Jurnal $jurnal): bool
     {
-        return (int) $user->type === 33 && $jurnal->isManual() && $jurnal->status === 'POSTED';
+        return $user->isAccounting() && $jurnal->isManual() && $jurnal->status === 'POSTED';
     }
 }

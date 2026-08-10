@@ -7,27 +7,32 @@ use App\Models\User;
 
 class GudangPolicy
 {
-    private function admin(User $u): bool
+    private function admin(User $user): bool
     {
-        return (int)$u->type === 14;
+        return $user->isWarehouse();
     }
-    public function viewAny(User $u): bool
+
+    public function viewAny(User $user): bool
     {
-        return $this->admin($u);
+        return $this->admin($user);
     }
-    public function view(User $u, Gudang $m): bool
+
+    public function view(User $user, Gudang $gudang): bool
     {
-        return $this->admin($u);
+        return $this->admin($user);
     }
-    public function create(User $u): bool
+
+    public function create(User $user): bool
     {
-        return $this->admin($u);
+        return $this->admin($user);
     }
-    public function update(User $u, Gudang $m): bool
+
+    public function update(User $user, Gudang $gudang): bool
     {
-        return $this->admin($u);
+        return $this->admin($user);
     }
-    public function delete(User $u, Gudang $m): bool
+
+    public function delete(User $user, Gudang $gudang): bool
     {
         return false;
     }
