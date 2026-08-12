@@ -18,7 +18,7 @@ return new class extends Migration
 
         DB::table('npks')->whereNull('jumlah_stok')->update([
             'jumlah_stok' => DB::raw('jumlah'),
-            'satuan_transaksi' => DB::raw('(SELECT satuan FROM bahan WHERE bahan.id = npks.id_barang)'),
+            'satuan_transaksi' => DB::raw('(SELECT satuan FROM bahans WHERE bahans.id = npks.id_barang)'),
         ]);
     }
 

@@ -2,10 +2,10 @@
 
 namespace App\Policies;
 
-use App\Models\Invoicelpb;
+use App\Models\InvoiceLpb;
 use App\Models\User;
 
-class InvoicelpbPolicy
+class InvoiceLpbPolicy
 {
     private function canViewInvoices(User $user): bool
     {
@@ -27,7 +27,7 @@ class InvoicelpbPolicy
         return $this->canViewInvoices($user);
     }
 
-    public function view(User $user, Invoicelpb $invoice): bool
+    public function view(User $user, InvoiceLpb $invoice): bool
     {
         return $this->canViewInvoices($user);
     }
@@ -37,23 +37,27 @@ class InvoicelpbPolicy
         return $this->canManageInvoices($user);
     }
 
-    public function update(User $user, Invoicelpb $invoice): bool
+    public function update(User $user, InvoiceLpb $invoice): bool
     {
-        return $this->canManageInvoices($user) && !$invoice->is_void && !$invoice->details()->exists();
+        return $this->canManageInvoices($user)
+            && $invoice->status !== InvoiceLpb::VOID
+            && !$invoice->payments()->exists()
+            && $invoice->match_status === 'PENDING'
+            && !\App\Models\Jurnal::where('sumber_transaksi', 'INVOICE_SUPPLIER')->where('reff_id', $invoice->id)->exists();
     }
 
-    public function delete(User $user, Invoicelpb $invoice): bool
+    public function delete(User $user, InvoiceLpb $invoice): bool
     {
-        return $this->canManageInvoices($user) && !$invoice->is_void && !$invoice->details()->exists();
+        return $this->canManageInvoices($user) && $invoice->status !== InvoiceLpb::VOID && !$invoice->payments()->exists();
     }
 
-    public function pay(User $user, Invoicelpb $invoice): bool
+    public function pay(User $user, InvoiceLpb $invoice): bool
     {
-        return $this->canPayInvoices($user) && !$invoice->is_void && (float) $invoice->sisa_tagihan > 0;
+        return $this->canPayInvoices($user) && $invoice->status !== InvoiceLpb::VOID && (float) $invoice->sisa_tagihan > 0;
     }
 
-    public function voidPayment(User $user, Invoicelpb $invoice): bool
+    public function voidPayment(User $user, InvoiceLpb $invoice): bool
     {
-        return $this->canPayInvoices($user) && !$invoice->is_void;
+        return $this->canPayInvoices($user) && $invoice->status !== InvoiceLpb::VOID;
     }
 }

@@ -29,4 +29,8 @@ class StokGudangPolicy
     {
         return $this->ok($u) && $this->canAccess($u, $m);
     }
+    public function reconcile(User $u): bool
+    {
+        return $u->isWarehouseOperator() || $u->isAccounting();
+    }
 }

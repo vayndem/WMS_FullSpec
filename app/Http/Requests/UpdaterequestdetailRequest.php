@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use App\Models\RequestDetail;
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdaterequestdetailRequest extends FormRequest
+class UpdateRequestDetailRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -18,7 +18,7 @@ class UpdaterequestdetailRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'bahan_id'     => 'nullable|exists:bahan,id',
+            'bahan_id'     => 'nullable|exists:bahans,id',
             'nama_barang'  => 'required|string|max:255',
             'jumlah_minta' => 'required|numeric|gt:0',
             'keterangan'   => 'nullable|string',

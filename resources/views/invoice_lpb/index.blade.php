@@ -24,19 +24,19 @@
                             <div class="invoice-status-filter mb-3" role="radiogroup"
                                 aria-label="Filter status pembayaran">
                                 <input class="btn-check" type="radio" name="invoice_payment_status"
-                                    id="invoice-status-unpaid" value="0" checked>
+                                    id="invoice-status-unpaid" value="UNPAID" checked>
                                 <label for="invoice-status-unpaid">
                                     <i class="fa-regular fa-clock"></i>Belum Lunas
                                 </label>
 
                                 <input class="btn-check" type="radio" name="invoice_payment_status"
-                                    id="invoice-status-partial" value="1">
+                                    id="invoice-status-partial" value="PARTIALLY_PAID">
                                 <label for="invoice-status-partial">
                                     <i class="fa-solid fa-circle-half-stroke"></i>Dibayar Sebagian
                                 </label>
 
                                 <input class="btn-check" type="radio" name="invoice_payment_status"
-                                    id="invoice-status-paid" value="2">
+                                    id="invoice-status-paid" value="PAID">
                                 <label for="invoice-status-paid">
                                     <i class="fa-solid fa-circle-check"></i>Lunas
                                 </label>
@@ -126,9 +126,9 @@
                             name: 'status_pembayaran',
                             className: 'text-center align-middle',
                             render: function(data, type, row) {
-                                if (row.status === 2) {
+                                if (row.status === 'PAID') {
                                     return '<span class="badge bg-success p-2">Lunas</span>';
-                                } else if (row.status === 1) {
+                                } else if (row.status === 'PARTIALLY_PAID') {
                                     return '<span class="badge bg-warning p-2 text-white">Dibayar Sebagian</span>';
                                 } else {
                                     return '<span class="badge bg-secondary p-2">Belum Dibayar</span>';
@@ -258,8 +258,8 @@
 
                 function renderShowModal(data) {
                     let detailsHtml = '';
-                    if (data.details && data.details.length > 0) {
-                        data.details.forEach(function(item, i) {
+                    if (data.payments && data.payments.length > 0) {
+                        data.payments.forEach(function(item, i) {
                             let coaInfo = item.coa_kas_bank ?
                                 `${item.coa_kas_bank.kode_akun} - ${item.coa_kas_bank.nama_akun}` : '-';
                             detailsHtml += `
@@ -394,9 +394,9 @@
                                                     <i class="fa-solid fa-xmark me-1"></i>Tutup
                                                 </button>
                                             </div>
-                                            <form id="form-store-payment" action="{{ route('invoice-lpb-detail.store') }}" method="POST">
+                                            <form id="form-store-payment" action="{{ route('invoice-payments.store') }}" method="POST">
                                                 @csrf
-                                                <input type="hidden" name="id_invoice_lpb" value="${invoiceId}">
+                                                <input type="hidden" name="invoice_lpb_id" value="${invoiceId}">
                                                 <div class="modal-body p-0 bg-light">
                                                     <div class="card border-0 shadow-sm p-3 bg-white mb-0">
                                                         <div class="row g-2 payment-compact-grid">

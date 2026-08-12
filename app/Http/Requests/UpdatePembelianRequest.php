@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Pembelian;
 use App\Models\RequestDetail;
-use App\Models\Pembeliandetail;
+use App\Models\PembelianDetail;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdatePembelianRequest extends FormRequest
@@ -52,7 +52,7 @@ class UpdatePembelianRequest extends FormRequest
             'ongkir'                      => 'nullable|numeric|min:0',
             'input_label'                 => 'nullable|string|max:100',
             'details'                     => 'required|array|min:1',
-            'details.*.bahan_id'          => 'required|exists:bahan,id',
+            'details.*.bahan_id'          => 'required|exists:bahans,id',
             'details.*.harga'             => 'required|numeric|min:0',
             'details.*.request_detail_id' => 'nullable|exists:request_details,id',
             'details.*.jumlah'            => [
@@ -73,7 +73,7 @@ class UpdatePembelianRequest extends FormRequest
                             if ($reqDetail) {
                                 $existingRealisasiThisPo = 0;
                                 if ($noPoTarget) {
-                                    $existingRealisasiThisPo = Pembeliandetail::where('no_po', $noPoTarget)
+                                    $existingRealisasiThisPo = PembelianDetail::where('no_po', $noPoTarget)
                                         ->where('request_detail_id', $reqDetailId)
                                         ->sum('jumlah');
                                 }

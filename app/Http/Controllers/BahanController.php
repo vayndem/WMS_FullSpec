@@ -43,9 +43,9 @@ class BahanController extends Controller
             }
 
             $query = Bahan::with(['kategoriBahan', 'tipeBarang'])
-                ->leftJoinSub($layerSummary, 'layer_summary', 'layer_summary.bahan_id', '=', 'bahan.id')
-                ->leftJoinSub($stockSummary, 'stock_summary', 'stock_summary.bahan_id', '=', 'bahan.id')
-                ->select('bahan.*')
+                ->leftJoinSub($layerSummary, 'layer_summary', 'layer_summary.bahan_id', '=', 'bahans.id')
+                ->leftJoinSub($stockSummary, 'stock_summary', 'stock_summary.bahan_id', '=', 'bahans.id')
+                ->select('bahans.*')
                 ->addSelect([
                     DB::raw('COALESCE(stock_summary.stok_tersedia, 0) as stok_onhand'),
                     DB::raw('COALESCE(stock_summary.stok_dipesan, 0) as stok_onpurchase'),

@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Request as RequestModel;
+use App\Models\MaterialRequest;
 use App\Models\Pembelian;
 use App\Models\Lpb;
-use App\Models\Invoicelpb;
-use App\Models\Invoicelpbdetail;
+use App\Models\InvoiceLpb;
+use App\Models\InvoicePayment;
 use App\Models\Bahan;
 use App\Models\Npk;
 use App\Models\StockOpname;
@@ -22,12 +23,9 @@ class AuthController extends Controller
         return view('login');
     }
 
-    public function login(Request $request)
+    public function login(LoginRequest $request)
     {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
-        ]);
+        $credentials = $request->safe()->only(['email', 'password']);
 
         if (!Auth::attempt($credentials, $request->boolean('remember'))) {
             return back()
@@ -156,35 +154,35 @@ class AuthController extends Controller
     private function purchasingDashboardData(): array
     {
         $metrics = [
-            'pending_requests' => RequestModel::where('status', 'pending')->count(),
+            'pending_requests' => MaterialRequest::where('status', MaterialRequest::PENDING)->count(),
             'approved_unrealized' => DB::table('request_details')
                 ->join('requests', 'requests.id', '=', 'request_details.request_id')
-                ->where('requests.status', 'approved')
+                ->where('requests.status', MaterialRequest::APPROVED)
                 ->whereRaw('COALESCE(request_details.realisasi, 0) < COALESCE(request_details.jumlah_acc, request_details.jumlah_minta)')
                 ->count(),
-            'open_purchase_orders' => Pembelian::where('status', '!=', 2)->count(),
-            'awaiting_receipt' => Pembelian::where('status', '!=', 2)
+            'open_purchase_orders' => Pembelian::where('status', Pembelian::OPEN)->count(),
+            'awaiting_receipt' => Pembelian::where('status', Pembelian::OPEN)
                 ->whereHas('details', fn($query) => $query->whereColumn('diterima', '<', 'jumlah'))
                 ->count(),
             'unbilled_receipts' => Lpb::whereNull('no_invoice')->count(),
-            'unpaid_invoices' => Invoicelpb::where('is_void', false)->where('sisa_tagihan', '>', 0)->count(),
-            'overdue_invoices' => Invoicelpb::where('is_void', false)->where('sisa_tagihan', '>', 0)
+            'unpaid_invoices' => InvoiceLpb::where('status', '!=', InvoiceLpb::VOID)->where('sisa_tagihan', '>', 0)->count(),
+            'overdue_invoices' => InvoiceLpb::where('status', '!=', InvoiceLpb::VOID)->where('sisa_tagihan', '>', 0)
                 ->whereDate('tgl_deadline_pembayaran', '<', today())->count(),
             'stock_attention' => Bahan::whereColumn('stok_onhand', '<', 'planning')->count(),
         ];
 
-        $pendingRequests = RequestModel::withCount('details')
-            ->where('status', 'pending')->latest()->limit(5)->get();
+        $pendingRequests = MaterialRequest::withCount('details')
+            ->where('status', MaterialRequest::PENDING)->latest()->limit(5)->get();
 
         $openPurchaseOrders = Pembelian::with('supplier')
             ->withSum('details as ordered_quantity', 'jumlah')
             ->withSum('details as received_quantity', 'diterima')
-            ->where('status', '!=', 2)->latest('tanggal')->limit(5)->get();
+            ->where('status', Pembelian::OPEN)->latest('tanggal')->limit(5)->get();
 
         $unbilledReceipts = Lpb::with('pembelian.supplier')
             ->whereNull('no_invoice')->latest('tanggal')->limit(5)->get();
 
-        $dueInvoices = Invoicelpb::with('supplier')->where('is_void', false)
+        $dueInvoices = InvoiceLpb::with('supplier')->where('status', '!=', InvoiceLpb::VOID)
             ->where('sisa_tagihan', '>', 0)
             ->orderByRaw('tgl_deadline_pembayaran IS NULL')
             ->orderBy('tgl_deadline_pembayaran')->limit(5)->get();
@@ -194,29 +192,29 @@ class AuthController extends Controller
 
     private function paymentDashboardData(): array
     {
-        $activeInvoices = Invoicelpb::query()->where('is_void', false)->where('sisa_tagihan', '>', 0);
+        $activeInvoices = InvoiceLpb::query()->where('status', '!=', InvoiceLpb::VOID)->where('sisa_tagihan', '>', 0);
         $metrics = [
             'unpaid_count' => (clone $activeInvoices)->count(),
             'outstanding_value' => (float) (clone $activeInvoices)->sum('sisa_tagihan'),
             'overdue_count' => (clone $activeInvoices)->whereDate('tgl_deadline_pembayaran', '<', today())->count(),
             'due_soon_count' => (clone $activeInvoices)
                 ->whereBetween('tgl_deadline_pembayaran', [today(), today()->addDays(7)])->count(),
-            'paid_this_month' => (float) Invoicelpbdetail::query()->where('is_void', false)
+            'paid_this_month' => (float) InvoicePayment::query()->where('status', InvoicePayment::POSTED)
                 ->whereBetween('tanggal_pembayaran', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
                 ->sum('jumlah_pembayaran'),
-            'payments_this_month' => Invoicelpbdetail::query()->where('is_void', false)
+            'payments_this_month' => InvoicePayment::query()->where('status', InvoicePayment::POSTED)
                 ->whereBetween('tanggal_pembayaran', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
                 ->count(),
         ];
 
-        $priorityInvoices = Invoicelpb::with('supplier')->where('is_void', false)
+        $priorityInvoices = InvoiceLpb::with('supplier')->where('status', '!=', InvoiceLpb::VOID)
             ->where('sisa_tagihan', '>', 0)
             ->orderByRaw('tgl_deadline_pembayaran IS NULL')
             ->orderBy('tgl_deadline_pembayaran')
             ->limit(8)->get();
 
-        $recentPayments = Invoicelpbdetail::with(['invoice.supplier', 'coaKasBank'])
-            ->where('is_void', false)->latest('tanggal_pembayaran')->latest('id')->limit(8)->get();
+        $recentPayments = InvoicePayment::with(['invoice.supplier', 'coaKasBank'])
+            ->where('status', InvoicePayment::POSTED)->latest('tanggal_pembayaran')->latest('id')->limit(8)->get();
 
         return compact('metrics', 'priorityInvoices', 'recentPayments');
     }

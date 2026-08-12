@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Invoicelpb;
+use App\Models\InvoiceLpb;
 use App\Models\Lpb;
 use App\Models\Jurnal;
-use App\Http\Requests\StoreInvoicelpbRequest;
-use App\Http\Requests\UpdateInvoicelpbRequest;
-use App\Policies\InvoicelpbPolicy;
+use App\Http\Requests\StoreInvoiceLpbRequest;
+use App\Http\Requests\UpdateInvoiceLpbRequest;
+use App\Policies\InvoiceLpbPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -15,20 +15,21 @@ use App\Services\WmsAccountingService;
 use App\Models\TaxRate;
 use App\Models\Supplier;
 use App\Services\DocumentNumberService;
+use App\Services\ThreeWayMatchService;
 
-class InvoicelpbController extends Controller
+class InvoiceLpbController extends Controller
 {
-    public function __construct(private WmsAccountingService $accounting, private DocumentNumberService $numbers) {}
+    public function __construct(private WmsAccountingService $accounting, private DocumentNumberService $numbers, private ThreeWayMatchService $matching) {}
     public function index(Request $request)
     {
-        $this->authorize('viewAny', Invoicelpb::class);
+        $this->authorize('viewAny', InvoiceLpb::class);
 
         if ($request->ajax()) {
             $paymentStatus = $request->input('payment_status');
-            $query = Invoicelpb::with(['supplier'])
+            $query = InvoiceLpb::with(['supplier'])
                 ->when(
-                    in_array((string) $paymentStatus, ['0', '1', '2'], true),
-                    fn($query) => $query->where('status', (int) $paymentStatus)
+                    in_array((string) $paymentStatus, [InvoiceLpb::UNPAID, InvoiceLpb::PARTIALLY_PAID, InvoiceLpb::PAID], true),
+                    fn($query) => $query->where('status', $paymentStatus)
                 )
                 ->when($request->filled('focus'), fn($query) => $query->whereKey($request->integer('focus')));
 
@@ -62,24 +63,27 @@ class InvoicelpbController extends Controller
 
     public function reportPdf(Request $request)
     {
-        $this->authorize('viewAny', Invoicelpb::class);
+        $this->authorize('viewAny', InvoiceLpb::class);
 
         $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
         $search = trim((string) $request->input('search', ''));
-        $query = Invoicelpb::with('supplier')->latest('tanggal');
+        $query = InvoiceLpb::with('supplier')->latest('tanggal');
 
         if ($search !== '') {
             $query->where(fn($q) => $q->where('no_invoice', 'like', "%{$search}%")
                 ->orWhere('tanggal', 'like', "%{$search}%")
                 ->orWhere('tgl_deadline_pembayaran', 'like', "%{$search}%")
-                ->orWhere('status_pembayaran', 'like', "%{$search}%")
+                ->orWhere('status', 'like', "%{$search}%")
                 ->orWhereHas('supplier', fn($supplier) => $supplier->where('nama', 'like', "%{$search}%")));
         }
 
-        foreach (['no_invoice', 'tanggal', 'tgl_deadline_pembayaran', 'grand_total', 'sisa_tagihan', 'status_pembayaran'] as $field) {
+        foreach (['no_invoice', 'tanggal', 'tgl_deadline_pembayaran', 'grand_total', 'sisa_tagihan'] as $field) {
             if ($filters->has($field)) {
                 $query->where($field, 'like', "%{$filters[$field]}%");
             }
+        }
+        if ($filters->has('status_pembayaran')) {
+            $query->where('status', 'like', "%{$filters['status_pembayaran']}%");
         }
         if ($filters->has('supplier_nama')) {
             $query->whereHas('supplier', fn($supplier) => $supplier->where('nama', 'like', "%{$filters['supplier_nama']}%"));
@@ -115,8 +119,8 @@ class InvoicelpbController extends Controller
 
     public function create()
     {
-        $this->authorize('create', Invoicelpb::class);
-        $lpbs = Lpb::whereNull('no_invoice')->where('is_cancelled', false)->where('status', 1)
+        $this->authorize('create', InvoiceLpb::class);
+        $lpbs = Lpb::whereNull('no_invoice')->where('status', Lpb::POSTED)
             ->with(['pembelian.supplier', 'details', 'serviceDetails'])->orderBy('id_lpb', 'desc')->get();
         $supplierIds = $lpbs->pluck('pembelian.supplier_id')->filter()->unique()->values();
         $suppliers = Supplier::whereIn('id', $supplierIds)->orderBy('nama')->get();
@@ -125,11 +129,10 @@ class InvoicelpbController extends Controller
 
     public function getLpbDetail($id_lpb)
     {
-        $this->authorize('create', Invoicelpb::class);
+        $this->authorize('create', InvoiceLpb::class);
         $lpb = Lpb::where('id_lpb', $id_lpb)
             ->whereNull('no_invoice')
-            ->where('is_cancelled', false)
-            ->where('status', 1)
+            ->where('status', Lpb::POSTED)
             ->with(['details.bahan', 'serviceDetails.servicePoDetail.category', 'serviceDetails.allocations', 'pembelian.supplier'])
             ->firstOrFail();
 
@@ -167,13 +170,13 @@ class InvoicelpbController extends Controller
         ]);
     }
 
-    public function store(StoreInvoicelpbRequest $request)
+    public function store(StoreInvoiceLpbRequest $request)
     {
         $validated = $request->validated();
 
         $invoice = DB::transaction(function () use ($validated) {
             $lpbs = Lpb::whereIn('id', $validated['lpb_ids'])->whereNull('no_invoice')
-                ->where('is_cancelled', false)->where('status', 1)
+                ->where('status', Lpb::POSTED)
                 ->with(['details', 'serviceDetails', 'pembelian'])->lockForUpdate()->get();
             if ($lpbs->count() !== count($validated['lpb_ids'])) {
                 throw new \RuntimeException('Salah satu LPB sudah digunakan invoice lain.');
@@ -190,7 +193,7 @@ class InvoicelpbController extends Controller
 
             $grandTotal = ($subTotal + $ppnNominal + $validated['ongkir']) - $validated['diskon'];
 
-            $createdInvoice = Invoicelpb::create([
+            $createdInvoice = InvoiceLpb::create([
                 'no_invoice'              => $validated['no_invoice'],
                 'kode_supplier'           => $validated['kode_supplier'],
                 'tanggal'                 => $validated['tanggal'],
@@ -206,11 +209,10 @@ class InvoicelpbController extends Controller
                 'ongkir'                  => $validated['ongkir'],
                 'pph'                     => 0,
                 'grand_total'             => $grandTotal,
-                'status_pembayaran'       => 'Belum Dibayar',
                 'total_pembayaran'        => 0,
                 'sisa_tagihan'            => $grandTotal,
                 'note'                    => $validated['note'] ?? null,
-                'status'                  => 0,
+                'status'                  => InvoiceLpb::UNPAID,
             ]);
 
             foreach ($lpbs as $lpb) {
@@ -219,10 +221,10 @@ class InvoicelpbController extends Controller
                     'amount' => $this->receiptAmount($lpb),
                 ]);
                 $lpb->update(['no_invoice' => $validated['no_invoice']]);
-                if ($lpb->document_type === 'SERVICE_BAP') {
-                    $lpb->pembelian()->update(['status' => 2]);
-                }
             }
+
+            $match = $this->matching->evaluate($createdInvoice);
+            if ($match['status'] === 'BLOCKED') throw new \RuntimeException('Invoice gagal three-way matching dan diblokir.');
 
             $this->accounting->postInvoice($createdInvoice);
 
@@ -238,7 +240,7 @@ class InvoicelpbController extends Controller
 
     public function show($id)
     {
-        $invoice = Invoicelpb::with(['supplier', 'details.userFinance', 'details.coaKasBank', 'details.coaSelisih', 'lpbs.details.bahan'])->findOrFail($id);
+        $invoice = InvoiceLpb::with(['supplier', 'payments.userFinance', 'payments.coaKasBank', 'payments.coaSelisih', 'lpbs.details.bahan'])->findOrFail($id);
         $this->authorize('view', $invoice);
 
         return response()->json([
@@ -253,29 +255,28 @@ class InvoicelpbController extends Controller
 
     public function edit($id)
     {
-        $invoice = Invoicelpb::with('lpbs')->findOrFail($id);
+        $invoice = InvoiceLpb::with('lpbs')->findOrFail($id);
         $this->authorize('update', $invoice);
 
-        $lpbs = Lpb::where('is_cancelled', false)
-            ->where('status', 1)
+        $lpbs = Lpb::where('status', Lpb::POSTED)
             ->where(fn($query) => $query->whereNull('no_invoice')->orWhereIn('id', $invoice->lpbs->pluck('id')))
             ->whereHas('pembelian', fn($query) => $query->where('supplier_id', $invoice->kode_supplier))
             ->with(['pembelian.supplier', 'serviceDetails'])->get();
         return view('invoice_lpb.edit', compact('invoice', 'lpbs'));
     }
 
-    public function update(UpdateInvoicelpbRequest $request, $id)
+    public function update(UpdateInvoiceLpbRequest $request, $id)
     {
-        $invoice = Invoicelpb::findOrFail($id);
+        $invoice = InvoiceLpb::findOrFail($id);
         $this->authorize('update', $invoice);
 
         $validated = $request->validated();
 
         DB::transaction(function () use ($validated, $invoice) {
-            if ($invoice->details()->exists()) {
+            if ($invoice->payments()->exists()) {
                 throw new \RuntimeException('Invoice yang sudah memiliki pembayaran tidak boleh diubah.');
             }
-            $lpbs = Lpb::whereIn('id', $validated['lpb_ids'])->where('is_cancelled', false)->where('status', 1)
+            $lpbs = Lpb::whereIn('id', $validated['lpb_ids'])->where('status', Lpb::POSTED)
                 ->with(['details', 'serviceDetails', 'pembelian'])->lockForUpdate()->get();
             $supplierIds = $lpbs->pluck('pembelian.supplier_id')->unique();
             if (
@@ -287,9 +288,6 @@ class InvoicelpbController extends Controller
             }
             foreach ($invoice->lpbs as $oldLpb) {
                 $oldLpb->update(['no_invoice' => null]);
-                if ($oldLpb->document_type === 'SERVICE_BAP') {
-                    $oldLpb->pembelian()->update(['status' => 1]);
-                }
             }
             $subTotal = $lpbs->sum(fn($lpb) => $this->receiptAmount($lpb));
             $ppnPercent = $validated['is_ppn'] ? TaxRate::rateFor('PPN', $validated['tanggal']) : 0;
@@ -299,17 +297,8 @@ class InvoicelpbController extends Controller
             $grandTotal = ($subTotal + $ppnNominal + $validated['ongkir']) - $validated['diskon'];
             $sisaTagihan = $grandTotal - $invoice->total_pembayaran;
 
-            $statusText = 'Belum Dibayar';
-            $statusCode = 0;
-
-            if ($sisaTagihan <= 0) {
-                $statusText = 'Lunas';
-                $statusCode = 2;
-                $sisaTagihan = 0;
-            } elseif ($invoice->total_pembayaran > 0) {
-                $statusText = 'Dibayar Sebagian';
-                $statusCode = 1;
-            }
+            $statusCode = InvoiceLpb::paymentStatus($grandTotal, (float) $invoice->total_pembayaran);
+            $sisaTagihan = max(0, $sisaTagihan);
 
             $invoice->update([
                 'no_invoice'              => $validated['no_invoice'],
@@ -328,7 +317,6 @@ class InvoicelpbController extends Controller
                 'pph'                     => 0,
                 'grand_total'             => $grandTotal,
                 'sisa_tagihan'            => $sisaTagihan,
-                'status_pembayaran'       => $statusText,
                 'status'                  => $statusCode,
                 'note'                    => $validated['note'] ?? null,
             ]);
@@ -339,10 +327,9 @@ class InvoicelpbController extends Controller
                     'amount' => $this->receiptAmount($lpb)
                 ]);
                 $lpb->update(['no_invoice' => $validated['no_invoice']]);
-                if ($lpb->document_type === 'SERVICE_BAP') {
-                    $lpb->pembelian()->update(['status' => 2]);
-                }
             }
+            $match = $this->matching->evaluate($invoice);
+            if ($match['status'] === 'BLOCKED') throw new \RuntimeException('Invoice gagal three-way matching dan diblokir.');
             $this->accounting->postInvoice($invoice->fresh());
         });
 
@@ -354,19 +341,16 @@ class InvoicelpbController extends Controller
 
     public function destroy($id)
     {
-        $invoice = Invoicelpb::findOrFail($id);
+        $invoice = InvoiceLpb::findOrFail($id);
         $this->authorize('delete', $invoice);
 
         DB::transaction(function () use ($invoice) {
-            if ($invoice->details()->exists()) {
+            if ($invoice->payments()->exists()) {
                 throw new \RuntimeException('Invoice yang sudah memiliki pembayaran tidak boleh dihapus.');
             }
             $receipts = Lpb::where('no_invoice', $invoice->no_invoice)->get();
             foreach ($receipts as $receipt) {
                 $receipt->update(['no_invoice' => null]);
-                if ($receipt->document_type === 'SERVICE_BAP') {
-                    $receipt->pembelian()->update(['status' => 1]);
-                }
             }
 
             $this->accounting->reverseAutomaticJournal(
@@ -376,11 +360,10 @@ class InvoicelpbController extends Controller
             );
             $invoice->receipts()->delete();
             $invoice->update([
-                'is_void' => true,
                 'voided_by' => auth()->id(),
                 'voided_at' => now(),
                 'void_reason' => 'Dibatalkan melalui sistem',
-                'status_pembayaran' => 'Dibatalkan',
+                'status' => InvoiceLpb::VOID,
             ]);
         });
 
@@ -390,7 +373,7 @@ class InvoicelpbController extends Controller
         ]);
     }
 
-    private function syncJurnalInvoice(Invoicelpb $invoice): void
+    private function syncJurnalInvoice(InvoiceLpb $invoice): void
     {
         $this->accounting->postInvoice($invoice);
     }

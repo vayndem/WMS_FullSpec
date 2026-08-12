@@ -18,14 +18,14 @@ class UpdateBahanRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nama' => ['required', 'string', 'max:200', Rule::unique('bahan', 'nama')->ignore($this->route('bahan'))],
+            'nama' => ['required', 'string', 'max:200', Rule::unique('bahans', 'nama')->ignore($this->route('bahan'))],
             'keterangan_bahan' => ['nullable', 'string', 'max:200'],
             // Kategori menentukan mapping COA. Setelah bahan terbentuk nilainya
             // tidak boleh dipindah diam-diam ke kelompok akun lain.
             'kategori' => [
                 'required',
                 'integer',
-                'exists:kategoribahan,id',
+                'exists:kategori_bahans,id',
                 Rule::in([(int) $this->route('bahan')->kategori]),
             ],
             'satuan' => ['required', 'string', 'max:50'],

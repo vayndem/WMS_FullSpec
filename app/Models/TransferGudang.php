@@ -2,16 +2,19 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 
 class TransferGudang extends Model
 {
+    use Auditable;
     public const DRAFT = 'DRAFT';
     public const DIAJUKAN = 'DIAJUKAN';
-    public const DIKONFIRMASI = 'DIKONFIRMASI';
+    public const DIKIRIM = 'DIKIRIM';
+    public const DITERIMA = 'DITERIMA';
     public const DIBATALKAN = 'DIBATALKAN';
     protected $guarded = ['id'];
-    protected $casts = ['tanggal' => 'date', 'diajukan_pada' => 'datetime', 'dikonfirmasi_pada' => 'datetime'];
+    protected $casts = ['tanggal' => 'date', 'diajukan_pada' => 'datetime', 'dikonfirmasi_pada' => 'datetime', 'dikirim_pada' => 'datetime', 'diterima_pada' => 'datetime'];
     public function gudangAsal()
     {
         return $this->belongsTo(Gudang::class, 'gudang_asal_id');

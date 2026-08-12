@@ -2,15 +2,15 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Invoicelpb;
+use App\Models\InvoiceLpb;
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateInvoicelpbRequest extends FormRequest
+class UpdateInvoiceLpbRequest extends FormRequest
 {
     public function authorize(): bool
     {
         $id = $this->route('invoicelpb') ?? $this->route('id');
-        $invoice = Invoicelpb::find($id);
+        $invoice = InvoiceLpb::find($id);
 
         return $invoice ? ($this->user()?->can('update', $invoice) ?? false) : false;
     }
@@ -31,7 +31,7 @@ class UpdateInvoicelpbRequest extends FormRequest
         $idTarget = $this->route('invoicelpb') ?? $this->route('id');
 
         return [
-            'no_invoice'              => 'required|string|max:100|unique:invoicelpbs,no_invoice,' . $idTarget,
+            'no_invoice'              => 'required|string|max:100|unique:invoice_lpbs,no_invoice,' . $idTarget,
             'kode_supplier'           => 'required|exists:suppliers,id',
             'lpb_ids'                 => 'required|array|min:1',
             'lpb_ids.*'               => 'required|integer|distinct|exists:lpbs,id',

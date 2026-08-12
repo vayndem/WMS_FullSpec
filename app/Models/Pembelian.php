@@ -11,8 +11,12 @@ class Pembelian extends Model
 {
     use HasFactory;
 
+    public const OPEN = 'OPEN';
+    public const CLOSED = 'CLOSED';
+
     protected $table = 'pembelians';
     protected $guarded = ['id'];
+    protected $casts = ['tanggal' => 'date', 'kunci' => 'boolean'];
 
     protected $appends = [
         'id_suplier',
@@ -61,7 +65,7 @@ class Pembelian extends Model
 
     public function details(): HasMany
     {
-        return $this->hasMany(Pembeliandetail::class, 'no_po', 'no_po');
+        return $this->hasMany(PembelianDetail::class, 'no_po', 'no_po');
     }
 
     public function lpbs(): HasMany

@@ -28,7 +28,7 @@ class RequestDetailPolicy
             return false;
         }
 
-        return strtolower((string) optional($requestdetail->request)->status) === 'pending';
+        return optional($requestdetail->request)->status === \App\Models\MaterialRequest::PENDING;
     }
 
     public function delete(User $user, RequestDetail $requestdetail): bool
@@ -37,6 +37,6 @@ class RequestDetailPolicy
             return false;
         }
 
-        return strtolower((string) optional($requestdetail->request)->status) === 'pending';
+        return optional($requestdetail->request)->status === \App\Models\MaterialRequest::PENDING;
     }
 }

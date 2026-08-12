@@ -283,9 +283,9 @@ Dashboard produksi menampilkan:
 | Transfer | `transfer_gudangs`, `detail_transfer_gudangs`, `alokasi_transfer_gudangs` |
 | Consider | `pemeriksaan_considers`, `detail_pemeriksaan_considers` |
 | Procurement | `requests`, `request_details`, `pembelians`, `pembelian_details` |
-| Receipt | `lpbs`, `lpbdetails` |
+| Receipt | `lpbs`, `lpb_details` |
 | Issue | `npks`, `npk_stock_allocations`, `inventory_layers` |
-| AP | `invoicelpbs`, `invoice_lpb_receipts`, `invoicelpbdetails` |
+| AP | `invoice_lpbs`, `invoice_lpb_receipts`, `invoice_payments` |
 | Ledger | `chart_of_accounts`, `accounting_settings`, `jurnals`, `jurnal_details` |
 | Controls | `accounting_period_locks`, `tax_rates`, `document_sequences` |
 | Opname | `stock_opnames`, `stock_opname_details`, `stock_opname_allocations` |
@@ -345,7 +345,7 @@ Catatan:
 
 Status terakhir:
 
-- 35 tests passed
+- 44 tests passed, 150 assertions
 - 125 assertions
 
 Perintah:
@@ -373,15 +373,32 @@ Tambahan test terbaru mencakup role `Produksi`.
 
 Daftar yang masih relevan:
 
-1. belum ada `.env.example`
+1. `.env.example` sudah tersedia; secret production tetap wajib dikelola di luar repository
 2. belum ada UI admin user dan reset password
 3. `DatabaseSeeder` masih mencampur master dan demo
-4. belum ada integration test workflow penuh request -> PO -> LPB -> invoice -> payment
+4. integration test inventory control sudah mencakup rekonsiliasi, matching, transfer transit, reservation/picking, landed cost, dan reversal; workflow procurement penuh masih dapat diperluas
 5. belum ada token management UI/API untuk Sanctum
 6. beberapa file lama masih punya encoding teks yang jelek
 7. naming `accouting` masih typo historis pada sebagian view/path
-8. belum ada CI/CD definition
+8. CI GitHub Actions sudah tersedia untuk build, fresh migration+seed, dan test
 9. belum ada model manufacturing/WIP khusus untuk produksi
+
+## 15. WMS control standard (12 Agustus 2026)
+
+Framework kontrol baru mencakup:
+
+- `audit_logs` untuk histori perubahan dokumen kritis
+- `document_operation_keys` untuk idempotency
+- `document_reversals` untuk pembalikan LPB/NPK
+- `warehouse_locations`, `inventory_lots`, dan `inventory_serials`
+- status layer `AVAILABLE`, `QC_HOLD`, `IN_TRANSIT`, `REVERSED`, dan `TRANSFER_SHORTAGE`
+- `quality_inspections` dan putaway
+- `landed_costs` beserta alokasi ke layer
+- `inventory_reservations` dan `picking_orders`
+- `replenishment_suggestions`
+- three-way matching tersimpan pada invoice supplier
+
+Urutan transfer standar adalah `DRAFT -> DIAJUKAN -> DIKIRIM -> DITERIMA`. Urutan receiving adalah `RECEIVED -> QC_COMPLETED/QC_COMPLETED_WITH_HOLD -> PUTAWAY`. Dokumen posted tidak boleh diedit; gunakan workflow reversal atau void sumber transaksi.
 
 ## 13. Next development yang masuk akal
 

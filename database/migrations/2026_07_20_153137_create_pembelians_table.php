@@ -17,21 +17,21 @@ return new class extends Migration
             $table->string('untuk_perhatian', 250)->nullable()->default('-');
             $table->string('term', 250)->nullable()->default('-');
             $table->text('notes')->nullable();
-            $table->double('ppn')->default(0);
-            $table->double('total_exclude')->default(0);
-            $table->double('total_ppn')->default(0);
-            $table->double('total_include')->default(0);
-            $table->double('diskon')->default(0);
-            $table->double('ongkir')->default(0);
-            $table->double('grand_total')->default(0);
-            $table->tinyInteger('status')->default(0)
-                ->comment('Status PO: 0=Open, 2=Closed');
+            $table->decimal('ppn', 8, 4)->default(0);
+            $table->decimal('total_exclude', 18, 2)->default(0);
+            $table->decimal('total_ppn', 18, 2)->default(0);
+            $table->decimal('total_include', 18, 2)->default(0);
+            $table->decimal('diskon', 18, 2)->default(0);
+            $table->decimal('ongkir', 18, 2)->default(0);
+            $table->decimal('grand_total', 18, 2)->default(0);
+            $table->enum('status', ['OPEN', 'CLOSED'])->default('OPEN')
+                ->comment('Lifecycle PO: OPEN atau CLOSED');
             $table->string('term_pengiriman', 10)->default('Tidak Ada');
             $table->tinyInteger('jenis')->default(0);
             $table->string('input_label', 100)->nullable()->default('Freight Handling');
             $table->tinyInteger('cetak')->default(0)
                 ->comment('Jumlah/penanda proses cetak dokumen PO');
-            $table->tinyInteger('kunci')->default(0)
+            $table->boolean('kunci')->default(false)
                 ->comment('Kunci dokumen: 0=dapat diedit/dicetak, 1=terkunci setelah cetak');
             $table->tinyInteger('counter_asli')->default(1);
             $table->tinyInteger('cetak_ulang')->default(0);

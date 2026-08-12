@@ -3,16 +3,16 @@
 namespace App\Policies;
 
 use App\Models\User;
-use App\Models\Pembeliandetail;
+use App\Models\PembelianDetail;
 
-class PembeliandetailPolicy
+class PembelianDetailPolicy
 {
     public function viewAny(User $user): bool
     {
         return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING]);
     }
 
-    public function view(User $user, Pembeliandetail $pembeliandetail): bool
+    public function view(User $user, PembelianDetail $pembeliandetail): bool
     {
         return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING]);
     }
@@ -22,7 +22,7 @@ class PembeliandetailPolicy
         return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING]);
     }
 
-    public function update(User $user, Pembeliandetail $pembeliandetail): bool
+    public function update(User $user, PembelianDetail $pembeliandetail): bool
     {
         if (!$user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING])) {
             return false;
@@ -31,7 +31,7 @@ class PembeliandetailPolicy
         return (int) $pembeliandetail->pembelian->kunci === 0;
     }
 
-    public function delete(User $user, Pembeliandetail $pembeliandetail): bool
+    public function delete(User $user, PembelianDetail $pembeliandetail): bool
     {
         if (!$user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING])) {
             return false;

@@ -27,7 +27,7 @@ class PemeriksaanConsiderService
             foreach ($pemeriksaan->details as $detail) {
                 if (abs(((float)$detail->jumlah_baik + (float)$detail->jumlah_rusak) - (float)$detail->jumlah_diperiksa) > 0.000001) throw new RuntimeException('Jumlah baik dan rusak harus sama dengan jumlah diperiksa.');
                 $this->stok->saldo($consider->id, $detail->bahan_id);
-                $allocations = $this->stok->ambilLayer($consider->id, $detail->bahan_id, (float)$detail->jumlah_diperiksa, $pemeriksaan->tanggal);
+                $allocations = $this->stok->ambilLayer($consider->id, $detail->bahan_id, (float)$detail->jumlah_diperiksa, $pemeriksaan->tanggal, ['AVAILABLE', 'QC_HOLD']);
                 $total = collect($allocations)->sum(fn($a) => $a['jumlah'] * $a['harga']);
                 $avg = (float)$detail->jumlah_diperiksa > 0 ? $total / (float)$detail->jumlah_diperiksa : 0;
                 $this->stok->keluar($consider->id, $detail->bahan_id, (float)$detail->jumlah_diperiksa, $avg, 'CONSIDER_KELUAR', 'PEMERIKSAAN_CONSIDER', $pemeriksaan->id, $pemeriksaan->nomor_pemeriksaan);

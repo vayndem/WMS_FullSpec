@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('content')
-    @php($hasActiveBap = $po->serviceDetails->flatMap->bapDetails->contains(fn ($detail) => !$detail->lpb?->is_cancelled))
+    @php($hasActiveBap = $po->serviceDetails->flatMap->bapDetails->contains(fn ($detail) => $detail->lpb?->status === \App\Models\Lpb::POSTED))
     <div class="content-page">
         <div class="container-fluid">
             <div class="d-flex justify-content-between mb-3">

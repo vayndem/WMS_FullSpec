@@ -9,12 +9,12 @@ return new class extends Migration {
             $table->unsignedInteger('last_number')->default(0);$table->timestamps();
             $table->unique(['namespace','period_key']);
         });
-        Schema::table('invoicelpbdetails',function(Blueprint $table){
+        Schema::table('invoice_payments',function(Blueprint $table){
             $table->string('payment_number',30)->nullable()->unique()->after('id');
         });
     }
     public function down(): void {
-        Schema::table('invoicelpbdetails',fn(Blueprint $table)=>$table->dropColumn('payment_number'));
+        Schema::table('invoice_payments',fn(Blueprint $table)=>$table->dropColumn('payment_number'));
         Schema::dropIfExists('document_sequences');
     }
 };

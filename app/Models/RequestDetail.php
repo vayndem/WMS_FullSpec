@@ -16,7 +16,7 @@ class RequestDetail extends Model
 
     public function request(): BelongsTo
     {
-        return $this->belongsTo(Request::class, 'request_id');
+        return $this->belongsTo(MaterialRequest::class, 'request_id');
     }
 
     public function bahan(): BelongsTo

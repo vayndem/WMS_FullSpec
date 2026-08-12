@@ -126,7 +126,7 @@ return new class extends Migration
             $table->string('service_type', 30)
                 ->comment('Jenis jasa dari kategori: SERVICE_OPERATIONAL atau SERVICE_PRODUCTION');
             $table->text('description');
-            $table->decimal('quantity', 15, 2)->default(1);
+            $table->decimal('quantity', 18, 6)->default(1);
             $table->string('unit', 30)->default('JOB');
             $table->decimal('unit_price', 18, 2);
             $table->decimal('subtotal', 18, 2);
@@ -140,9 +140,7 @@ return new class extends Migration
         Schema::table('lpbs', function (Blueprint $table) {
             $table->string('document_type', 20)->default('GOODS')->after('id_lpb')->index()
                 ->comment('Jenis penerimaan: GOODS=LPB barang, SERVICE_BAP=BAP jasa');
-            $table->boolean('is_cancelled')->default(false)->after('status')
-                ->comment('0=dokumen aktif, 1=dokumen penerimaan dibatalkan');
-            $table->unsignedBigInteger('cancelled_by')->nullable()->after('is_cancelled')
+            $table->unsignedBigInteger('cancelled_by')->nullable()->after('status')
                 ->comment('ID user lokal yang membatalkan penerimaan');
             $table->timestamp('cancelled_at')->nullable()->after('cancelled_by');
             $table->text('cancellation_reason')->nullable()->after('cancelled_at');
@@ -178,7 +176,7 @@ return new class extends Migration
         Schema::dropIfExists('service_bap_allocations');
         Schema::dropIfExists('service_bap_details');
         Schema::table('lpbs', fn (Blueprint $table) => $table->dropColumn([
-            'document_type', 'is_cancelled', 'cancelled_by', 'cancelled_at', 'cancellation_reason',
+            'document_type', 'cancelled_by', 'cancelled_at', 'cancellation_reason',
         ]));
         Schema::dropIfExists('service_po_details');
         Schema::dropIfExists('service_categories');

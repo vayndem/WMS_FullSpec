@@ -19,7 +19,7 @@ class NpkPolicy
 
     private function canEditNpk(Npk $npk): bool
     {
-        return (int) $npk->close === 0 && $npk->status_posting !== 'POSTED';
+        return $npk->status === Npk::DRAFT;
     }
 
     private function canAccessNpkWarehouse(User $user, Npk $npk): bool

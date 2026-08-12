@@ -10,7 +10,9 @@ class RekonsiliasiGudangController extends Controller
     public function __construct(private RekonsiliasiGudangService $service) {}
     public function index()
     {
-        $this->authorize('viewAny', StokGudang::class);
-        return view('rekonsiliasi_gudangs.index', ['rows' => $this->service->rows()]);
+        $this->authorize('reconcile', StokGudang::class);
+        return view('rekonsiliasi_gudangs.index', $this->service->summary() + [
+            'financial' => request()->user()->isAccounting() || request()->user()->isSuperAdmin(),
+        ]);
     }
 }

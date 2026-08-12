@@ -2,14 +2,20 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Invoicelpb extends Model
+class InvoiceLpb extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
-    protected $table = 'invoicelpbs';
+    public const UNPAID = 'UNPAID';
+    public const PARTIALLY_PAID = 'PARTIALLY_PAID';
+    public const PAID = 'PAID';
+    public const VOID = 'VOID';
+
+    protected $table = 'invoice_lpbs';
 
     protected $fillable = [
         'no_invoice',
@@ -27,25 +33,49 @@ class Invoicelpb extends Model
         'ongkir',
         'pph',
         'grand_total',
-        'status_pembayaran',
         'total_pembayaran',
         'sisa_tagihan',
         'note',
         'status',
-        'is_void',
+        'match_status',
+        'match_summary',
+        'matched_by',
+        'matched_at',
         'voided_by',
         'voided_at',
         'void_reason',
     ];
+
+    protected $appends = ['status_pembayaran'];
+
+    public static function paymentStatus(float $grandTotal, float $totalPaid): string
+    {
+        if ($grandTotal > 0 && $totalPaid >= $grandTotal - 0.01) {
+            return self::PAID;
+        }
+
+        return $totalPaid > 0 ? self::PARTIALLY_PAID : self::UNPAID;
+    }
+
+    public function getStatusPembayaranAttribute(): string
+    {
+        return match ($this->status) {
+            self::PAID => 'Lunas',
+            self::PARTIALLY_PAID => 'Dibayar Sebagian',
+            self::VOID => 'Dibatalkan',
+            default => 'Belum Dibayar',
+        };
+    }
 
     public function supplier()
     {
         return $this->belongsTo(Supplier::class, 'kode_supplier');
     }
 
-    public function details()
+    public function payments()
     {
-        return $this->hasMany(Invoicelpbdetail::class, 'id_invoice_lpb')->where('is_void', false);
+        return $this->hasMany(InvoicePayment::class)
+            ->where('status', InvoicePayment::POSTED);
     }
 
     public function receipts()
@@ -69,7 +99,8 @@ class Invoicelpb extends Model
         'dasar_pph' => 'decimal:2',
         'tarif_pph' => 'decimal:4',
         'grand_total' => 'decimal:2',
-        'is_void' => 'boolean',
         'voided_at' => 'datetime',
+        'match_summary' => 'array',
+        'matched_at' => 'datetime',
     ];
 }

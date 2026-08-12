@@ -12,13 +12,14 @@ use RuntimeException;
 
 class TransferGudangService
 {
-    public function __construct(private StokGudangService $stok) {}
+    public function __construct(private StokGudangService $stok, private DocumentOperationGuard $operations) {}
 
     public function konfirmasi(TransferGudang $transfer): TransferGudang
     {
         return DB::transaction(function () use ($transfer) {
             $transfer = TransferGudang::with('details')->lockForUpdate()->findOrFail($transfer->id);
             if ($transfer->status !== TransferGudang::DIAJUKAN) throw new RuntimeException('Hanya transfer diajukan yang dapat dikonfirmasi.');
+            $this->operations->claim('TRANSFER_GUDANG', $transfer->id, 'SHIP');
             $asal = Gudang::lockForUpdate()->findOrFail($transfer->gudang_asal_id);
             $tujuan = Gudang::lockForUpdate()->findOrFail($transfer->gudang_tujuan_id);
             if (!$asal->aktif || !$tujuan->aktif) throw new RuntimeException('Gudang asal dan tujuan harus aktif.');
@@ -32,8 +33,7 @@ class TransferGudangService
                 $allocations = $this->stok->ambilLayer($asal->id, $detail->bahan_id, (float) $detail->jumlah, $transfer->tanggal);
                 $total = collect($allocations)->sum(fn($a) => $a['jumlah'] * $a['harga']);
                 $average = (float) $detail->jumlah > 0 ? $total / (float) $detail->jumlah : 0;
-                $this->stok->keluar($asal->id, $detail->bahan_id, (float) $detail->jumlah, $average, 'TRANSFER_KELUAR', 'TRANSFER_GUDANG', $transfer->id, $transfer->nomor_transfer);
-                $this->stok->masuk($tujuan->id, $detail->bahan_id, (float) $detail->jumlah, $average, $tujuan->jenis === Gudang::CONSIDER ? 'CONSIDER_MASUK' : 'TRANSFER_MASUK', 'TRANSFER_GUDANG', $transfer->id, $transfer->nomor_transfer);
+                $this->stok->keluar($asal->id, $detail->bahan_id, (float) $detail->jumlah, $average, 'TRANSFER_KELUAR', 'TRANSFER_GUDANG', $transfer->id, $transfer->nomor_transfer, false);
                 foreach ($allocations as $allocation) {
                     $alokasi = AlokasiTransferGudang::create([
                         'detail_transfer_gudang_id' => $detail->id,
@@ -51,11 +51,42 @@ class TransferGudangService
                         'initial_quantity' => $allocation['jumlah'],
                         'remaining_quantity' => $allocation['jumlah'],
                         'unit_cost' => $allocation['harga'],
+                        'stock_status' => 'IN_TRANSIT',
                     ]);
                     $alokasi->update(['inventory_layer_tujuan_id' => $layerTujuan->id]);
                 }
+                $detail->update(['jumlah_dikirim' => $detail->jumlah]);
             }
-            $transfer->update(['status' => TransferGudang::DIKONFIRMASI, 'dikonfirmasi_oleh' => Auth::id(), 'dikonfirmasi_pada' => now()]);
+            $transfer->update(['status' => TransferGudang::DIKIRIM, 'dikirim_oleh' => Auth::id(), 'dikirim_pada' => now()]);
+            return $transfer->fresh('details');
+        });
+    }
+
+    public function terima(TransferGudang $transfer, array $received = [], ?string $notes = null): TransferGudang
+    {
+        return DB::transaction(function () use ($transfer, $received, $notes) {
+            $transfer = TransferGudang::with('details.alokasi')->lockForUpdate()->findOrFail($transfer->id);
+            if ($transfer->status !== TransferGudang::DIKIRIM) throw new RuntimeException('Hanya transfer dalam perjalanan yang dapat diterima.');
+            $this->operations->claim('TRANSFER_GUDANG', $transfer->id, 'RECEIVE');
+            $tujuan = Gudang::lockForUpdate()->findOrFail($transfer->gudang_tujuan_id);
+            foreach ($transfer->details as $detail) {
+                $quantity = array_key_exists($detail->id, $received) ? (float) $received[$detail->id] : (float) $detail->jumlah_dikirim;
+                if ($quantity < 0 || $quantity > (float) $detail->jumlah_dikirim) throw new RuntimeException('Jumlah diterima tidak valid.');
+                $allocations = $detail->alokasi;
+                $sentValue = (float) $allocations->sum('total_nilai');
+                $average = (float) $detail->jumlah_dikirim > 0 ? $sentValue / (float) $detail->jumlah_dikirim : 0;
+                $remaining = $quantity;
+                foreach ($allocations as $allocation) {
+                    $layer = InventoryLayer::lockForUpdate()->findOrFail($allocation->inventory_layer_tujuan_id);
+                    $release = min($remaining, (float) $layer->remaining_quantity);
+                    if ($release > 0) $layer->update(['remaining_quantity' => $release, 'initial_quantity' => $release, 'stock_status' => $tujuan->jenis === Gudang::CONSIDER ? 'QC_HOLD' : 'AVAILABLE']);
+                    else $layer->update(['remaining_quantity' => 0, 'initial_quantity' => 0, 'stock_status' => 'TRANSFER_SHORTAGE']);
+                    $remaining -= $release;
+                }
+                if ($quantity > 0) $this->stok->masuk($tujuan->id, $detail->bahan_id, $quantity, $average, $tujuan->jenis === Gudang::CONSIDER ? 'CONSIDER_MASUK' : 'TRANSFER_MASUK', 'TRANSFER_GUDANG', $transfer->id, $transfer->nomor_transfer, false);
+                $detail->update(['jumlah_diterima' => $quantity, 'jumlah_selisih' => (float) $detail->jumlah_dikirim - $quantity]);
+            }
+            $transfer->update(['status' => TransferGudang::DITERIMA, 'diterima_oleh' => Auth::id(), 'diterima_pada' => now(), 'catatan_penerimaan' => $notes, 'dikonfirmasi_oleh' => Auth::id(), 'dikonfirmasi_pada' => now()]);
             return $transfer->fresh('details');
         });
     }

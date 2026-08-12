@@ -7,8 +7,8 @@
                     <h4>{{ $bap->id_lpb }}</h4>
                     <p class="text-muted">{{ $bap->pembelian->supplier->nama }} · PO {{ $bap->no_po }}</p>
                 </div><span
-                    class="badge bg-{{ $bap->is_cancelled ? 'danger' : ($bap->invoiceReceipts->isNotEmpty() ? 'success' : 'warning') }} align-self-center">
-                    {{ $bap->is_cancelled ? 'Dibatalkan' : ($bap->invoiceReceipts->isNotEmpty() ? 'SELESAI · SUDAH INVOICE' : 'SEDANG DIKERJAKAN') }}
+                    class="badge bg-{{ $bap->status === \App\Models\Lpb::CANCELLED ? 'danger' : ($bap->invoiceReceipts->isNotEmpty() ? 'success' : 'warning') }} align-self-center">
+                    {{ $bap->status === \App\Models\Lpb::CANCELLED ? 'Dibatalkan' : ($bap->invoiceReceipts->isNotEmpty() ? 'SELESAI · SUDAH INVOICE' : 'SEDANG DIKERJAKAN') }}
                 </span>
             </div>
             <div class="card border-0 shadow-sm">

@@ -7,8 +7,8 @@ use App\Models\Gudang;
 use App\Models\User;
 use App\Models\Bahan;
 use App\Models\ChartOfAccount;
-use App\Models\Invoicelpb;
-use App\Models\Invoicelpbdetail;
+use App\Models\InvoiceLpb;
+use App\Models\InvoicePayment;
 use App\Models\InventoryLayer;
 use App\Models\Jurnal;
 use App\Models\KategoriBahan;
@@ -16,8 +16,8 @@ use App\Models\Lpb;
 use App\Models\LpbDetail;
 use App\Models\Npk;
 use App\Models\Pembelian;
-use App\Models\Pembeliandetail;
-use App\Models\Request as RequestModel;
+use App\Models\PembelianDetail;
+use App\Models\MaterialRequest;
 use App\Models\RequestDetail;
 use App\Models\StockOpname;
 use App\Models\Supplier;
@@ -71,9 +71,9 @@ class WmsTransactionScenarioSeeder extends Seeder
                 ]
             );
 
-            $approvedRequest = RequestModel::create([
+            $approvedRequest = MaterialRequest::create([
                 'no_request' => $numbers->internal('REQ', 'PO', $date),
-                'status' => 'approved',
+                'status' => MaterialRequest::APPROVED,
                 'catatan_approver' => 'Skenario request yang sudah menjadi PO',
                 'approved_by' => 33,
                 'approved_at' => $date,
@@ -92,9 +92,9 @@ class WmsTransactionScenarioSeeder extends Seeder
                 'tipe_barang' => $category->id,
             ]);
 
-            $pendingRequest = RequestModel::create([
+            $pendingRequest = MaterialRequest::create([
                 'no_request' => $numbers->internal('REQ', 'PO', $date->copy()->addDay()),
-                'status' => 'pending',
+                'status' => MaterialRequest::PENDING,
             ]);
             RequestDetail::create([
                 'request_id' => $pendingRequest->id,
@@ -109,9 +109,9 @@ class WmsTransactionScenarioSeeder extends Seeder
                 'tipe_barang' => $category->id,
             ]);
 
-            $unrealizedRequest = RequestModel::create([
+            $unrealizedRequest = MaterialRequest::create([
                 'no_request' => $numbers->internal('REQ', 'PO', $date->copy()->addDays(2)),
-                'status' => 'approved',
+                'status' => MaterialRequest::APPROVED,
                 'approved_by' => 33,
                 'approved_at' => today()->subDays(3),
             ]);
@@ -143,12 +143,12 @@ class WmsTransactionScenarioSeeder extends Seeder
                 'total_ppn' => 22000,
                 'total_include' => 222000,
                 'grand_total' => 222000,
-                'status' => 0,
+                'status' => Pembelian::OPEN,
                 'term_pengiriman' => 'Bertahap',
                 'jenis' => 0,
                 'kunci' => 1,
             ]);
-            $poDetail = Pembeliandetail::create([
+            $poDetail = PembelianDetail::create([
                 'no_po' => $po->no_po,
                 'bahan_id' => $material->id,
                 'jumlah' => 20,
@@ -192,7 +192,7 @@ class WmsTransactionScenarioSeeder extends Seeder
                 'jumlah' => 4,
                 'jumlah_terkirim' => 4,
                 'tgl_terkirim' => $date->copy()->addDays(10),
-                'close' => 1,
+                'status' => Npk::POSTED,
                 'keterangan' => 'Pemakaian demo empat kilogram',
                 'id_user' => 5,
                 'operator' => 'Demo Gudang',
@@ -205,7 +205,7 @@ class WmsTransactionScenarioSeeder extends Seeder
             $ppnRate = TaxRate::rateFor('PPN', $date->copy()->addDays(12));
             $pphRate = TaxRate::rateFor('PPH23', $date->copy()->addDays(12));
             $ppn = round($subtotal * $ppnRate / 100, 2);
-            $invoice = Invoicelpb::create([
+            $invoice = InvoiceLpb::create([
                 'no_invoice' => 'DEMO-INV-001',
                 'kode_supplier' => $supplier->id,
                 'tanggal' => $date->copy()->addDays(12),
@@ -221,19 +221,18 @@ class WmsTransactionScenarioSeeder extends Seeder
                 'ongkir' => 0,
                 'pph' => 0,
                 'grand_total' => $subtotal + $ppn,
-                'status_pembayaran' => 'Dibayar Sebagian',
                 'total_pembayaran' => 50000,
                 'sisa_tagihan' => $subtotal + $ppn - 50000,
                 'note' => 'Invoice demo terlambat dan sudah dibayar sebagian',
-                'status' => 1,
+                'status' => InvoiceLpb::PARTIALLY_PAID,
             ]);
             $invoice->receipts()->create(['lpb_id' => $firstLpb->id, 'amount' => $subtotal]);
             $firstLpb->update(['no_invoice' => $invoice->no_invoice]);
             $accounting->postInvoice($invoice);
 
-            $payment = Invoicelpbdetail::create([
+            $payment = InvoicePayment::create([
                 'payment_number' => $numbers->financial('PY', today()->subDay()),
-                'id_invoice_lpb' => $invoice->id,
+                'invoice_lpb_id' => $invoice->id,
                 'tanggal_pembayaran' => today()->subDay(),
                 'metode_pembayaran' => 'Transfer Bank BCA',
                 'coa_kas_bank_id' => $bank->id,
@@ -245,7 +244,7 @@ class WmsTransactionScenarioSeeder extends Seeder
                 'kelebihan_pembayaran' => 0,
                 'total_transaksi_pengurang_hutang' => 50000,
                 'keterangan' => 'Pembayaran parsial demo',
-                'id_user_finance' => 13,
+                'finance_user_id' => 13,
             ]);
             $accounting->postPayment($payment);
 
@@ -299,7 +298,7 @@ class WmsTransactionScenarioSeeder extends Seeder
             'no_sj' => 'SJ-' . $number,
             'id_user' => 5,
             'flag' => 0,
-            'status' => 1,
+            'status' => Lpb::POSTED,
             'jenis_lpb' => 1,
             'kunci' => 1,
         ]);
@@ -343,7 +342,7 @@ class WmsTransactionScenarioSeeder extends Seeder
             throw new RuntimeException('Seeder gagal: terdapat jurnal yang tidak seimbang.');
         }
 
-        $invoice = Invoicelpb::where('no_invoice', 'DEMO-INV-001')->firstOrFail();
+        $invoice = InvoiceLpb::where('no_invoice', 'DEMO-INV-001')->firstOrFail();
         if (abs((float) $invoice->sisa_tagihan - ((float) $invoice->grand_total - (float) $invoice->total_pembayaran)) > 0.01) {
             throw new RuntimeException('Seeder gagal: sisa invoice tidak sesuai grand total dikurangi pembayaran.');
         }
@@ -352,10 +351,10 @@ class WmsTransactionScenarioSeeder extends Seeder
         $grniLedger = (float) DB::table('jurnal_details')->join('jurnals', 'jurnals.id', '=', 'jurnal_details.jurnal_id')
             ->whereIn('jurnals.status', ['POSTED', 'REVERSED'])->whereIn('jurnal_details.coa_id', $grniIds)
             ->selectRaw('COALESCE(SUM(kredit-debit),0) balance')->value('balance');
-        $grniExpected = (float) DB::table('lpbdetails')->join('lpbs', 'lpbs.id_lpb', '=', 'lpbdetails.id_lpb')
+        $grniExpected = (float) DB::table('lpb_details')->join('lpbs', 'lpbs.id_lpb', '=', 'lpb_details.id_lpb')
             ->leftJoin('invoice_lpb_receipts', 'invoice_lpb_receipts.lpb_id', '=', 'lpbs.id')
             ->whereNull('invoice_lpb_receipts.id')
-            ->sum(DB::raw('lpbdetails.jumlah_barang_diterima * lpbdetails.harga'));
+            ->sum(DB::raw('lpb_details.jumlah_barang_diterima * lpb_details.harga'));
         if (abs($grniLedger - $grniExpected) > 0.01) {
             throw new RuntimeException("Seeder gagal: GRNI ledger {$grniLedger} tidak sama dengan LPB belum ditagih {$grniExpected}.");
         }
@@ -364,7 +363,7 @@ class WmsTransactionScenarioSeeder extends Seeder
         $apLedger = (float) DB::table('jurnal_details')->join('jurnals', 'jurnals.id', '=', 'jurnal_details.jurnal_id')
             ->whereIn('jurnals.status', ['POSTED', 'REVERSED'])->where('jurnal_details.coa_id', $apId)
             ->selectRaw('COALESCE(SUM(kredit-debit),0) balance')->value('balance');
-        $invoiceOutstanding = (float) Invoicelpb::where('is_void', false)->sum('sisa_tagihan');
+        $invoiceOutstanding = (float) InvoiceLpb::where('status', '!=', InvoiceLpb::VOID)->sum('sisa_tagihan');
         if (abs($apLedger - $invoiceOutstanding) > 0.01) {
             throw new RuntimeException("Seeder gagal: hutang ledger {$apLedger} tidak sama dengan sisa invoice {$invoiceOutstanding}.");
         }

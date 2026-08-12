@@ -47,7 +47,7 @@ class ServicePurchaseController extends Controller
             $items = $data['items'];
             unset($data['items']);
             $subtotal = collect($items)->sum(fn($x) => (float)$x['quantity'] * (float)$x['unit_price']);
-            $po = ServicePurchase::create($data + ['document_type' => 'SERVICE', 'total_exclude' => $subtotal, 'total_include' => $subtotal, 'grand_total' => $subtotal, 'no_order' => '-', 'status' => 0]);
+            $po = ServicePurchase::create($data + ['document_type' => 'SERVICE', 'total_exclude' => $subtotal, 'total_include' => $subtotal, 'grand_total' => $subtotal, 'no_order' => '-', 'status' => ServicePurchase::OPEN]);
             foreach ($items as $item) {
                 $category = ServiceCategory::findOrFail($item['service_category_id']);
                 $po->serviceDetails()->create($item + [

@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\AccountingSetting;
-use App\Models\Invoicelpb;
-use App\Models\Invoicelpbdetail;
+use App\Models\InvoiceLpb;
+use App\Models\InvoicePayment;
 use App\Models\Jurnal;
 use App\Models\Lpb;
 use App\Models\LpbDetail;
@@ -65,10 +65,16 @@ class WmsAccountingService
 
     public function consumeStock(Npk $npk): void
     {
-        $quantity = (float) ($npk->jumlah_stok ?: $npk->jumlah);
+        $quantity = (float) $npk->jumlah_stok > 0 ? (float) $npk->jumlah_stok : (float) $npk->jumlah;
         $layers = InventoryLayer::query()
             ->where('bahan_id', $npk->id_barang)
             ->when($npk->id_gudang_asal, fn($query) => $query->where('gudang_id', $npk->id_gudang_asal))
+            ->where('stock_status', 'AVAILABLE')
+            ->where(function ($query) {
+                $query->whereNull('inventory_lot_id')->orWhereHas('lot', fn ($lot) => $lot
+                    ->where('blocked', false)
+                    ->where(fn ($expiry) => $expiry->whereNull('expires_at')->orWhereDate('expires_at', '>=', today())));
+            })
             ->where('remaining_quantity', '>', 0)
             ->whereDate('transaction_date', '<=', $npk->tanggal)
             ->orderBy('transaction_date')
@@ -111,10 +117,10 @@ class WmsAccountingService
         }
 
         $effectiveUnitCost = $quantity > 0 ? round($totalCost / $quantity, 4) : 0;
-        $npk->update(['harga_satuan' => $effectiveUnitCost, 'total_nilai' => $totalCost, 'status_posting' => 'POSTED']);
+        $npk->update(['harga_satuan' => $effectiveUnitCost, 'total_nilai' => $totalCost, 'status' => Npk::POSTED]);
     }
 
-    public function restoreStock(Npk $npk): void
+    public function restoreStock(Npk $npk, bool $deleteJournal = true): void
     {
         foreach ($npk->allocations()->lockForUpdate()->get() as $allocation) {
             $layer = InventoryLayer::lockForUpdate()->findOrFail($allocation->inventory_layer_id);
@@ -130,10 +136,10 @@ class WmsAccountingService
             }
         }
         $npk->allocations()->delete();
-        $this->deleteAutomaticJournal('NPK', $npk->id);
+        if ($deleteJournal) $this->deleteAutomaticJournal('NPK', $npk->id);
     }
 
-    public function postInvoice(Invoicelpb $invoice): Jurnal
+    public function postInvoice(InvoiceLpb $invoice): Jurnal
     {
         $this->periods->assertOpen($invoice->tanggal, 'Invoice supplier');
         $invoice->loadMissing(['receipts.lpb.details.kategori', 'receipts.lpb.serviceDetails.servicePoDetail.category']);
@@ -171,7 +177,7 @@ class WmsAccountingService
         return $this->post("INV-{$invoice->no_invoice}", $invoice->tanggal, 'INVOICE_SUPPLIER', $invoice->id, "Invoice supplier {$invoice->no_invoice}", $lines);
     }
 
-    public function postPayment(Invoicelpbdetail $payment): Jurnal
+    public function postPayment(InvoicePayment $payment): Jurnal
     {
         $this->periods->assertOpen($payment->tanggal_pembayaran, 'Pembayaran supplier');
         $payment->loadMissing('invoice');
@@ -211,7 +217,7 @@ class WmsAccountingService
 
     public function reverseAutomaticJournal(string $source, int $referenceId, string $reason): Jurnal
     {
-        if (!in_array($source, ['INVOICE_SUPPLIER', 'PELUNASAN_HUTANG'], true)) {
+        if (!in_array($source, ['LPB', 'NPK', 'INVOICE_SUPPLIER', 'PELUNASAN_HUTANG'], true)) {
             throw new RuntimeException('Jurnal otomatis harus dibatalkan melalui workflow dokumen sumber.');
         }
         $this->periods->assertOpen(now(), 'Pembatalan dokumen sumber');

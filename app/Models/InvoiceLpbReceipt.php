@@ -12,7 +12,7 @@ class InvoiceLpbReceipt extends Model
 
     public function invoice(): BelongsTo
     {
-        return $this->belongsTo(Invoicelpb::class, 'invoice_lpb_id');
+        return $this->belongsTo(InvoiceLpb::class, 'invoice_lpb_id');
     }
 
     public function lpb(): BelongsTo

@@ -2,12 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Lpb extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
+
+    public const DRAFT = 'DRAFT';
+    public const POSTED = 'POSTED';
+    public const REVERSED = 'REVERSED';
+    public const CANCELLED = 'CANCELLED';
 
     protected $table = 'lpbs';
 
@@ -22,7 +28,9 @@ class Lpb extends Model
         'flag',
         'no_invoice',
         'status',
-        'is_cancelled',
+        'receiving_status',
+        'putaway_by',
+        'putaway_at',
         'cancelled_by',
         'cancelled_at',
         'cancellation_reason',
@@ -65,7 +73,7 @@ class Lpb extends Model
 
     protected $casts = [
         'tanggal' => 'date',
-        'is_cancelled' => 'boolean',
         'cancelled_at' => 'datetime',
+        'putaway_at' => 'datetime',
     ];
 }

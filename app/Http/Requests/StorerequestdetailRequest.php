@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use App\Models\RequestDetail;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StorerequestdetailRequest extends FormRequest
+class StoreRequestDetailRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -16,7 +16,7 @@ class StorerequestdetailRequest extends FormRequest
     {
         return [
             'request_id'   => 'required|exists:requests,id',
-            'bahan_id'     => 'nullable|exists:bahan,id',
+            'bahan_id'     => 'nullable|exists:bahans,id',
             'nama_barang'  => 'required|string|max:255',
             'jumlah_minta' => 'required|numeric|gt:0',
             'keterangan'   => 'nullable|string',

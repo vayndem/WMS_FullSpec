@@ -10,7 +10,7 @@ class LpbDetail extends Model
 {
     use HasFactory;
 
-    protected $table = 'lpbdetails';
+    protected $table = 'lpb_details';
 
     protected $fillable = [
         'id_lpb',

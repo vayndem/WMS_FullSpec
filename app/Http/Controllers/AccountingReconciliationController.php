@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AccountingReconciliation;
 use App\Models\AccountingSetting;
 use App\Models\Jurnal;
+use App\Models\InvoiceLpb;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -15,7 +16,7 @@ class AccountingReconciliationController extends Controller
         $this->authorize('viewAny', AccountingReconciliation::class);
         $financial = $request->user()->can('viewFinancials', AccountingReconciliation::class);
 
-        $stock = DB::table('bahan')
+        $stock = DB::table('bahans')
             ->leftJoinSub(
                 DB::table('inventory_layers')->select('bahan_id')
                     ->selectRaw('SUM(remaining_quantity) layer_quantity')
@@ -24,10 +25,10 @@ class AccountingReconciliationController extends Controller
                 'layers',
                 'layers.bahan_id',
                 '=',
-                'bahan.id'
+                'bahans.id'
             )
             ->selectRaw('COUNT(*) total_rows')
-            ->selectRaw('SUM(CASE WHEN ABS(COALESCE(bahan.stok_onhand,0)-COALESCE(layers.layer_quantity,0)) <= 0.000001 THEN 0 ELSE 1 END) invalid_rows')
+            ->selectRaw('SUM(CASE WHEN ABS(COALESCE(bahans.stok_onhand,0)-COALESCE(layers.layer_quantity,0)) <= 0.000001 THEN 0 ELSE 1 END) invalid_rows')
             ->selectRaw('SUM(COALESCE(layers.inventory_value,0)) inventory_value')
             ->first();
 
@@ -36,18 +37,18 @@ class AccountingReconciliationController extends Controller
             ->selectRaw('SUM(CASE WHEN ABS(COALESCE(total_debit,0)-COALESCE(total_kredit,0)) <= 0.01 THEN 0 ELSE 1 END) invalid_rows')
             ->first();
 
-        $invoice = DB::table('invoicelpbs')->where('is_void', false)
+        $invoice = DB::table('invoice_lpbs')->where('status', '!=', InvoiceLpb::VOID)
             ->selectRaw('COUNT(*) total_rows')
             ->selectRaw('SUM(CASE WHEN ABS(COALESCE(sisa_tagihan,0) - GREATEST(COALESCE(grand_total,0)-COALESCE(total_pembayaran,0),0)) <= 0.01 THEN 0 ELSE 1 END) invalid_rows')
             ->selectRaw('SUM(COALESCE(sisa_tagihan,0)) outstanding')
             ->first();
 
-        $grniExpected = (float) DB::table('lpbdetails')
-            ->join('lpbs', 'lpbs.id_lpb', '=', 'lpbdetails.id_lpb')
+        $grniExpected = (float) DB::table('lpb_details')
+            ->join('lpbs', 'lpbs.id_lpb', '=', 'lpb_details.id_lpb')
             ->leftJoin('invoice_lpb_receipts', 'invoice_lpb_receipts.lpb_id', '=', 'lpbs.id')
             ->whereNull('invoice_lpb_receipts.id')
-            ->sum(DB::raw('lpbdetails.jumlah_barang_diterima * lpbdetails.harga'));
-        $grniAccounts = DB::table('kategoribahan')->whereNotNull('coa_clearing_lpb_id')
+            ->sum(DB::raw('lpb_details.jumlah_barang_diterima * lpb_details.harga'));
+        $grniAccounts = DB::table('kategori_bahans')->whereNotNull('coa_clearing_lpb_id')
             ->distinct()->pluck('coa_clearing_lpb_id');
         $grniLedger = (float) DB::table('jurnal_details')->join('jurnals', 'jurnals.id', '=', 'jurnal_details.jurnal_id')
             ->whereIn('jurnals.status', ['POSTED', 'REVERSED'])->whereIn('jurnal_details.coa_id', $grniAccounts)
@@ -113,31 +114,31 @@ class AccountingReconciliationController extends Controller
         $financial = $request->user()->can('viewFinancials', AccountingReconciliation::class);
 
         if ($check === 'stock') {
-            $rows = DB::table('bahan')->leftJoinSub(
+            $rows = DB::table('bahans')->leftJoinSub(
                 DB::table('inventory_layers')->select('bahan_id')
                     ->selectRaw('SUM(remaining_quantity) layer_quantity')
                     ->selectRaw('SUM(remaining_quantity * unit_cost) inventory_value')->groupBy('bahan_id'),
                 'layers',
                 'layers.bahan_id',
                 '=',
-                'bahan.id'
-            )->select('bahan.id', 'bahan.nama', 'bahan.stok_onhand')
+                'bahans.id'
+            )->select('bahans.id', 'bahans.nama', 'bahans.stok_onhand')
                 ->selectRaw('COALESCE(layers.layer_quantity,0) layer_quantity')
-                ->selectRaw('COALESCE(bahan.stok_onhand,0)-COALESCE(layers.layer_quantity,0) difference')
-                ->selectRaw('COALESCE(layers.inventory_value,0) inventory_value')->orderBy('bahan.nama')->get();
+                ->selectRaw('COALESCE(bahans.stok_onhand,0)-COALESCE(layers.layer_quantity,0) difference')
+                ->selectRaw('COALESCE(layers.inventory_value,0) inventory_value')->orderBy('bahans.nama')->get();
         } elseif ($check === 'journal') {
             $rows = Jurnal::query()->select('id', 'no_jurnal', 'tanggal', 'sumber_transaksi', 'status', 'total_debit', 'total_kredit')
                 ->selectRaw('total_debit-total_kredit difference')->latest('tanggal')->get();
         } elseif ($check === 'invoice' || $check === 'ap') {
-            $rows = DB::table('invoicelpbs')->where('is_void', false)
-                ->select('id', 'no_invoice', 'tanggal', 'grand_total', 'total_pembayaran', 'sisa_tagihan', 'status_pembayaran')
+            $rows = DB::table('invoice_lpbs')->where('status', '!=', InvoiceLpb::VOID)
+                ->select('id', 'no_invoice', 'tanggal', 'grand_total', 'total_pembayaran', 'sisa_tagihan', 'status')
                 ->selectRaw('sisa_tagihan-GREATEST(grand_total-total_pembayaran,0) difference')->orderByDesc('tanggal')->get();
         } else {
-            $goods = DB::table('lpbs')->join('lpbdetails', 'lpbdetails.id_lpb', '=', 'lpbs.id_lpb')
+            $goods = DB::table('lpbs')->join('lpb_details', 'lpb_details.id_lpb', '=', 'lpbs.id_lpb')
                 ->leftJoin('invoice_lpb_receipts', 'invoice_lpb_receipts.lpb_id', '=', 'lpbs.id')
                 ->whereNull('invoice_lpb_receipts.id')
                 ->select('lpbs.id', 'lpbs.id_lpb', 'lpbs.tanggal', 'lpbs.no_po')
-                ->selectRaw('SUM(lpbdetails.jumlah_barang_diterima * lpbdetails.harga) amount')
+                ->selectRaw('SUM(lpb_details.jumlah_barang_diterima * lpb_details.harga) amount')
                 ->groupBy('lpbs.id', 'lpbs.id_lpb', 'lpbs.tanggal', 'lpbs.no_po')->get();
             $rows = $goods->sortByDesc('tanggal')->values();
         }

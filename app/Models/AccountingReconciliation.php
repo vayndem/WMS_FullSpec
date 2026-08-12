@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class AccountingReconciliation extends Model
 {
-    protected $table = 'bahan';
+    protected $table = 'bahans';
 
     public $timestamps = false;
 

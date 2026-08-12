@@ -91,7 +91,7 @@
                                         @else
                                             <td>{{ $row->no_invoice }}</td>
                                             <td>{{ $row->tanggal }}</td>
-                                            <td>{{ $row->status_pembayaran }}</td>
+                                            <td>{{ str($row->status)->replace('_', ' ')->title() }}</td>
                                             @if ($financial)
                                                 <td class="text-end">Rp {{ number_format($row->grand_total, 2, ',', '.') }}
                                                 </td>

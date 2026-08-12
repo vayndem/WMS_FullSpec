@@ -2,16 +2,16 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Invoicelpb;
+use App\Models\InvoiceLpb;
 use App\Models\Lpb;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
-class StoreInvoicelpbRequest extends FormRequest
+class StoreInvoiceLpbRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('create', Invoicelpb::class) ?? false;
+        return $this->user()?->can('create', InvoiceLpb::class) ?? false;
     }
 
     protected function prepareForValidation(): void
@@ -28,7 +28,7 @@ class StoreInvoicelpbRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'no_invoice'              => 'required|string|max:100|unique:invoicelpbs,no_invoice',
+            'no_invoice'              => 'required|string|max:100|unique:invoice_lpbs,no_invoice',
             'lpb_ids'                 => 'required|array|min:1',
             'lpb_ids.*'               => 'required|integer|distinct|exists:lpbs,id',
             'kode_supplier'           => 'required|exists:suppliers,id',
@@ -51,8 +51,7 @@ class StoreInvoicelpbRequest extends FormRequest
             $lpbs = Lpb::query()
                 ->whereIn('id', $this->input('lpb_ids', []))
                 ->whereNull('no_invoice')
-                ->where('is_cancelled', false)
-                ->where('status', 1)
+                ->where('status', Lpb::POSTED)
                 ->with('pembelian:id,no_po,supplier_id')
                 ->get();
 

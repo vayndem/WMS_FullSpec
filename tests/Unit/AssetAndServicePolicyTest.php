@@ -5,6 +5,7 @@ use App\Models\Asset;
 use App\Models\AssetCategory;
 use App\Models\ServiceBap;
 use App\Models\ServicePurchase;
+use App\Models\Lpb;
 use App\Policies\AssetPolicy;
 use App\Policies\AssetCategoryPolicy;
 use App\Policies\ServiceBapPolicy;
@@ -29,7 +30,7 @@ class AssetAndServicePolicyTest extends TestCase {
     }
     public function test_purchasing_and_accounting_manage_services_but_finance_does_not(): void {
         $poPolicy=new ServicePurchasePolicy();$bapPolicy=new ServiceBapPolicy();
-        $po=new ServicePurchase(['document_type'=>'SERVICE']);$bap=new ServiceBap(['document_type'=>'SERVICE_BAP','is_cancelled'=>false]);
+        $po=new ServicePurchase(['document_type'=>'SERVICE']);$bap=new ServiceBap(['document_type'=>'SERVICE_BAP','status'=>Lpb::POSTED]);
         foreach([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING] as $type){$this->assertTrue($poPolicy->view($this->user($type),$po));$this->assertTrue($bapPolicy->view($this->user($type),$bap));}
         $this->assertFalse($poPolicy->viewAny($this->user(User::ROLE_FINANCE)));
         $this->assertFalse($bapPolicy->viewAny($this->user(User::ROLE_FINANCE)));

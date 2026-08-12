@@ -76,6 +76,13 @@
                                 </select>
                             </div>
                             <div class="col-md-6 mb-3">
+                                <label class="fw-bold text-dark small text-uppercase">Reservasi / Picking (Opsional)</label>
+                                <select name="inventory_reservation_id" class="form-select" data-app-picker data-placeholder="Pilih reservasi stok...">
+                                    <option value="">Tanpa reservasi</option>
+                                    @foreach($reservations as $reservation)<option value="{{ $reservation->id }}">{{ $reservation->number }} · {{ $reservation->gudang->nama }} · {{ $reservation->bahan->nama }} · {{ $reservation->quantity }}</option>@endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
                                 <label class="fw-bold text-dark small text-uppercase">Jumlah Barang <span
                                         class="text-danger">*</span></label>
                                 <input type="number" step="any" name="jumlah" class="form-control" placeholder="0"
@@ -86,9 +93,9 @@
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold text-dark small text-uppercase">Status Transaksi <span
                                         class="text-danger">*</span></label>
-                                <select name="close" class="form-control" required>
-                                    <option value="0">Draft (Belum Potong Stok & COA)</option>
-                                    <option value="1">Keluar (Potong Stok & Catat COA)</option>
+                                <select name="status" class="form-control" required>
+                                    <option value="DRAFT">Draft (Belum Potong Stok & COA)</option>
+                                    <option value="POSTED">Keluar (Potong Stok & Catat COA)</option>
                                 </select>
                             </div>
                             <div class="col-md-6 mb-3">

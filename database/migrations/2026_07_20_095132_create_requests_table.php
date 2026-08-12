@@ -11,8 +11,8 @@ return new class extends Migration
         Schema::create('requests', function (Blueprint $table) {
             $table->id();
             $table->string('no_request')->unique();
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending')
-                ->comment('Alur request: pending=menunggu persetujuan, approved=disetujui, rejected=ditolak');
+            $table->enum('status', ['PENDING', 'APPROVED', 'REJECTED'])->default('PENDING')
+                ->comment('Lifecycle request: PENDING, APPROVED, atau REJECTED');
             $table->text('catatan_approver')->nullable();
             $table->unsignedBigInteger('approved_by')->nullable()
                 ->comment('ID user lokal yang menyetujui/menolak request');

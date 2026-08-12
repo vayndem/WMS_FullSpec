@@ -5,7 +5,7 @@ namespace App\Policies;
 use App\Models\User;
 use App\Models\LpbDetail;
 
-class LpbdetailPolicy
+class LpbDetailPolicy
 {
     public function viewAny(User $user): bool
     {

@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Lpb;
 use App\Models\LpbDetail;
 use App\Models\Pembelian;
-use App\Models\Pembeliandetail;
+use App\Models\PembelianDetail;
 use App\Models\Bahan;
 use App\Models\Jurnal;
 use App\Models\KategoriBahan;
@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\WmsAccountingService;
 use App\Models\InventoryLayer;
+use App\Models\InventoryLot;
 use App\Services\DocumentNumberService;
 use App\Services\StokGudangService;
 
@@ -216,7 +217,7 @@ class LpbController extends Controller
         $this->authorize('create', Lpb::class);
 
         $pos = Pembelian::with(['supplier', 'details'])
-            ->where('status', '!=', 2)
+            ->where('status', Pembelian::OPEN)
             ->orderBy('no_po', 'desc')
             ->get();
         $kategoris = KategoriBahan::all();
@@ -297,7 +298,7 @@ class LpbController extends Controller
                 'id_user'     => $user->id,
                 'flag'        => 0,
                 'no_invoice'  => $validated['no_invoice'] ?? null,
-                'status'      => 0,
+                'status'      => Lpb::DRAFT,
                 'jenis_lpb'   => $validated['jenis_lpb'] ?? 1,
                 'ulang'       => 0,
                 'kunci'       => 0,
@@ -306,7 +307,7 @@ class LpbController extends Controller
             ]);
 
             foreach ($validated['details'] as $item) {
-                $poDetail = Pembeliandetail::where('no_po', $validated['no_po'])
+                $poDetail = PembelianDetail::where('no_po', $validated['no_po'])
                     ->where('bahan_id', $item['id_bahan'])
                     ->lockForUpdate()
                     ->firstOrFail();
@@ -334,9 +335,14 @@ class LpbController extends Controller
                     'jumlah_tersisa'         => $item['jumlah_barang_diterima'],
                     'flag_dipakai'           => 1,
                 ]);
+                $lot = !empty($item['lot_number']) ? InventoryLot::firstOrCreate(
+                    ['bahan_id' => $item['id_bahan'], 'lot_number' => $item['lot_number']],
+                    ['quality_status' => 'RELEASED']
+                ) : null;
                 InventoryLayer::create([
                     'bahan_id' => $item['id_bahan'],
                     'gudang_id' => $po->gudang_id,
+                    'inventory_lot_id' => $lot?->id,
                     'source_type' => 'LPB_DETAIL',
                     'source_id' => $lpbDetail->id,
                     'transaction_date' => $lpb->tanggal,
@@ -361,7 +367,7 @@ class LpbController extends Controller
             }
 
             $this->accounting->postLpb($lpb);
-            $lpb->update(['kunci' => 1, 'status' => 1]);
+            $lpb->update(['kunci' => true, 'status' => Lpb::POSTED]);
 
             return $lpb;
         });
@@ -450,7 +456,7 @@ class LpbController extends Controller
             foreach ($lpbData->details as $oldDetail) {
                 Bahan::where('id', $oldDetail->id_bahan)->decrement('stok_onhand', $oldDetail->jumlah_barang_diterima);
 
-                $poDetail = Pembeliandetail::where('no_po', $lpbData->no_po)
+                $poDetail = PembelianDetail::where('no_po', $lpbData->no_po)
                     ->where('bahan_id', $oldDetail->id_bahan)
                     ->lockForUpdate()
                     ->first();
@@ -488,7 +494,7 @@ class LpbController extends Controller
 
                 Bahan::where('id', $item['id_bahan'])->increment('stok_onhand', $item['jumlah_barang_diterima']);
 
-                $poDetail = Pembeliandetail::where('no_po', $lpbData->no_po)
+                $poDetail = PembelianDetail::where('no_po', $lpbData->no_po)
                     ->where('bahan_id', $item['id_bahan'])
                     ->lockForUpdate()
                     ->first();
@@ -526,7 +532,7 @@ class LpbController extends Controller
             foreach ($lpbData->details as $detail) {
                 Bahan::where('id', $detail->id_bahan)->decrement('stok_onhand', $detail->jumlah_barang_diterima);
 
-                $poDetail = Pembeliandetail::where('no_po', $lpbData->no_po)
+                $poDetail = PembelianDetail::where('no_po', $lpbData->no_po)
                     ->where('bahan_id', $detail->id_bahan)
                     ->lockForUpdate()
                     ->first();
@@ -584,7 +590,7 @@ class LpbController extends Controller
 
             Bahan::where('id', $validated['id_bahan'])->increment('stok_onhand', $validated['jumlah_barang_diterima']);
 
-            $poDetail = Pembeliandetail::where('no_po', $lpbData->no_po)
+            $poDetail = PembelianDetail::where('no_po', $lpbData->no_po)
                 ->where('bahan_id', $validated['id_bahan'])
                 ->lockForUpdate()
                 ->first();
@@ -647,7 +653,7 @@ class LpbController extends Controller
                     Bahan::where('id', $detail->id_bahan)->decrement('stok_onhand', abs($diff));
                 }
 
-                $poDetail = Pembeliandetail::where('no_po', $lpbData->no_po)
+                $poDetail = PembelianDetail::where('no_po', $lpbData->no_po)
                     ->where('bahan_id', $detail->id_bahan)
                     ->lockForUpdate()
                     ->first();
@@ -694,7 +700,7 @@ class LpbController extends Controller
         DB::transaction(function () use ($lpbData, $detail) {
             Bahan::where('id', $detail->id_bahan)->decrement('stok_onhand', $detail->jumlah_barang_diterima);
 
-            $poDetail = Pembeliandetail::where('no_po', $lpbData->no_po)
+            $poDetail = PembelianDetail::where('no_po', $lpbData->no_po)
                 ->where('bahan_id', $detail->id_bahan)
                 ->lockForUpdate()
                 ->first();

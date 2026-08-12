@@ -15,7 +15,11 @@
                     @can('confirm', $transfer)
                         <form class="d-inline" method="POST" action="{{ route('transfer-gudangs.confirm', $transfer) }}">
                             @csrf<button class="btn btn-success"
-                                onclick="return confirm('Konfirmasi transfer dan pindahkan stok?')">Konfirmasi</button></form>
+                                onclick="return confirm('Kirim barang dan pindahkan ke stok in-transit?')">Kirim</button></form>
+                    @endcan
+                    @can('receive', $transfer)
+                        <form class="d-inline" method="POST" action="{{ route('transfer-gudangs.receive', $transfer) }}">
+                            @csrf<button class="btn btn-success" onclick="return confirm('Terima seluruh barang transfer?')">Terima</button></form>
                     @endcan
                     @can('delete', $transfer)
                         <form class="d-inline" method="POST" action="{{ route('transfer-gudangs.destroy', $transfer) }}">
@@ -37,6 +41,7 @@
                         <tr>
                             <th>Bahan</th>
                             <th class="text-end">Jumlah</th>
+                            <th class="text-end">Dikirim</th><th class="text-end">Diterima</th><th class="text-end">Selisih</th>
                             <th>Keterangan</th>
                         </tr>
                     </thead>
@@ -45,6 +50,7 @@
                             <tr>
                                 <td>{{ $d->bahan->nama }}</td>
                                 <td class="text-end">{{ $d->jumlah }}</td>
+                                <td class="text-end">{{ $d->jumlah_dikirim }}</td><td class="text-end">{{ $d->jumlah_diterima }}</td><td class="text-end">{{ $d->jumlah_selisih }}</td>
                                 <td>{{ $d->keterangan ?: '-' }}</td>
                             </tr>
                         @endforeach

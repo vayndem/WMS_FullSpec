@@ -41,18 +41,18 @@ class StokGudangService
         $saldo->update(['stok_dipesan' => max(0, (float) $saldo->stok_dipesan - $jumlah)]);
     }
 
-    public function masuk(int $gudangId, int $bahanId, float $jumlah, float $harga, string $jenis, string $referensi, int $referensiId, ?string $keterangan = null): StokGudang
+    public function masuk(int $gudangId, int $bahanId, float $jumlah, float $harga, string $jenis, string $referensi, int $referensiId, ?string $keterangan = null, bool $affectGlobal = true): StokGudang
     {
         if ($jumlah <= 0) throw new RuntimeException('Jumlah stok masuk harus lebih besar dari nol.');
         $saldo = $this->saldo($gudangId, $bahanId);
         $sebelum = (float) $saldo->stok_tersedia;
         $saldo->update(['stok_tersedia' => $sebelum + $jumlah]);
-        Bahan::whereKey($bahanId)->increment('stok_onhand', $jumlah);
+        if ($affectGlobal) Bahan::whereKey($bahanId)->increment('stok_onhand', $jumlah);
         $this->catat($saldo, $jenis, $jumlah, 0, $sebelum, $harga, $referensi, $referensiId, $keterangan);
         return $saldo->fresh();
     }
 
-    public function keluar(int $gudangId, int $bahanId, float $jumlah, float $harga, string $jenis, string $referensi, int $referensiId, ?string $keterangan = null): StokGudang
+    public function keluar(int $gudangId, int $bahanId, float $jumlah, float $harga, string $jenis, string $referensi, int $referensiId, ?string $keterangan = null, bool $affectGlobal = true): StokGudang
     {
         if ($jumlah <= 0) throw new RuntimeException('Jumlah stok keluar harus lebih besar dari nol.');
         $saldo = $this->saldo($gudangId, $bahanId);
@@ -61,14 +61,20 @@ class StokGudangService
             throw new RuntimeException('Stok bebas gudang tidak mencukupi.');
         }
         $saldo->update(['stok_tersedia' => $sebelum - $jumlah]);
-        Bahan::whereKey($bahanId)->decrement('stok_onhand', $jumlah);
+        if ($affectGlobal) Bahan::whereKey($bahanId)->decrement('stok_onhand', $jumlah);
         $this->catat($saldo, $jenis, 0, $jumlah, $sebelum, $harga, $referensi, $referensiId, $keterangan);
         return $saldo->fresh();
     }
 
-    public function ambilLayer(int $gudangId, int $bahanId, float $jumlah, $tanggal): array
+    public function ambilLayer(int $gudangId, int $bahanId, float $jumlah, $tanggal, array $statuses = ['AVAILABLE']): array
     {
         $layers = InventoryLayer::where('gudang_id', $gudangId)->where('bahan_id', $bahanId)
+            ->whereIn('stock_status', $statuses)
+            ->where(function ($query) {
+                $query->whereNull('inventory_lot_id')->orWhereHas('lot', fn ($lot) => $lot
+                    ->where('blocked', false)
+                    ->where(fn ($expiry) => $expiry->whereNull('expires_at')->orWhereDate('expires_at', '>=', today())));
+            })
             ->where('remaining_quantity', '>', 0)->whereDate('transaction_date', '<=', $tanggal)
             ->orderBy('transaction_date')->orderBy('id')->lockForUpdate()->get();
         if ((float) $layers->sum('remaining_quantity') + 0.000001 < $jumlah) {

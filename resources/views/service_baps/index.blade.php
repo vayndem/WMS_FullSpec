@@ -45,8 +45,8 @@
                                         <td>{{ $bap->no_po }}</td>
                                         <td>{{ $bap->pembelian->supplier->nama }}</td>
                                         <td><span
-                                                class="badge bg-{{ $bap->is_cancelled ? 'danger' : ($bap->invoiceReceipts->isNotEmpty() ? 'success' : 'warning') }}">
-                                                {{ $bap->is_cancelled ? 'Dibatalkan' : ($bap->invoiceReceipts->isNotEmpty() ? 'Selesai / Sudah Invoice' : 'Sedang Dikerjakan') }}
+                                                class="badge bg-{{ $bap->status === \App\Models\Lpb::CANCELLED ? 'danger' : ($bap->invoiceReceipts->isNotEmpty() ? 'success' : 'warning') }}">
+                                                {{ $bap->status === \App\Models\Lpb::CANCELLED ? 'Dibatalkan' : ($bap->invoiceReceipts->isNotEmpty() ? 'Selesai / Sudah Invoice' : 'Sedang Dikerjakan') }}
                                             </span>
                                         </td>
                                         <td class="text-end"><a class="btn btn-sm btn-outline-primary"

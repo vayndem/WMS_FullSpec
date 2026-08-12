@@ -49,4 +49,9 @@ class TransferGudangPolicy
     {
         return $this->ok($u) && $this->canAccessTransfer($u, $m) && $m->status === TransferGudang::DIAJUKAN;
     }
+
+    public function receive(User $u, TransferGudang $m): bool
+    {
+        return $this->ok($u) && $this->canAccessTransfer($u, $m) && $m->status === TransferGudang::DIKIRIM;
+    }
 }

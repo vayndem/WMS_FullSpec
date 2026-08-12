@@ -6,7 +6,7 @@ use App\Models\Pembelian;
 use App\Models\RequestDetail;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StorepembeliandetailRequest extends FormRequest
+class StorePembelianDetailRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -27,7 +27,7 @@ class StorepembeliandetailRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'bahan_id'          => 'required|exists:bahan,id',
+            'bahan_id'          => 'required|exists:bahans,id',
             'jumlah'            => [
                 'required',
                 'numeric',

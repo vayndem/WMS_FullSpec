@@ -90,7 +90,7 @@ class PembelianController extends Controller
             'tanggal' => $row->tanggal,
             'nama' => $row->supplier->nama ?? '-',
             'grand_total' => 'Rp ' . number_format($row->grand_total, 0, ',', '.'),
-            'status' => (int) $row->status === 2 ? 'Closed' : 'Open',
+            'status' => $row->status === Pembelian::CLOSED ? 'Closed' : 'Open',
         ]);
 
         return Pdf::loadView('reports.table-pdf', [
@@ -315,7 +315,7 @@ class PembelianController extends Controller
         $pembelian = Pembelian::where('no_po', $no_po)->with('details')->firstOrFail();
         $this->authorize('update', $pembelian);
 
-        if ($pembelian->status == 2) {
+        if ($pembelian->status === Pembelian::CLOSED) {
             return response()->json([
                 'success' => false,
                 'message' => 'PO sudah dalam status tertutup (Closed).'
@@ -323,7 +323,7 @@ class PembelianController extends Controller
         }
 
         DB::transaction(function () use ($pembelian) {
-            $pembelian->update(['status' => 2]);
+            $pembelian->update(['status' => Pembelian::CLOSED]);
 
             foreach ($pembelian->details as $detail) {
                 $selisih = $detail->jumlah - $detail->diterima;

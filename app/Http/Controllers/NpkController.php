@@ -15,10 +15,12 @@ use App\Services\WmsAccountingService;
 use App\Services\AccountingPeriodService;
 use App\Services\DocumentNumberService;
 use App\Services\StokGudangService;
+use App\Services\WarehouseExecutionService;
+use App\Models\InventoryReservation;
 
 class NpkController extends Controller
 {
-    public function __construct(private WmsAccountingService $accounting, private AccountingPeriodService $periods, private DocumentNumberService $numbers, private StokGudangService $stokGudang) {}
+    public function __construct(private WmsAccountingService $accounting, private AccountingPeriodService $periods, private DocumentNumberService $numbers, private StokGudangService $stokGudang, private WarehouseExecutionService $execution) {}
     public function index(Request $request)
     {
         $this->authorize('viewAny', Npk::class);
@@ -28,8 +30,8 @@ class NpkController extends Controller
         if ($request->ajax()) {
             $query = Npk::with(['barang', 'gudangAsal', 'gudangTujuan'])
                 ->when($request->user()->isProduction(), fn($builder) => $builder->whereIn('id_gudang_asal', $warehouseIds))
-                ->when($request->filled('close'), function ($query) use ($request) {
-                    $query->where('close', $request->input('close'));
+                ->when($request->filled('status'), function ($query) use ($request) {
+                    $query->where('status', $request->input('status'));
                 });
 
             if (!$financial) {
@@ -42,11 +44,10 @@ class NpkController extends Controller
                     'jumlah',
                     'jumlah_stok',
                     'satuan_transaksi',
-                    'close',
+                    'status',
                     'operator',
                     'id_gudang_asal',
                     'id_gudang_tujuan',
-                    'status_posting',
                 ]);
             }
 
@@ -86,7 +87,8 @@ class NpkController extends Controller
         $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
         $search = trim((string) $request->input('search', ''));
         $query = Npk::with('barang')
-            ->when($request->filled('close'), fn($q) => $q->where('close', $request->close))
+            ->when($request->user()->isProduction(), fn ($q) => $q->whereIn('id_gudang_asal', $request->user()->accessibleGudangIds('npk')))
+            ->when($request->filled('status'), fn($q) => $q->where('status', $request->status))
             ->latest('tanggal');
 
         if ($search !== '') {
@@ -97,7 +99,7 @@ class NpkController extends Controller
                 ->orWhereHas('barang', fn($barang) => $barang->where('nama', 'like', "%{$search}%")));
         }
 
-        foreach (['kode', 'kode_datapesanan', 'tanggal', 'jumlah', 'close', 'operator'] as $field) {
+        foreach (['kode', 'kode_datapesanan', 'tanggal', 'jumlah', 'status', 'operator'] as $field) {
             if ($filters->has($field)) {
                 $query->where($field, 'like', "%{$filters[$field]}%");
             }
@@ -114,7 +116,7 @@ class NpkController extends Controller
                 'nama_barang' => $row->barang->nama ?? '-',
                 'jumlah' => number_format($row->jumlah, 2, ',', '.') . ' ' .
                     ($row->satuan_transaksi ?: ($row->barang->satuan ?? '')),
-                'close' => (int) $row->close === 1 ? 'Keluar' : 'Draft',
+                'status' => $row->status === Npk::POSTED ? 'Keluar' : ($row->status === Npk::REVERSED ? 'Reversed' : 'Draft'),
                 'operator' => $row->operator ?: '-',
             ];
             if ($financial) {
@@ -135,7 +137,7 @@ class NpkController extends Controller
             $columns[] = ['key' => 'harga_satuan', 'label' => 'Harga Rata-rata', 'align' => 'right'];
             $columns[] = ['key' => 'total_nilai', 'label' => 'Nilai Pemakaian', 'align' => 'right'];
         }
-        $columns[] = ['key' => 'close', 'label' => 'Status', 'align' => 'left'];
+        $columns[] = ['key' => 'status', 'label' => 'Status', 'align' => 'left'];
         $columns[] = ['key' => 'operator', 'label' => 'Operator', 'align' => 'left'];
 
         return Pdf::loadView('reports.table-pdf', [
@@ -155,8 +157,9 @@ class NpkController extends Controller
         $bahans = Bahan::with('stokGudangs')->orderBy('nama', 'asc')->get();
         $gudangs = $this->availableWarehouses(request()->user(), 'npk');
         $documentNumber = $this->numbers->external('NPK');
+        $reservations = InventoryReservation::with(['bahan', 'gudang'])->whereIn('gudang_id', request()->user()->accessibleGudangIds('npk'))->whereIn('status', ['ACTIVE', 'PICKED'])->get();
 
-        return view('npk.create', compact('bahans', 'gudangs', 'documentNumber'));
+        return view('npk.create', compact('bahans', 'gudangs', 'documentNumber', 'reservations'));
     }
 
     public function store(StoreNpkRequest $request)
@@ -166,7 +169,7 @@ class NpkController extends Controller
         abort_unless($request->user()->canAccessGudang((int) $validated['id_gudang_asal'], 'npk'), 403);
 
         $npk = DB::transaction(function () use ($validated, $request) {
-            $isKeluar = (int) $validated['close'] === 1;
+            $isKeluar = $validated['status'] === Npk::POSTED;
             $bahan = Bahan::lockForUpdate()->findOrFail($validated['id_barang']);
 
             $validated['id_user'] = $request->user()->id ?? 0;
@@ -180,6 +183,7 @@ class NpkController extends Controller
             $npk = Npk::create($validated);
 
             if ($isKeluar) {
+                if ($npk->inventory_reservation_id) $this->execution->consumeReservation(InventoryReservation::findOrFail($npk->inventory_reservation_id), (int) $npk->id_gudang_asal, (int) $npk->id_barang, (float) $npk->jumlah_stok);
                 $this->stokGudang->saldo((int) $npk->id_gudang_asal, (int) $npk->id_barang);
                 $this->accounting->consumeStock($npk);
                 $this->stokGudang->keluar((int) $npk->id_gudang_asal, (int) $npk->id_barang, (float) $npk->jumlah_stok, (float) $npk->harga_satuan, 'PENGELUARAN', 'NPK', $npk->id, $npk->kode);
@@ -228,8 +232,9 @@ class NpkController extends Controller
 
         $bahans = Bahan::with('stokGudangs')->orderBy('nama', 'asc')->get();
         $gudangs = $this->availableWarehouses(request()->user(), 'npk');
+        $reservations = InventoryReservation::with(['bahan', 'gudang'])->whereIn('gudang_id', request()->user()->accessibleGudangIds('npk'))->whereIn('status', ['ACTIVE', 'PICKED'])->get();
 
-        return view('npk.edit', compact('npk', 'bahans', 'gudangs'));
+        return view('npk.edit', compact('npk', 'bahans', 'gudangs', 'reservations'));
     }
 
     public function update(UpdateNpkRequest $request, $id)
@@ -242,7 +247,7 @@ class NpkController extends Controller
         abort_unless($request->user()->canAccessGudang((int) $validated['id_gudang_asal'], 'npk'), 403);
 
         DB::transaction(function () use ($npk, $validated) {
-            $willClose = (int) $validated['close'] === 1;
+            $willClose = $validated['status'] === Npk::POSTED;
             $bahan = Bahan::lockForUpdate()->findOrFail($validated['id_barang']);
 
             $validated['jumlah_terkirim'] = $willClose ? ($validated['jumlah_terkirim'] ?? $validated['jumlah']) : 0;
@@ -255,6 +260,7 @@ class NpkController extends Controller
             $npk->update($validated);
 
             if ($willClose) {
+                if ($npk->inventory_reservation_id) $this->execution->consumeReservation(InventoryReservation::findOrFail($npk->inventory_reservation_id), (int) $npk->id_gudang_asal, (int) $npk->id_barang, (float) $npk->jumlah_stok);
                 $this->stokGudang->saldo((int) $npk->id_gudang_asal, (int) $npk->id_barang);
                 $this->accounting->consumeStock($npk);
                 $this->stokGudang->keluar((int) $npk->id_gudang_asal, (int) $npk->id_barang, (float) $npk->jumlah_stok, (float) $npk->harga_satuan, 'PENGELUARAN', 'NPK', $npk->id, $npk->kode);

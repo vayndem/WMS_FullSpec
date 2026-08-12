@@ -38,8 +38,8 @@
                         <div class="col-6 col-lg-3">
                             <small class="text-muted d-block mb-1">Status</small>
                             <span
-                                class="badge {{ (int) $pembelian->status === 2 ? 'bg-success' : 'bg-warning text-dark' }}">
-                                {{ (int) $pembelian->status === 2 ? 'Selesai' : 'Aktif' }}
+                                class="badge {{ $pembelian->status === \App\Models\Pembelian::CLOSED ? 'bg-success' : 'bg-warning text-dark' }}">
+                                {{ $pembelian->status === \App\Models\Pembelian::CLOSED ? 'Selesai' : 'Aktif' }}
                             </span>
                         </div>
                     </div>

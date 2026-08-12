@@ -9,8 +9,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::rename('admin_namagudang', 'gudangs');
-
         Schema::table('gudangs', function (Blueprint $table) {
             $table->string('kode', 30)->nullable()->unique()->after('id');
             $table->enum('jenis', ['NORMAL', 'CONSIDER', 'RUSAK'])->default('NORMAL')->after('nama')->index();
@@ -38,7 +36,7 @@ return new class extends Migration
         Schema::create('stok_gudangs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('gudang_id')->constrained('gudangs')->restrictOnDelete();
-            $table->foreignId('bahan_id')->constrained('bahan')->restrictOnDelete();
+            $table->foreignId('bahan_id')->constrained('bahans')->restrictOnDelete();
             $table->decimal('stok_tersedia', 18, 6)->default(0);
             $table->decimal('stok_direservasi', 18, 6)->default(0);
             $table->decimal('stok_dipesan', 18, 6)->default(0);
@@ -61,7 +59,7 @@ return new class extends Migration
         Schema::create('pengaturan_bahan_gudangs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('gudang_id')->constrained('gudangs')->cascadeOnDelete();
-            $table->foreignId('bahan_id')->constrained('bahan')->cascadeOnDelete();
+            $table->foreignId('bahan_id')->constrained('bahans')->cascadeOnDelete();
             $table->decimal('stok_minimum', 18, 6)->default(0);
             $table->decimal('stok_maksimum', 18, 6)->default(0);
             $table->decimal('stok_pengaman', 18, 6)->default(0);
@@ -77,7 +75,7 @@ return new class extends Migration
             $table->dateTime('tanggal');
             $table->string('jenis_mutasi', 40)->index();
             $table->foreignId('gudang_id')->constrained('gudangs')->restrictOnDelete();
-            $table->foreignId('bahan_id')->constrained('bahan')->restrictOnDelete();
+            $table->foreignId('bahan_id')->constrained('bahans')->restrictOnDelete();
             $table->decimal('jumlah_masuk', 18, 6)->default(0);
             $table->decimal('jumlah_keluar', 18, 6)->default(0);
             $table->decimal('saldo_sebelum', 18, 6);
@@ -99,7 +97,7 @@ return new class extends Migration
             $table->date('tanggal');
             $table->foreignId('gudang_asal_id')->constrained('gudangs')->restrictOnDelete();
             $table->foreignId('gudang_tujuan_id')->constrained('gudangs')->restrictOnDelete();
-            $table->enum('status', ['DRAFT', 'DIAJUKAN', 'DIKONFIRMASI', 'DIBATALKAN'])->default('DRAFT')->index();
+            $table->enum('status', ['DRAFT', 'DIAJUKAN', 'DIKIRIM', 'DITERIMA', 'DIBATALKAN'])->default('DRAFT')->index();
             $table->text('keterangan')->nullable();
             $table->foreignId('dibuat_oleh')->constrained('users')->restrictOnDelete();
             $table->foreignId('diajukan_oleh')->nullable()->constrained('users')->nullOnDelete();
@@ -112,7 +110,7 @@ return new class extends Migration
         Schema::create('detail_transfer_gudangs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('transfer_gudang_id')->constrained('transfer_gudangs')->cascadeOnDelete();
-            $table->foreignId('bahan_id')->constrained('bahan')->restrictOnDelete();
+            $table->foreignId('bahan_id')->constrained('bahans')->restrictOnDelete();
             $table->decimal('jumlah', 18, 6);
             $table->text('keterangan')->nullable();
             $table->timestamps();
@@ -148,7 +146,7 @@ return new class extends Migration
         Schema::create('detail_pemeriksaan_considers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('pemeriksaan_consider_id')->constrained('pemeriksaan_considers')->cascadeOnDelete();
-            $table->foreignId('bahan_id')->constrained('bahan')->restrictOnDelete();
+            $table->foreignId('bahan_id')->constrained('bahans')->restrictOnDelete();
             $table->decimal('jumlah_diperiksa', 18, 6);
             $table->decimal('jumlah_baik', 18, 6);
             $table->decimal('jumlah_rusak', 18, 6);
@@ -157,14 +155,14 @@ return new class extends Migration
             $table->unique(['pemeriksaan_consider_id', 'bahan_id'], 'detail_consider_bahan_unique');
         });
 
-        foreach (DB::table('lpbs')->leftJoin('lpbdetails', 'lpbdetails.id_lpb', '=', 'lpbs.id_lpb')
-            ->leftJoin('bahan', 'bahan.id', '=', 'lpbdetails.id_bahan')
-            ->whereNull('lpbs.gudang_id')->select('lpbs.id', 'bahan.tipe_gudang')->distinct()->get() as $receipt) {
+        foreach (DB::table('lpbs')->leftJoin('lpb_details', 'lpb_details.id_lpb', '=', 'lpbs.id_lpb')
+            ->leftJoin('bahans', 'bahans.id', '=', 'lpb_details.id_bahan')
+            ->whereNull('lpbs.gudang_id')->select('lpbs.id', 'bahans.tipe_gudang')->distinct()->get() as $receipt) {
             if ($receipt->tipe_gudang) DB::table('lpbs')->where('id', $receipt->id)->update(['gudang_id' => $receipt->tipe_gudang]);
         }
         foreach (DB::table('pembelians')->leftJoin('pembelian_details', 'pembelian_details.no_po', '=', 'pembelians.no_po')
-            ->leftJoin('bahan', 'bahan.id', '=', 'pembelian_details.bahan_id')
-            ->whereNull('pembelians.gudang_id')->select('pembelians.id', 'bahan.tipe_gudang')->distinct()->get() as $order) {
+            ->leftJoin('bahans', 'bahans.id', '=', 'pembelian_details.bahan_id')
+            ->whereNull('pembelians.gudang_id')->select('pembelians.id', 'bahans.tipe_gudang')->distinct()->get() as $order) {
             if ($order->tipe_gudang) DB::table('pembelians')->where('id', $order->id)->update(['gudang_id' => $order->tipe_gudang]);
         }
 
@@ -176,7 +174,7 @@ return new class extends Migration
 
         DB::table('stok_gudangs')->insertUsing(
             ['gudang_id', 'bahan_id', 'stok_tersedia', 'stok_direservasi', 'stok_dipesan', 'created_at', 'updated_at'],
-            DB::table('bahan')->select([
+            DB::table('bahans')->select([
                 'tipe_gudang',
                 'id',
                 'stok_onhand',
@@ -225,6 +223,5 @@ return new class extends Migration
             'boleh_transfer',
             'boleh_opname',
         ]));
-        Schema::rename('gudangs', 'admin_namagudang');
     }
 };

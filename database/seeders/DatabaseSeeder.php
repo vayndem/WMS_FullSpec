@@ -16,7 +16,13 @@ use App\Models\ServiceCategory;
 use App\Models\StokGudang;
 use App\Models\MutasiStok;
 use App\Models\User;
+use App\Models\PengaturanBahanGudang;
+use App\Models\WarehouseLocation;
+use App\Models\InventoryLot;
 use App\Services\DocumentNumberService;
+use App\Services\ThreeWayMatchService;
+use App\Models\InvoiceLpb;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
@@ -245,6 +251,14 @@ class DatabaseSeeder extends Seeder
             AssetAndServiceDemoSeeder::class,
         ]);
 
+        $accountingUser = User::where('type', User::ROLE_ACCOUNTING)->first();
+        if ($accountingUser) {
+            Auth::setUser($accountingUser);
+            foreach (InvoiceLpb::where('status', '!=', InvoiceLpb::VOID)->get() as $invoice) {
+                app(ThreeWayMatchService::class)->evaluate($invoice);
+            }
+        }
+
         $this->syncMultiWarehouseDemoData();
     }
 
@@ -263,7 +277,7 @@ class DatabaseSeeder extends Seeder
 
         $ordered = DB::table('pembelian_details as d')->join('pembelians as p', 'p.no_po', '=', 'd.no_po')
             ->select('p.gudang_id', 'd.bahan_id', DB::raw('SUM(GREATEST(d.jumlah - d.diterima, 0)) as quantity'))
-            ->where('p.status', '!=', 2)->whereNotNull('p.gudang_id')->groupBy('p.gudang_id', 'd.bahan_id')->get();
+            ->where('p.status', \App\Models\Pembelian::OPEN)->whereNotNull('p.gudang_id')->groupBy('p.gudang_id', 'd.bahan_id')->get();
         foreach ($ordered as $row) {
             StokGudang::updateOrCreate(
                 ['gudang_id' => $row->gudang_id, 'bahan_id' => $row->bahan_id],
@@ -304,6 +318,35 @@ class DatabaseSeeder extends Seeder
                     'user_id' => $warehouseUser?->id, 'keterangan' => 'Saldo awal multi-warehouse dari data demo',
                 ]);
             }
+        }
+
+        foreach (Gudang::where('aktif', true)->get() as $warehouse) {
+            foreach ([
+                ['code' => 'RCV-01', 'name' => 'Receiving Area', 'type' => 'RECEIVING'],
+                ['code' => 'QC-01', 'name' => 'Quality Hold', 'type' => 'QC'],
+                ['code' => 'STG-A-01', 'name' => 'Storage A-01', 'type' => 'STORAGE'],
+            ] as $location) {
+                WarehouseLocation::updateOrCreate(['gudang_id' => $warehouse->id, 'code' => $location['code']], $location + ['active' => true]);
+            }
+        }
+
+        $planningWarehouse = Gudang::where('kode', 'GDG-UTAMA')->firstOrFail();
+        foreach (Bahan::all() as $material) {
+            PengaturanBahanGudang::updateOrCreate(
+                ['gudang_id' => $planningWarehouse->id, 'bahan_id' => $material->id],
+                ['stok_minimum' => 5, 'stok_maksimum' => 30, 'stok_pengaman' => 3, 'titik_pemesanan' => 10, 'aktif' => true]
+            );
+        }
+
+        foreach (DB::table('inventory_layers')->where('remaining_quantity', '>', 0)->get() as $layer) {
+            $lot = InventoryLot::updateOrCreate(
+                ['bahan_id' => $layer->bahan_id, 'lot_number' => 'DEMO-' . str_pad((string) $layer->id, 4, '0', STR_PAD_LEFT)],
+                ['quality_status' => 'RELEASED', 'manufactured_at' => today()->subMonth(), 'expires_at' => today()->addYear()]
+            );
+            DB::table('inventory_layers')->where('id', $layer->id)->update([
+                'inventory_lot_id' => $lot->id,
+                'warehouse_location_id' => WarehouseLocation::where('gudang_id', $layer->gudang_id)->where('type', 'STORAGE')->value('id'),
+            ]);
         }
     }
 }

@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\User;
 use App\Models\ServiceBap;
+use App\Models\Lpb;
 
 class ServiceBapPolicy
 {
@@ -36,7 +37,7 @@ class ServiceBapPolicy
     {
         return $this->canViewServiceBapFinancials($user)
             && $this->view($user, $bap)
-            && !$bap->is_cancelled
+            && $bap->status === Lpb::POSTED
             && !$bap->invoiceReceipts()->exists();
     }
 

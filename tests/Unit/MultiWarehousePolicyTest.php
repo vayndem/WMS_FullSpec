@@ -33,7 +33,7 @@ class MultiWarehousePolicyTest extends TestCase
 
         $draft = (new TransferGudang())->forceFill(['status' => TransferGudang::DRAFT]);
         $submitted = (new TransferGudang())->forceFill(['status' => TransferGudang::DIAJUKAN]);
-        $posted = (new TransferGudang())->forceFill(['status' => TransferGudang::DIKONFIRMASI]);
+        $posted = (new TransferGudang())->forceFill(['status' => TransferGudang::DITERIMA]);
 
         $this->assertTrue($policy->update($user, $draft));
         $this->assertTrue($policy->submit($user, $draft));

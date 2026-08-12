@@ -20,7 +20,7 @@ class StoreStockOpnameRequest extends FormRequest
             'cutoff_at' => 'required|date',
             'notes' => 'nullable|string|max:2000',
             'items' => 'required|array|min:1',
-            'items.*.bahan_id' => 'required|integer|distinct|exists:bahan,id',
+            'items.*.bahan_id' => 'required|integer|distinct|exists:bahans,id',
             'items.*.physical_quantity' => 'required|numeric|min:0',
             'items.*.reason' => 'nullable|string|max:150',
             'items.*.notes' => 'nullable|string|max:1000',

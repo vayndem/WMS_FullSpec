@@ -27,17 +27,15 @@ return new class extends Migration
             $table->foreign('coa_id')->references('id')->on('chart_of_accounts')->onDelete('restrict');
         });
 
-        Schema::table('lpbdetails', function (Blueprint $table) {
-            $table->decimal('jumlah_tersisa', 15, 2)->default(0)->after('jumlah_dipakai');
+        Schema::table('lpb_details', function (Blueprint $table) {
+            $table->decimal('jumlah_tersisa', 18, 6)->default(0)->after('jumlah_dipakai');
             $table->decimal('nilai_awal', 18, 2)->default(0)->after('harga');
-            $table->index(['id_bahan', 'flag_dipakai'], 'lpbdetails_active_lot_index');
+            $table->index(['id_bahan', 'flag_dipakai'], 'lpb_details_active_lot_index');
         });
 
         Schema::table('npks', function (Blueprint $table) {
             $table->decimal('harga_satuan', 18, 4)->default(0)->after('jumlah');
             $table->decimal('total_nilai', 18, 2)->default(0)->after('harga_satuan');
-            $table->string('status_posting', 20)->default('DRAFT')->after('close')
-                ->comment('Status akuntansi NPK: DRAFT=belum posting, POSTED=stok dan jurnal sudah diposting');
         });
 
         Schema::create('inventory_layers', function (Blueprint $table) {
@@ -48,21 +46,21 @@ return new class extends Migration
                 ->comment('Jenis sumber layer persediaan, contoh LPB atau STOCK_OPNAME');
             $table->unsignedBigInteger('source_id');
             $table->date('transaction_date');
-            $table->decimal('initial_quantity', 15, 2);
-            $table->decimal('remaining_quantity', 15, 2);
+            $table->decimal('initial_quantity', 18, 6);
+            $table->decimal('remaining_quantity', 18, 6);
             $table->decimal('unit_cost', 18, 4);
             $table->timestamps();
             $table->index(['bahan_id', 'gudang_id', 'remaining_quantity'], 'inventory_layers_active_index');
             $table->unique(['source_type', 'source_id'], 'inventory_layers_source_unique');
-            $table->foreign('bahan_id')->references('id')->on('bahan')->onDelete('restrict');
-            $table->foreign('gudang_id')->references('id')->on('admin_namagudang')->onDelete('restrict');
+            $table->foreign('bahan_id')->references('id')->on('bahans')->onDelete('restrict');
+            $table->foreign('gudang_id')->references('id')->on('gudangs')->onDelete('restrict');
         });
 
         Schema::create('npk_stock_allocations', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('npk_id');
             $table->unsignedBigInteger('inventory_layer_id');
-            $table->decimal('quantity', 15, 2);
+            $table->decimal('quantity', 18, 6);
             $table->decimal('unit_cost', 18, 4);
             $table->decimal('total_cost', 18, 2);
             $table->timestamps();
@@ -74,18 +72,18 @@ return new class extends Migration
         DB::table('inventory_layers')->insertUsing(
             ['bahan_id', 'gudang_id', 'source_type', 'source_id', 'transaction_date',
                 'initial_quantity', 'remaining_quantity', 'unit_cost', 'created_at', 'updated_at'],
-            DB::table('lpbdetails')
-                ->join('lpbs', 'lpbs.id_lpb', '=', 'lpbdetails.id_lpb')
-                ->join('bahan', 'bahan.id', '=', 'lpbdetails.id_bahan')
+            DB::table('lpb_details')
+                ->join('lpbs', 'lpbs.id_lpb', '=', 'lpb_details.id_lpb')
+                ->join('bahans', 'bahans.id', '=', 'lpb_details.id_bahan')
                 ->select([
-                    'lpbdetails.id_bahan',
-                    'bahan.tipe_gudang',
+                    'lpb_details.id_bahan',
+                    'bahans.tipe_gudang',
                     DB::raw("'LPB_DETAIL'"),
-                    'lpbdetails.id',
+                    'lpb_details.id',
                     'lpbs.tanggal',
-                    'lpbdetails.jumlah_barang_diterima',
-                    DB::raw('GREATEST(lpbdetails.jumlah_barang_diterima - lpbdetails.jumlah_dipakai, 0)'),
-                    DB::raw('COALESCE(lpbdetails.harga, 0)'),
+                    'lpb_details.jumlah_barang_diterima',
+                    DB::raw('GREATEST(lpb_details.jumlah_barang_diterima - lpb_details.jumlah_dipakai, 0)'),
+                    DB::raw('COALESCE(lpb_details.harga, 0)'),
                     DB::raw('CURRENT_TIMESTAMP'),
                     DB::raw('CURRENT_TIMESTAMP'),
                 ])
@@ -98,24 +96,20 @@ return new class extends Migration
             $table->decimal('amount', 18, 2)->default(0);
             $table->timestamps();
             $table->unique(['invoice_lpb_id', 'lpb_id']);
-            $table->foreign('invoice_lpb_id')->references('id')->on('invoicelpbs')->onDelete('cascade');
+            $table->foreign('invoice_lpb_id')->references('id')->on('invoice_lpbs')->onDelete('cascade');
             $table->foreign('lpb_id')->references('id')->on('lpbs')->onDelete('restrict');
         });
 
-        Schema::table('invoicelpbs', function (Blueprint $table) {
-            $table->boolean('is_void')->default(false)->after('status')
-                ->comment('0=invoice aktif, 1=invoice dibatalkan/void');
-            $table->unsignedBigInteger('voided_by')->nullable()->after('is_void')
+        Schema::table('invoice_lpbs', function (Blueprint $table) {
+            $table->unsignedBigInteger('voided_by')->nullable()->after('status')
                 ->comment('ID user lokal yang membatalkan invoice');
             $table->timestamp('voided_at')->nullable()->after('voided_by');
             $table->text('void_reason')->nullable()->after('voided_at');
         });
 
-        Schema::table('invoicelpbdetails', function (Blueprint $table) {
-            $table->dropForeign(['id_user_finance']);
-            $table->boolean('is_void')->default(false)->after('id_user_finance')
-                ->comment('0=pembayaran aktif, 1=pembayaran dibatalkan/void');
-            $table->unsignedBigInteger('voided_by')->nullable()->after('is_void')
+        Schema::table('invoice_payments', function (Blueprint $table) {
+            $table->dropForeign(['finance_user_id']);
+            $table->unsignedBigInteger('voided_by')->nullable()->after('status')
                 ->comment('ID user lokal yang membatalkan pembayaran');
             $table->timestamp('voided_at')->nullable()->after('voided_by');
             $table->text('void_reason')->nullable()->after('voided_at');
@@ -144,16 +138,16 @@ return new class extends Migration
             $table->dropColumn(['status', 'created_by', 'posted_by', 'posted_at', 'reversal_of_id']);
         });
         Schema::dropIfExists('invoice_lpb_receipts');
-        Schema::table('invoicelpbs', fn (Blueprint $table) => $table->dropColumn(['is_void', 'voided_by', 'voided_at', 'void_reason']));
-        Schema::table('invoicelpbdetails', function (Blueprint $table) {
-            $table->dropColumn(['is_void', 'voided_by', 'voided_at', 'void_reason']);
-            $table->foreign('id_user_finance')->references('id')->on('users')->onDelete('restrict');
+        Schema::table('invoice_lpbs', fn (Blueprint $table) => $table->dropColumn(['voided_by', 'voided_at', 'void_reason']));
+        Schema::table('invoice_payments', function (Blueprint $table) {
+            $table->dropColumn(['voided_by', 'voided_at', 'void_reason']);
+            $table->foreign('finance_user_id')->references('id')->on('users')->onDelete('restrict');
         });
         Schema::dropIfExists('npk_stock_allocations');
         Schema::dropIfExists('inventory_layers');
-        Schema::table('npks', fn (Blueprint $table) => $table->dropColumn(['harga_satuan', 'total_nilai', 'status_posting']));
-        Schema::table('lpbdetails', function (Blueprint $table) {
-            $table->dropIndex('lpbdetails_active_lot_index');
+        Schema::table('npks', fn (Blueprint $table) => $table->dropColumn(['harga_satuan', 'total_nilai']));
+        Schema::table('lpb_details', function (Blueprint $table) {
+            $table->dropIndex('lpb_details_active_lot_index');
             $table->dropColumn(['jumlah_tersisa', 'nilai_awal']);
         });
         Schema::dropIfExists('accounting_settings');

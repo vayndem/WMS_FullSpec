@@ -3,14 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pembelian;
-use App\Models\Pembeliandetail;
+use App\Models\PembelianDetail;
 use App\Models\RequestDetail;
-use App\Http\Requests\StorepembeliandetailRequest;
-use App\Http\Requests\UpdatepembeliandetailRequest;
+use App\Http\Requests\StorePembelianDetailRequest;
+use App\Http\Requests\UpdatePembelianDetailRequest;
 use App\Traits\CalculatesPembelianTotals;
 use Illuminate\Support\Facades\DB;
 
-class PembeliandetailController extends Controller
+class PembelianDetailController extends Controller
 {
     use CalculatesPembelianTotals;
 
@@ -19,7 +19,7 @@ class PembeliandetailController extends Controller
         $pembelian = Pembelian::where('no_po', $no_po)->firstOrFail();
         $this->authorize('view', $pembelian);
 
-        $details = Pembeliandetail::where('no_po', $no_po)->with('bahan')->get();
+        $details = PembelianDetail::where('no_po', $no_po)->with('bahan')->get();
 
         return response()->json([
             'success' => true,
@@ -27,11 +27,11 @@ class PembeliandetailController extends Controller
         ]);
     }
 
-    public function store(StorepembeliandetailRequest $request, $no_po)
+    public function store(StorePembelianDetailRequest $request, $no_po)
     {
         $pembelian = Pembelian::where('no_po', $no_po)->firstOrFail();
 
-        $this->authorize('create', [Pembeliandetail::class, $pembelian]);
+        $this->authorize('create', [PembelianDetail::class, $pembelian]);
 
         $validated = $request->validated();
 
@@ -68,7 +68,7 @@ class PembeliandetailController extends Controller
         ], 201);
     }
 
-    public function update(UpdatepembeliandetailRequest $request, Pembeliandetail $pembeliandetail)
+    public function update(UpdatePembelianDetailRequest $request, PembelianDetail $pembeliandetail)
     {
         $this->authorize('update', $pembeliandetail);
 
@@ -105,7 +105,7 @@ class PembeliandetailController extends Controller
         ]);
     }
 
-    public function destroy(Pembeliandetail $pembeliandetail)
+    public function destroy(PembelianDetail $pembeliandetail)
     {
         $this->authorize('delete', $pembeliandetail);
 

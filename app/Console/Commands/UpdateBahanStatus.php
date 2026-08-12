@@ -40,11 +40,11 @@ class UpdateBahanStatus extends Command
                     continue;
                 }
 
-                $exists = DB::table('bahan')->where('nama', $namaBahan)->exists();
+                $exists = DB::table('bahans')->where('nama', $namaBahan)->exists();
 
                 if ($exists) {
                     if (str_contains(strtoupper($statusGudang), 'BUKAN BARANG GUDANG')) {
-                        $affectedRows = DB::table('bahan')
+                        $affectedRows = DB::table('bahans')
                             ->where('nama', $namaBahan)
                             ->update([
                                 'jenis' => 2,

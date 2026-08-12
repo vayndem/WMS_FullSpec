@@ -5,12 +5,12 @@ namespace Tests\Unit;
 use App\Models\User;
 use App\Models\Lpb;
 use App\Models\Npk;
-use App\Models\Request as RequestModel;
+use App\Models\MaterialRequest;
 use App\Models\ServiceBap;
 use App\Models\StockOpname;
 use App\Policies\LpbPolicy;
 use App\Policies\NpkPolicy;
-use App\Policies\RequestPolicy;
+use App\Policies\MaterialRequestPolicy;
 use App\Policies\ServiceBapPolicy;
 use App\Policies\StockOpnamePolicy;
 use PHPUnit\Framework\TestCase;
@@ -31,8 +31,8 @@ class WarehouseRolePolicyTest extends TestCase
     {
         $user = $this->warehouse();
 
-        $this->assertTrue((new RequestPolicy())->viewAny($user));
-        $this->assertTrue((new RequestPolicy())->create($user));
+        $this->assertTrue((new MaterialRequestPolicy())->viewAny($user));
+        $this->assertTrue((new MaterialRequestPolicy())->create($user));
         $this->assertTrue((new LpbPolicy())->create($user));
         $this->assertTrue((new NpkPolicy())->create($user));
         $this->assertTrue((new ServiceBapPolicy())->create($user));
@@ -51,10 +51,10 @@ class WarehouseRolePolicyTest extends TestCase
     public function test_warehouse_role_cannot_approve_request_or_opname(): void
     {
         $user = $this->warehouse();
-        $request = new RequestModel(['status' => 'pending']);
+        $request = new MaterialRequest(['status' => MaterialRequest::PENDING]);
         $opname = new StockOpname(['status' => StockOpname::SUBMITTED]);
 
-        $this->assertFalse((new RequestPolicy())->approve($user, $request));
+        $this->assertFalse((new MaterialRequestPolicy())->approve($user, $request));
         $this->assertFalse((new StockOpnamePolicy())->approve($user, $opname));
         $this->assertFalse((new StockOpnamePolicy())->reject($user, $opname));
     }
@@ -69,6 +69,6 @@ class WarehouseRolePolicyTest extends TestCase
         $this->assertFalse((new StockOpnamePolicy())->viewFinancials($user));
         $this->assertFalse((new LpbPolicy())->create($user));
         $this->assertFalse((new ServiceBapPolicy())->create($user));
-        $this->assertFalse((new RequestPolicy())->create($user));
+        $this->assertFalse((new MaterialRequestPolicy())->create($user));
     }
 }

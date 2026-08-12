@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\RequestDetail;
-use App\Http\Requests\StorerequestdetailRequest;
-use App\Http\Requests\UpdaterequestdetailRequest;
+use App\Models\MaterialRequest;
+use App\Http\Requests\StoreRequestDetailRequest;
+use App\Http\Requests\UpdateRequestDetailRequest;
 use Illuminate\Http\Request;
 use App\Models\LpbDetail;
+use App\Models\Lpb;
 
-class RequestdetailController extends Controller
+class RequestDetailController extends Controller
 {
     public function index(Request $request)
     {
@@ -18,7 +20,7 @@ class RequestdetailController extends Controller
             $mayViewPrice = $request->user()->hasAnyRole([\App\Models\User::ROLE_PURCHASING, \App\Models\User::ROLE_ACCOUNTING]);
             $query = RequestDetail::with('bahan', 'request')
                 ->whereHas('request', function ($q) {
-                    $q->where('status', 'approved');
+                    $q->where('status', MaterialRequest::APPROVED);
                 })
                 ->whereRaw('jumlah_acc > realisasi');
 
@@ -66,22 +68,21 @@ class RequestdetailController extends Controller
     private function lastFiveLpbAverage(int $bahanId): float
     {
         $receipts = LpbDetail::query()
-            ->join('lpbs', 'lpbs.id_lpb', '=', 'lpbdetails.id_lpb')
-            ->where('lpbdetails.id_bahan', $bahanId)
-            ->where('lpbdetails.jumlah_barang_diterima', '>', 0)
-            ->where('lpbs.status', 1)
-            ->where('lpbs.is_cancelled', false)
+            ->join('lpbs', 'lpbs.id_lpb', '=', 'lpb_details.id_lpb')
+            ->where('lpb_details.id_bahan', $bahanId)
+            ->where('lpb_details.jumlah_barang_diterima', '>', 0)
+            ->where('lpbs.status', Lpb::POSTED)
             ->orderByDesc('lpbs.tanggal')
-            ->orderByDesc('lpbdetails.id')
+            ->orderByDesc('lpb_details.id')
             ->limit(5)
-            ->get(['lpbdetails.jumlah_barang_diterima', 'lpbdetails.harga']);
+            ->get(['lpb_details.jumlah_barang_diterima', 'lpb_details.harga']);
         $quantity = (float) $receipts->sum('jumlah_barang_diterima');
         return $quantity > 0
             ? round($receipts->sum(fn($row) => (float) $row->jumlah_barang_diterima * (float) $row->harga) / $quantity, 4)
             : 0;
     }
 
-    public function store(StorerequestdetailRequest $request)
+    public function store(StoreRequestDetailRequest $request)
     {
         $validated = $request->validated();
         $validated['realisasi'] = 0;
@@ -105,7 +106,7 @@ class RequestdetailController extends Controller
         ]);
     }
 
-    public function update(UpdaterequestdetailRequest $request, RequestDetail $requestdetail)
+    public function update(UpdateRequestDetailRequest $request, RequestDetail $requestdetail)
     {
         $validated = $request->validated();
 

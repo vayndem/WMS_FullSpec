@@ -6,7 +6,7 @@ Warehouse, procurement, finance, dan accounting dalam satu alur yang terkontrol.
 - PHP 8.1+
 - MySQL
 - Bootstrap 5
-- 35 tests passed, 125 assertions
+- 51 tests passed, 1.173 assertions
 
 Dokumen ini ditujukan untuk pembaca bisnis dan developer yang ingin cepat memahami sistem. Referensi teknis yang lebih detail ada di [feed.MD](feed.MD).
 
@@ -24,6 +24,32 @@ WMS FullSpec menghubungkan proses:
 8. Jurnal akuntansi
 
 Dokumen operasional tidak berhenti sebagai catatan administratif. LPB, NPK, invoice, pembayaran, dan stock opname ikut memengaruhi stok, nilai persediaan, hutang, dan general ledger.
+
+## Standar arsitektur
+
+- Route dipisahkan per domain pada `routes/auth.php`, `warehouse.php`, `procurement.php`, `finance.php`, `accounting.php`, dan `assets-and-services.php`.
+- Controller menangani HTTP orchestration; validasi wajib berada di `app/Http/Requests` dan proses lintas model berada di `app/Services`.
+- Policy model ditemukan otomatis melalui konvensi Laravel. Gate hanya dipakai untuk capability lintas model.
+- Nama class dan file mengikuti PSR-4 dengan casing yang identik.
+- Nama tabel memakai plural `snake_case`; foreign key baru memakai pola `<model>_id`.
+- Kuantitas memakai `DECIMAL(18,6)`, unit cost `DECIMAL(18,4)`, uang `DECIMAL(18,2)`, dan tarif `DECIMAL(8,4)`.
+- Status database selalu machine code uppercase. Label bahasa Indonesia hanya dibentuk pada presentation layer.
+- Dokumen posted tidak diedit atau dihapus; koreksi memakai void/reversal beserta audit metadata dan jurnal pembalik.
+
+Architecture test menjaga aturan tersebut agar nama legacy, floating point untuk data bisnis, inline validation, route monolitik, dan class/file mismatch tidak masuk kembali.
+
+## Lifecycle dokumen
+
+| Dokumen | Lifecycle standar |
+|---|---|
+| Material Request | `PENDING -> APPROVED / REJECTED` |
+| Purchase Order | `OPEN -> CLOSED` |
+| LPB/BAP | `DRAFT -> POSTED -> REVERSED` atau `CANCELLED` |
+| NPK | `DRAFT -> POSTED -> REVERSED` |
+| Invoice supplier | `UNPAID -> PARTIALLY_PAID -> PAID` atau `VOID` |
+| Pembayaran invoice | `POSTED -> VOID` |
+| Transfer gudang | `DRAFT -> DIAJUKAN -> DIKIRIM -> DITERIMA` atau `DIBATALKAN` |
+| Stock opname | `DRAFT -> SUBMITTED -> APPROVED -> POSTED` atau `REJECTED` |
 
 ## Modul aktif
 
@@ -44,6 +70,10 @@ Dokumen operasional tidak berhenti sebagai catatan administratif. LPB, NPK, invo
 | Accounting | Kontrol | Kunci periode, tarif pajak, rekonsiliasi |
 | Asset | Asset Tetap | Perolehan, penyusutan, pelepasan |
 | Jasa | PO Jasa dan BAP | Jasa operasional/produksi dan progress BAP |
+| WMS Control | Traceability | Bin, lot, serial, expiry, block/release |
+| WMS Control | Warehouse Execution | QC, putaway, reservation, FEFO/FIFO picking |
+| WMS Control | Financial Control | Three-way match, landed cost, controlled reversal |
+| WMS Control | Planning | Reorder point, safety stock, replenishment suggestion |
 
 ## Alur bisnis singkat
 
@@ -81,6 +111,22 @@ Aturan penting:
 - Transfer antar gudang mempertahankan nilai layer.
 - Gudang Consider diproses lewat pemeriksaan Consider.
 - Gudang Rusak bersifat final.
+
+Transfer baru memakai standar `DRAFT -> DIAJUKAN -> DIKIRIM -> DITERIMA`. Saat dikirim, barang berada pada layer `IN_TRANSIT`; saldo global perusahaan tidak berubah. Selisih penerimaan dipertahankan sebagai exception rekonsiliasi.
+
+## Standar transaksi inventory
+
+- Dokumen posted bersifat immutable.
+- Koreksi LPB dan NPK dilakukan melalui controlled reversal, bukan edit/delete.
+- Setiap reversal memulihkan saldo, FIFO, komitmen PO, dan jurnal dalam satu transaksi.
+- Operasi transfer memakai idempotency key untuk menolak request ganda.
+- NPK hanya mengonsumsi layer `AVAILABLE`, tidak blocked, dan belum expired.
+- Picking mengurutkan lot dengan FEFO lalu FIFO.
+- Rekonsiliasi wajib memenuhi: master quantity = gudang + transit, saldo gudang = layer, dan nilai layer = GL persediaan.
+- Invoice supplier menjalani three-way matching PO-LPB-Invoice sebelum jurnal hutang diposting.
+- Landed cost dikapitalisasi ke layer aktif dan diposting seimbang ke GL.
+
+Pusat operasional fitur tersebut tersedia pada menu **Multi Gudang -> WMS Control Center**.
 
 ## Gudang Produksi
 
@@ -176,10 +222,10 @@ Catatan:
 
 ## Pengujian
 
-Hasil terakhir pada 10 Agustus 2026:
+Hasil terakhir pada 12 Agustus 2026:
 
-- 35 tests passed
-- 125 assertions
+- 51 tests passed
+- 1.173 assertions
 
 Jalankan test dengan:
 
@@ -198,6 +244,7 @@ Suite saat ini mencakup:
 - inventory cost calculation
 - asset dan service policy
 - basic feature auth
+- WMS control, transfer in-transit, reservation/picking, three-way match, landed cost, reversal, dan rekonsiliasi
 
 ## Catatan deployment
 

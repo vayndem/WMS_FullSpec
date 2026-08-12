@@ -43,7 +43,7 @@ class ServiceBapController extends Controller
                 'date' => $b->tanggal->format('d-m-Y'),
                 'po' => $b->no_po,
                 'supplier' => $b->pembelian->supplier->nama,
-                'status' => $b->is_cancelled ? 'Dibatalkan' : ($b->invoiceReceipts->isNotEmpty() ? 'Selesai / Sudah Invoice' : 'Sedang Dikerjakan'),
+                'status' => $b->status === Lpb::CANCELLED ? 'Dibatalkan' : ($b->invoiceReceipts->isNotEmpty() ? 'Selesai / Sudah Invoice' : 'Sedang Dikerjakan'),
             ];
             if ($financial) $row['amount'] = 'Rp ' . number_format($b->service_details_sum_amount, 0, ',', '.');
             return $row;
@@ -59,7 +59,7 @@ class ServiceBapController extends Controller
         $orders = ServicePurchase::with(['supplier', 'serviceDetails.category'])
             ->whereDoesntHave(
                 'serviceDetails.bapDetails.lpb',
-                fn($query) => $query->where('is_cancelled', false)
+                fn($query) => $query->where('status', Lpb::POSTED)
             )
             ->latest('tanggal')->get();
         $documentNumber = $this->numbers->external('BAP');
@@ -77,7 +77,7 @@ class ServiceBapController extends Controller
                 'no_po' => $po->no_po,
                 'no_sj' => $data['no_sj'],
                 'id_user' => Auth::id(),
-                'status' => 1,
+                'status' => Lpb::POSTED,
                 'jenis_lpb' => 3,
                 'kunci' => 1,
                 'document_type' => 'SERVICE_BAP'
@@ -86,7 +86,7 @@ class ServiceBapController extends Controller
                 $poDetail = ServicePoDetail::with('category')->lockForUpdate()->findOrFail($item['service_po_detail_id']);
                 if ($poDetail->pembelian_id !== $po->id) throw new RuntimeException('Detail jasa bukan bagian dari PO yang dipilih.');
                 $hasActiveBap = $poDetail->bapDetails()
-                    ->whereHas('lpb', fn($query) => $query->where('is_cancelled', false))
+                    ->whereHas('lpb', fn($query) => $query->where('status', Lpb::POSTED))
                     ->exists();
                 if ((float) $poDetail->accepted_amount > .01 || $hasActiveBap) {
                     throw new RuntimeException("Pekerjaan {$poDetail->description} sudah mempunyai BAP.");
@@ -121,7 +121,7 @@ class ServiceBapController extends Controller
             foreach ($serviceBap->serviceDetails()->lockForUpdate()->get() as $detail) {
                 $detail->servicePoDetail()->update(['accepted_amount' => 0]);
             }
-            $serviceBap->update(['is_cancelled' => true, 'cancelled_by' => Auth::id(), 'cancelled_at' => now(), 'cancellation_reason' => $request->validated('reason')]);
+            $serviceBap->update(['status' => Lpb::CANCELLED, 'cancelled_by' => Auth::id(), 'cancelled_at' => now(), 'cancellation_reason' => $request->validated('reason')]);
         });
         return back()->with('success', 'BAP jasa dibatalkan. Tidak ada jurnal yang perlu direversal.');
     }

@@ -106,9 +106,9 @@
                                         Status</label>
                                     <select id="filter_status" class="form-control">
                                         <option value="">Semua Status</option>
-                                        <option value="pending" selected>Pending</option>
-                                        <option value="approved">Approved</option>
-                                        <option value="rejected">Rejected</option>
+                                        <option value="PENDING" selected>Pending</option>
+                                        <option value="APPROVED">Approved</option>
+                                        <option value="REJECTED">Rejected</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4">
@@ -223,9 +223,9 @@
                             name: 'status',
                             className: 'text-center align-middle',
                             render: function(data) {
-                                if (data === 'pending') {
+                                if (data === 'PENDING') {
                                     return '<span class="badge bg-warning px-3 py-2 text-white">Pending</span>';
-                                } else if (data === 'approved') {
+                                } else if (data === 'APPROVED') {
                                     return '<span class="badge bg-success px-3 py-2">Approved</span>';
                                 } else {
                                     return '<span class="badge bg-danger px-3 py-2">Rejected</span>';

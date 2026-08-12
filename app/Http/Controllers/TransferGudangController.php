@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTransferGudangRequest;
 use App\Http\Requests\UpdateTransferGudangRequest;
+use App\Http\Requests\ReceiveTransferGudangRequest;
 use App\Models\Bahan;
 use App\Models\Gudang;
 use App\Models\TransferGudang;
@@ -96,7 +97,13 @@ class TransferGudangController extends Controller
     {
         $this->authorize('confirm', $transferGudang);
         $this->service->konfirmasi($transferGudang);
-        return back()->with('success', 'Transfer dikonfirmasi dan stok telah berpindah.');
+        return back()->with('success', 'Transfer dikirim dan stok tercatat dalam perjalanan.');
+    }
+    public function receive(ReceiveTransferGudangRequest $request, TransferGudang $transferGudang)
+    {
+        $data = $request->validated();
+        $this->service->terima($transferGudang, $data['received'] ?? [], $data['notes'] ?? null);
+        return back()->with('success', 'Transfer diterima; stok tujuan dan selisih penerimaan telah dicatat.');
     }
     private function formData(): array
     {

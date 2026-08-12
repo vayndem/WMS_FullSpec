@@ -102,12 +102,13 @@
                         <div class="card-body p-4">
                             <div class="row align-items-end mb-4 bg-light p-3 rounded border">
                                 <div class="col-md-4 mb-2 mb-md-0">
-                                    <label for="filter_close" class="fw-bold text-dark small text-uppercase">Filter
+                                    <label for="filter_status" class="fw-bold text-dark small text-uppercase">Filter
                                         Status</label>
-                                    <select id="filter_close" class="form-control">
+                                    <select id="filter_status" class="form-control">
                                         <option value="">Semua Status</option>
-                                        <option value="0">Draft</option>
-                                        <option value="1" selected>Keluar</option>
+                                        <option value="DRAFT">Draft</option>
+                                        <option value="POSTED" selected>Keluar</option>
+                                        <option value="REVERSED">Reversed</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4">
@@ -121,8 +122,8 @@
                                 <table class="table table-hover mb-0" id="table-npk" width="100%" cellspacing="0"
                                     data-report-url="{{ route('npk.report.pdf') }}"
                                     data-filter-columns="{{ $financial
-                                        ? '0:kode,1:kode_datapesanan,2:tanggal,3:nama_barang,4:jumlah,7:close,8:operator'
-                                        : '0:kode,1:kode_datapesanan,2:tanggal,3:nama_barang,4:jumlah,5:close,6:operator' }}">
+                                        ? '0:kode,1:kode_datapesanan,2:tanggal,3:nama_barang,4:jumlah,7:status,8:operator'
+                                        : '0:kode,1:kode_datapesanan,2:tanggal,3:nama_barang,4:jumlah,5:status,6:operator' }}">
                                     <thead>
                                         <tr>
                                             <th width="15%" class="py-3 ps-2">Kode NPK</th>
@@ -161,7 +162,7 @@
                     ajax: {
                         url: "{{ route('npk.index') }}",
                         data: function(d) {
-                            d.close = $('#filter_close').val();
+                            d.status = $('#filter_status').val();
                         }
                     },
                     language: {
@@ -213,12 +214,14 @@
                                 render: data => 'Rp ' + Number(data || 0).toLocaleString('id-ID')
                             },
                         @endif {
-                            data: 'close',
-                            name: 'close',
+                            data: 'status',
+                            name: 'status',
                             className: 'text-center align-middle',
                             render: function(data) {
-                                if (parseInt(data) === 1) {
+                                if (data === 'POSTED') {
                                     return '<span class="badge bg-success px-3 py-2">Keluar</span>';
+                                } else if (data === 'REVERSED') {
+                                    return '<span class="badge bg-danger px-3 py-2">Reversed</span>';
                                 } else {
                                     return '<span class="badge bg-warning px-3 py-2 text-white">Draft</span>';
                                 }

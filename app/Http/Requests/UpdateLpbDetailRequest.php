@@ -15,7 +15,7 @@ class UpdateLpbDetailRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'id_kategori'            => 'nullable|integer|exists:kategoribahan,id',
+            'id_kategori'            => 'nullable|integer|exists:kategori_bahans,id',
             'jumlah_barang_diterima' => 'required|numeric|gt:0',
             'lot_number'             => 'nullable|string|max:80',
             'harga'                  => 'nullable|integer',

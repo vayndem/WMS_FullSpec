@@ -11,7 +11,7 @@ class Bahan extends Model
 {
     use HasFactory;
 
-    protected $table = 'bahan';
+    protected $table = 'bahans';
 
     protected $guarded = ['id'];
 

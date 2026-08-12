@@ -2,18 +2,18 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Pembeliandetail;
+use App\Models\PembelianDetail;
 use App\Models\RequestDetail;
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdatepembeliandetailRequest extends FormRequest
+class UpdatePembelianDetailRequest extends FormRequest
 {
     public function authorize(): bool
     {
         $detail = $this->route('pembeliandetail');
-        $pembeliandetail = $detail instanceof Pembeliandetail
+        $pembeliandetail = $detail instanceof PembelianDetail
             ? $detail
-            : Pembeliandetail::with('pembelian')->find($detail);
+            : PembelianDetail::with('pembelian')->find($detail);
 
         return $pembeliandetail && $pembeliandetail->pembelian
             ? ($this->user()?->can('update', $pembeliandetail->pembelian) ?? false)
@@ -29,9 +29,9 @@ class UpdatepembeliandetailRequest extends FormRequest
                 'gt:0',
                 function ($attribute, $value, $fail) {
                     $detailParam = $this->route('pembeliandetail');
-                    $detail = $detailParam instanceof Pembeliandetail
+                    $detail = $detailParam instanceof PembelianDetail
                         ? $detailParam
-                        : Pembeliandetail::find($detailParam);
+                        : PembelianDetail::find($detailParam);
 
                     if ($detail && $detail->request_detail_id) {
                         $reqDetail = RequestDetail::find($detail->request_detail_id);

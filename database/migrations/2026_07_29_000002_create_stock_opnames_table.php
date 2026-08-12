@@ -27,7 +27,7 @@ return new class extends Migration
                 ->comment('ID user lokal yang memposting hasil opname');
             $table->timestamp('posted_at')->nullable();
             $table->timestamps();
-            $table->foreign('warehouse_id')->references('id')->on('admin_namagudang')->onDelete('restrict');
+            $table->foreign('warehouse_id')->references('id')->on('gudangs')->onDelete('restrict');
             $table->index(['warehouse_id', 'status']);
         });
 
@@ -35,24 +35,30 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('stock_opname_id');
             $table->unsignedBigInteger('bahan_id');
-            $table->decimal('system_quantity', 15, 2);
-            $table->decimal('physical_quantity', 15, 2);
-            $table->decimal('difference_quantity', 15, 2);
+            $table->decimal('system_quantity', 18, 6);
+            $table->decimal('physical_quantity', 18, 6);
+            $table->decimal('difference_quantity', 18, 6);
             $table->decimal('unit_cost', 18, 4)->default(0);
             $table->decimal('difference_value', 18, 2)->default(0);
             $table->string('reason', 150)->nullable();
             $table->text('notes')->nullable();
+            $table->unsignedBigInteger('physical_confirmed_by')->nullable()
+                ->comment('User Warehouse yang mengonfirmasi kuantitas fisik');
+            $table->timestamp('physical_confirmed_at')->nullable();
+            $table->unsignedBigInteger('valuation_confirmed_by')->nullable()
+                ->comment('User Accounting yang mengonfirmasi valuasi');
+            $table->timestamp('valuation_confirmed_at')->nullable();
             $table->timestamps();
             $table->unique(['stock_opname_id', 'bahan_id']);
             $table->foreign('stock_opname_id')->references('id')->on('stock_opnames')->onDelete('cascade');
-            $table->foreign('bahan_id')->references('id')->on('bahan')->onDelete('restrict');
+            $table->foreign('bahan_id')->references('id')->on('bahans')->onDelete('restrict');
         });
 
         Schema::create('stock_opname_allocations', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('stock_opname_detail_id');
             $table->unsignedBigInteger('inventory_layer_id');
-            $table->decimal('quantity', 15, 2);
+            $table->decimal('quantity', 18, 6);
             $table->decimal('unit_cost', 18, 4);
             $table->decimal('total_cost', 18, 2);
             $table->timestamps();
@@ -60,7 +66,7 @@ return new class extends Migration
             $table->foreign('inventory_layer_id')->references('id')->on('inventory_layers')->onDelete('restrict');
         });
 
-        Schema::table('kategoribahan', function (Blueprint $table) {
+        Schema::table('kategori_bahans', function (Blueprint $table) {
             $table->unsignedBigInteger('coa_beban_selisih_opname_id')->nullable()->after('coa_clearing_lpb_id');
             $table->unsignedBigInteger('coa_koreksi_opname_id')->nullable()->after('coa_beban_selisih_opname_id');
             $table->foreign('coa_beban_selisih_opname_id')->references('id')->on('chart_of_accounts')->onDelete('restrict');
@@ -70,7 +76,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('kategoribahan', function (Blueprint $table) {
+        Schema::table('kategori_bahans', function (Blueprint $table) {
             $table->dropForeign(['coa_beban_selisih_opname_id']);
             $table->dropForeign(['coa_koreksi_opname_id']);
             $table->dropColumn(['coa_beban_selisih_opname_id', 'coa_koreksi_opname_id']);

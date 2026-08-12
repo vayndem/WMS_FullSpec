@@ -143,6 +143,7 @@ class StockOpnameService
     private function fifoValue(StockOpnameDetail $detail, float $quantity, int $warehouseId, bool $consume): float
     {
         $layers = InventoryLayer::where('bahan_id', $detail->bahan_id)->where('gudang_id', $warehouseId)
+            ->where('stock_status', 'AVAILABLE')
             ->whereDate('transaction_date', '<=', $detail->opname->cutoff_at)
             ->where('remaining_quantity', '>', 0)->orderBy('transaction_date')->orderBy('id')->lockForUpdate()->get();
         if ((float) $layers->sum('remaining_quantity') + 0.000001 < $quantity) {
@@ -168,7 +169,7 @@ class StockOpnameService
                 $layer->decrement('remaining_quantity', $take);
             }
             if ($consume && $layer->source_type === 'LPB_DETAIL') {
-                DB::table('lpbdetails')->where('id', $layer->source_id)->update([
+                DB::table('lpb_details')->where('id', $layer->source_id)->update([
                     'jumlah_dipakai' => DB::raw('jumlah_dipakai + ' . (float) $take),
                     'jumlah_tersisa' => DB::raw('GREATEST(jumlah_tersisa - ' . (float) $take . ', 0)'),
                     'flag_dipakai' => DB::raw("CASE WHEN jumlah_tersisa - " . (float) $take . " > 0 THEN 1 ELSE 0 END"),
