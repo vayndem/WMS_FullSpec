@@ -49,6 +49,10 @@
         ],
         "post-create-project-cmd": [
             "@php artisan key:generate --ansi"
+        ],
+        "test:case-sensitive": [
+            "@composer dump-autoload --optimize --strict-psr --strict-ambiguous",
+            "@php artisan test --filter=ArchitectureConventionTest"
         ]
     },
     "extra": {

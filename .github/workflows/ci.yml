@@ -51,6 +51,8 @@ jobs:
           sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=root/' .env
           php artisan key:generate
           php artisan config:clear
+      - name: Verify case-sensitive PSR-4 conventions
+        run: composer test:case-sensitive
       - name: Migrate and seed database
         run: php artisan migrate:fresh --seed --force
       - name: Run test suite

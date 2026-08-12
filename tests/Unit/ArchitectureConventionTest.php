@@ -26,6 +26,39 @@ class ArchitectureConventionTest extends TestCase
         }
     }
 
+    public function test_git_paths_and_app_references_are_case_exact(): void
+    {
+        $canonicalClasses = [];
+        foreach ($this->phpFiles(app_path()) as $file) {
+            $relative = str_replace(['/', '.php'], ['\\', ''], substr($file, strlen(app_path()) + 1));
+            $fqcn = 'App\\'.$relative;
+            $canonicalClasses[strtolower($fqcn)] = $fqcn;
+        }
+
+        foreach ([app_path(), database_path(), base_path('routes'), base_path('tests')] as $directory) {
+            foreach ($this->phpFiles($directory) as $file) {
+                $contents = file_get_contents($file);
+                preg_match_all('/^use\s+(App\\\\[^;\s]+)\s*;|\\\\(App\\\\(?:Models|Services|Policies|Http|Providers|Traits|Exports)\\\\[A-Za-z0-9_\\\\]+)/m', $contents, $matches, PREG_SET_ORDER);
+                foreach ($matches as $match) {
+                    $reference = $match[1] ?: $match[2];
+                    $canonical = $canonicalClasses[strtolower($reference)] ?? null;
+                    if ($canonical !== null) {
+                        $this->assertSame($canonical, $reference, "Referensi {$reference} pada {$file} memiliki casing yang salah; gunakan {$canonical}.");
+                    }
+                }
+            }
+        }
+
+        exec('git ls-files app database routes tests', $trackedFiles, $exitCode);
+        $this->assertSame(0, $exitCode, 'Daftar file Git harus dapat dibaca untuk audit casing PSR-4.');
+        foreach (array_filter($trackedFiles, fn ($path) => str_ends_with($path, '.php')) as $trackedFile) {
+            $contents = file_get_contents(base_path($trackedFile));
+            if (preg_match('/^(?:abstract\s+|final\s+)?(?:class|trait|enum|interface)\s+(\w+)/m', $contents, $class)) {
+                $this->assertSame($class[1].'.php', basename($trackedFile), "Path yang dicatat Git {$trackedFile} tidak case-sensitive terhadap class {$class[1]}.");
+            }
+        }
+    }
+
     public function test_controllers_delegate_validation_to_form_requests(): void
     {
         foreach ($this->phpFiles(app_path('Http/Controllers')) as $file) {

@@ -7,7 +7,7 @@ use App\Models\ChartOfAccount;
 use App\Models\TipePembebanan;
 use App\Models\Supplier;
 use App\Models\Bahan;
-use App\Models\Kategoribahan;
+use App\Models\KategoriBahan;
 use App\Models\Gudang;
 use App\Models\AccountingSetting;
 use App\Models\TaxRate;
@@ -117,7 +117,7 @@ class DatabaseSeeder extends Seeder
         $coaOpnameLoss = ChartOfAccount::where('kode_akun', '5106')->first();
         $coaOpnameGain = ChartOfAccount::where('kode_akun', '4202')->first();
 
-        $katBahan = Kategoribahan::updateOrCreate(
+        $katBahan = KategoriBahan::updateOrCreate(
             ['katnama' => 'Bahan Baku Paper'],
             [
                 'tipe_pembebanan_id'  => $tipe2->id,
@@ -129,7 +129,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $katJasaOperasional = Kategoribahan::updateOrCreate(
+        $katJasaOperasional = KategoriBahan::updateOrCreate(
             ['katnama' => 'Jasa Operasional'],
             [
                 'tipe_pembebanan_id'  => $tipe1->id,
@@ -141,7 +141,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $katJasaProduksi = Kategoribahan::updateOrCreate(
+        $katJasaProduksi = KategoriBahan::updateOrCreate(
             ['katnama' => 'Jasa Produksi'],
             [
                 'tipe_pembebanan_id'  => $tipe2->id,

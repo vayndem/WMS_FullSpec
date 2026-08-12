@@ -6,7 +6,7 @@ Warehouse, procurement, finance, dan accounting dalam satu alur yang terkontrol.
 - PHP 8.1+
 - MySQL
 - Bootstrap 5
-- 51 tests passed, 1.173 assertions
+- 52 tests passed, 2.078 assertions
 
 Dokumen ini ditujukan untuk pembaca bisnis dan developer yang ingin cepat memahami sistem. Referensi teknis yang lebih detail ada di [feed.MD](feed.MD).
 
@@ -37,6 +37,14 @@ Dokumen operasional tidak berhenti sebagai catatan administratif. LPB, NPK, invo
 - Dokumen posted tidak diedit atau dihapus; koreksi memakai void/reversal beserta audit metadata dan jurnal pembalik.
 
 Architecture test menjaga aturan tersebut agar nama legacy, floating point untuk data bisnis, inline validation, route monolitik, dan class/file mismatch tidak masuk kembali.
+
+Pemeriksaan casing yang sama dengan runner Linux dapat dijalankan dari Windows menggunakan:
+
+```bash
+composer test:case-sensitive
+```
+
+Perintah ini menjalankan strict PSR-4 Composer dan membandingkan casing class, import `App\\...`, nama file lokal, serta path yang benar-benar disimpan Git.
 
 ## Lifecycle dokumen
 
@@ -224,8 +232,8 @@ Catatan:
 
 Hasil terakhir pada 12 Agustus 2026:
 
-- 51 tests passed
-- 1.173 assertions
+- 52 tests passed
+- 2.078 assertions
 
 Jalankan test dengan:
 
