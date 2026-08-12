@@ -7,6 +7,14 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: inventory_test
+      DB_USERNAME: root
+      DB_PASSWORD: root
     services:
       mysql:
         image: mysql:8.0
@@ -35,8 +43,3 @@ jobs:
       - run: cp .env.example .env && php artisan key:generate
       - run: php artisan migrate:fresh --seed --force
       - run: php artisan test
-        env:
-          APP_ENV: testing
-          DB_DATABASE: inventory_test
-          DB_USERNAME: root
-          DB_PASSWORD: root
