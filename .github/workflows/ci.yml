@@ -40,6 +40,18 @@ jobs:
           cache: npm
       - run: composer install --no-interaction --prefer-dist
       - run: npm ci && npm run build
-      - run: cp .env.example .env && php artisan key:generate
-      - run: php artisan migrate:fresh --seed --force
-      - run: php artisan test
+      - name: Prepare Laravel environment
+        run: |
+          cp .env.example .env
+          sed -i 's/^APP_ENV=.*/APP_ENV=testing/' .env
+          sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
+          sed -i 's/^DB_PORT=.*/DB_PORT=3306/' .env
+          sed -i 's/^DB_DATABASE=.*/DB_DATABASE=inventory_test/' .env
+          sed -i 's/^DB_USERNAME=.*/DB_USERNAME=root/' .env
+          sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=root/' .env
+          php artisan key:generate
+          php artisan config:clear
+      - name: Migrate and seed database
+        run: php artisan migrate:fresh --seed --force
+      - name: Run test suite
+        run: php artisan test
