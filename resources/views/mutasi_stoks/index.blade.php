@@ -1,20 +1,19 @@
 @extends('layouts.app')
 @section('content')
     <div class="content-page">
-        <div class="container-fluid">
-            <h4>Mutasi Stok</h4>
-            <form class="row mb-3">
-                <div class="col-md-4"><select name="gudang_id" class="form-select">
-                        <option value="">Semua gudang</option>
-                        @foreach ($gudangs as $g)
-                            <option value="{{ $g->id }}" @selected(request('gudang_id') == $g->id)>{{ $g->nama }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col"><button class="btn btn-primary">Filter</button></div>
-            </form>
-            <div class="card table-responsive">
-                <table class="table mb-0">
+        <h3 class="mb-4 text-2xl font-bold">Mutasi Stok</h3>
+        <form class="mb-4 grid grid-cols-1 gap-2 md:grid-cols-5">
+            <select name="gudang_id" class="select select-bordered md:col-span-4">
+                <option value="">Semua gudang</option>
+                @foreach ($gudangs as $g)
+                    <option value="{{ $g->id }}" @selected(request('gudang_id') == $g->id)>{{ $g->nama }}</option>
+                @endforeach
+            </select>
+            <button class="btn btn-primary">Filter</button>
+        </form>
+        <div class="card border border-base-300 bg-base-100 shadow-sm">
+            <div class="overflow-x-auto">
+                <table class="table">
                     <thead>
                         <tr>
                             <th>Tanggal</th>
@@ -32,7 +31,7 @@
                         @foreach ($rows as $r)
                             <tr>
                                 <td>{{ $r->tanggal }}</td>
-                                <td>{{ $r->nomor_mutasi }}</td>
+                                <td class="font-semibold">{{ $r->nomor_mutasi }}</td>
                                 <td>{{ $r->gudang->nama }}</td>
                                 <td>{{ $r->bahan->nama }}</td>
                                 <td>{{ $r->jenis_mutasi }}</td>
@@ -44,7 +43,8 @@
                         @endforeach
                     </tbody>
                 </table>
-            </div>{{ $rows->links() }}
+            </div>
         </div>
+        <div class="mt-4">{{ $rows->links() }}</div>
     </div>
 @endsection

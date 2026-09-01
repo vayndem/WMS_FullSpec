@@ -1,11 +1,11 @@
 <div class="mm-sidebar sidebar-default">
-    <div class="mm-sidebar-logo d-flex align-items-center justify-content-between">
-        <a href="{{ route('dashboard') }}" class="header-logo">
-            <img src="{{ asset('assets/images/logo.png') }}" class="img-fluid rounded light-logo" alt="Logo">
+    <div class="mm-sidebar-logo flex items-center justify-center">
+        <a href="{{ route('dashboard') }}" class="header-logo flex items-center gap-2 no-underline text-neutral-content">
+            <span class="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-primary text-primary-content">
+                <i class="fa-solid fa-warehouse"></i>
+            </span>
+            <span class="text-lg font-bold">WMS</span>
         </a>
-        <div class="side-menu-bt-sidebar">
-            <i class="fa-solid fa-bars wrapper-menu"></i>
-        </div>
     </div>
     <div class="data-scrollbar" data-scroll="1">
         <nav class="mm-sidebar-menu">

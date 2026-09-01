@@ -1,133 +1,102 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="content-page">
-        <div class="container-fluid">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-                <div>
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <a href="{{ route('request.index') }}" class="btn btn-sm btn-light border" title="Kembali">
-                            <i class="fa-solid fa-arrow-left"></i>
-                        </a>
-                        <h3 class="fw-bold text-dark mb-0">Persetujuan Request Barang</h3>
-                    </div>
-                    <p class="text-muted mb-0">Periksa jumlah yang disetujui sebelum memproses request.</p>
+    <div class="content-page" x-data="{
+        submitting: false,
+        async submit(event) {
+            this.submitting = true;
+            try {
+                const form = event.target;
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                    body: new FormData(form),
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) { window.AppAlert.ajaxError(data); return; }
+                await window.AppAlert.success(data.message, 'Berhasil');
+                window.location.href = '{{ route('request.index') }}';
+            } catch (error) {
+                window.AppAlert.error('Gagal memproses persetujuan.');
+            } finally {
+                this.submitting = false;
+            }
+        },
+    }">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <div class="mb-1 flex items-center gap-2">
+                    <a href="{{ route('request.index') }}" class="btn btn-sm btn-ghost border border-base-300" title="Kembali">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </a>
+                    <h3 class="text-2xl font-bold">Persetujuan Request Barang</h3>
                 </div>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 fs-6">
-                    {{ $requestData->no_request }}
-                </span>
+                <p class="text-base-content/60">Periksa jumlah yang disetujui sebelum memproses request.</p>
             </div>
+            <span class="badge badge-lg badge-primary badge-outline">{{ $requestData->no_request }}</span>
+        </div>
 
-            <form id="formProcessApprove" action="{{ route('request.processApprove', $requestData) }}" method="POST">
-                @csrf
-                <div class="card border-0 shadow-sm mb-4">
-                    <div class="card-header bg-white border-bottom p-4">
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                            <div>
-                                <h5 class="fw-bold mb-1">Detail Barang</h5>
-                                <small class="text-muted">{{ $requestData->details->count() }} item dalam request ini</small>
-                            </div>
-                            <span class="badge bg-warning-subtle text-warning-emphasis px-3 py-2">
-                                <i class="fa-solid fa-clock me-1"></i>Menunggu tindakan
-                            </span>
-                        </div>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="row g-3">
-                            @foreach ($requestData->details as $item)
-                                <div class="col-12">
-                                    <div class="border rounded-3 p-3 bg-light">
-                                        <div class="row align-items-center g-3">
-                                            <div class="col-lg-5">
-                                                <div class="d-flex align-items-start gap-3">
-                                                    <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-primary-subtle text-primary"
-                                                        style="width:42px;height:42px">
-                                                        <i class="fa-solid fa-box"></i>
-                                                    </span>
-                                                    <div>
-                                                        <h6 class="fw-bold mb-1">{{ $item->nama_barang }}</h6>
-                                                        <small class="text-muted d-block">
-                                                            {{ $item->kategoriBahan->katnama ?? 'Tanpa kategori' }}
-                                                        </small>
-                                                        <small class="text-muted">
-                                                            Gudang: {{ $item->gudang->nama ?? '-' }}
-                                                        </small>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="col-6 col-lg-3">
-                                                <label class="form-label small text-muted mb-1">Jumlah diminta</label>
-                                                <div class="fw-semibold">
-                                                    {{ number_format((float) $item->jumlah_minta, 2, ',', '.') }}
-                                                    {{ $item->satuan }}
-                                                </div>
-                                            </div>
-                                            <div class="col-6 col-lg-4">
-                                                <label class="form-label fw-semibold" for="approved-{{ $item->id }}">
-                                                    Jumlah disetujui
-                                                </label>
-                                                <div class="input-group">
-                                                    <input id="approved-{{ $item->id }}" type="number" step="any"
-                                                        min="0" max="{{ $item->jumlah_minta }}"
-                                                        name="items[{{ $item->id }}][jumlah_acc]"
-                                                        value="{{ old("items.{$item->id}.jumlah_acc", $item->jumlah_minta) }}"
-                                                        class="form-control" required>
-                                                    <span class="input-group-text">{{ $item->satuan }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
+        <form action="{{ route('request.processApprove', $requestData) }}" method="POST" @submit.prevent="submit"
+            class="card border border-base-300 bg-base-100 shadow-sm">
+            @csrf
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-base-300 p-4">
+                <div>
+                    <h5 class="font-bold">Detail Barang</h5>
+                    <p class="text-sm text-base-content/50">{{ $requestData->details->count() }} item dalam request ini</p>
+                </div>
+                <span class="badge badge-warning badge-outline"><i class="fa-solid fa-clock"></i> Menunggu tindakan</span>
+            </div>
+            <div class="flex flex-col gap-3 p-4">
+                @foreach ($requestData->details as $item)
+                    <div class="rounded-lg border border-base-300 bg-base-200/40 p-3">
+                        <div class="grid grid-cols-1 items-center gap-3 lg:grid-cols-12">
+                            <div class="lg:col-span-5">
+                                <div class="flex items-start gap-3">
+                                    <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                        <i class="fa-solid fa-box"></i>
+                                    </span>
+                                    <div>
+                                        <h6 class="font-bold">{{ $item->nama_barang }}</h6>
+                                        <p class="text-sm text-base-content/50">{{ $item->kategoriBahan->katnama ?? 'Tanpa kategori' }}</p>
+                                        <p class="text-sm text-base-content/50">Gudang: {{ $item->gudang->nama ?? '-' }}</p>
                                     </div>
                                 </div>
-                            @endforeach
+                            </div>
+                            <div class="lg:col-span-3">
+                                <label class="label"><span class="label-text text-xs">Jumlah diminta</span></label>
+                                <div class="font-semibold">
+                                    {{ number_format((float) $item->jumlah_minta, 2, ',', '.') }} {{ $item->satuan }}
+                                </div>
+                            </div>
+                            <div class="lg:col-span-4">
+                                <label class="label" for="approved-{{ $item->id }}">
+                                    <span class="label-text font-semibold">Jumlah disetujui</span>
+                                </label>
+                                <div class="join w-full">
+                                    <input id="approved-{{ $item->id }}" type="number" step="any" min="0"
+                                        max="{{ $item->jumlah_minta }}" name="items[{{ $item->id }}][jumlah_acc]"
+                                        value="{{ old("items.{$item->id}.jumlah_acc", $item->jumlah_minta) }}"
+                                        class="input input-bordered join-item flex-1" required>
+                                    <span class="join-item btn btn-disabled btn-outline">{{ $item->satuan }}</span>
+                                </div>
+                            </div>
                         </div>
+                    </div>
+                @endforeach
 
-                        <div class="mt-4">
-                            <label class="form-label fw-semibold" for="approval-note">Catatan approver</label>
-                            <textarea id="approval-note" name="catatan_approver" class="form-control" rows="3"
-                                placeholder="Tambahkan catatan bila diperlukan">{{ old('catatan_approver') }}</textarea>
-                        </div>
-                    </div>
-                    <div class="card-footer bg-white border-top p-3 d-flex flex-column flex-sm-row justify-content-end gap-2">
-                        <a href="{{ route('request.index') }}" class="btn btn-light border px-4">Batal</a>
-                        <button type="submit" class="btn btn-success px-4" id="btnSubmitApprove">
-                            <i class="fa-solid fa-check me-2"></i>Setujui Request
-                        </button>
-                    </div>
+                <div class="mt-2">
+                    <label class="label" for="approval-note"><span class="label-text font-semibold">Catatan approver</span></label>
+                    <textarea id="approval-note" name="catatan_approver" class="textarea textarea-bordered w-full" rows="3"
+                        placeholder="Tambahkan catatan bila diperlukan">{{ old('catatan_approver') }}</textarea>
                 </div>
-            </form>
-        </div>
+            </div>
+            <div class="flex flex-col justify-end gap-2 border-t border-base-300 p-4 sm:flex-row">
+                <a href="{{ route('request.index') }}" class="btn btn-ghost border border-base-300">Batal</a>
+                <button type="submit" class="btn btn-success" :disabled="submitting">
+                    <span x-show="submitting" class="loading loading-spinner loading-sm"></span>
+                    <i class="fa-solid fa-check" x-show="!submitting"></i> Setujui Request
+                </button>
+            </div>
+        </form>
     </div>
 @endsection
-
-@push('scripts')
-    <script>
-        $('#formProcessApprove').on('submit', function(e) {
-            e.preventDefault();
-            const form = $(this);
-            const button = $('#btnSubmitApprove');
-            button.prop('disabled', true)
-                .html('<i class="fa-solid fa-spinner fa-spin me-2"></i>Memproses...');
-
-            $.ajax({
-                url: form.attr('action'),
-                type: 'POST',
-                data: form.serialize(),
-                success: function(response) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil',
-                        text: response.message,
-                        confirmButtonColor: '#0d6efd'
-                    }).then(() => window.location.href = @json(route('request.index')));
-                },
-                error: function(xhr) {
-                    AppAlert.ajaxError(xhr);
-                },
-                complete: function() {
-                    button.prop('disabled', false)
-                        .html('<i class="fa-solid fa-check me-2"></i>Setujui Request');
-                }
-            });
-        });
-    </script>
-@endpush

@@ -1,74 +1,57 @@
-<div class="modal fade" id="createJurnalModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-create" role="document">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold text-white">
-                    <i class="fa-solid fa-book-bookmark me-2"></i>Buat Header Jurnal Baru
-                </h5>
-                <button type="button" class="btn-close btn-close-white " data-bs-dismiss="modal"
-                    aria-label="Close"></button>
-            </div>
-            <form id="form-store-jurnal" action="{{ route('jurnal.store') }}" method="POST" data-autosave
-                data-autosave-key="jurnal-create">
-                @csrf
-                <div class="modal-body p-4">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="fw-bold">No. Jurnal</label>
-                            <input type="text" class="form-control" name="no_jurnal" value="{{ $documentNumber }}" readonly>
-                            <small class="text-muted">Kode finansial internal dengan penanda JR.</small>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="fw-bold">Tanggal Jurnal <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control" name="tanggal" value="{{ date('Y-m-d') }}"
-                                required>
-                        </div>
+<dialog id="createJurnalModal" class="modal">
+    <div class="modal-box max-w-4xl p-0 overflow-hidden">
+        <div class="bg-primary px-6 py-4 text-primary-content">
+            <h3 class="text-lg font-bold"><i class="fa-solid fa-book-bookmark"></i> Buat Header Jurnal Baru</h3>
+        </div>
+        <form action="{{ route('jurnal.store') }}" method="POST" @submit.prevent="submitAjaxForm($event)"
+            data-autosave data-autosave-key="jurnal-create" class="flex flex-col">
+            @csrf
+            <div class="flex flex-col gap-4 p-6">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-semibold">No. Jurnal</span></label>
+                        <input type="text" class="input input-bordered" name="no_jurnal" value="{{ $documentNumber }}" readonly>
+                        <span class="label-text-alt mt-1 text-base-content/50">Kode finansial internal dengan penanda JR.</span>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="fw-bold">Sumber Transaksi</label>
-                            <input type="text" class="form-control" name="sumber_transaksi" value="MANUAL" readonly>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="fw-bold">Reff ID / ID Referensi</label>
-                            <input type="number" class="form-control" name="reff_id"
-                                placeholder="ID Dokumen Asal (Opsional)">
-                        </div>
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-semibold">Tanggal Jurnal <span class="text-error">*</span></span></label>
+                        <input type="date" class="input input-bordered" name="tanggal" value="{{ date('Y-m-d') }}" required>
                     </div>
-                    <div class="mb-3">
-                        <label class="fw-bold">Keterangan / Catatan</label>
-                        <textarea class="form-control" name="keterangan" rows="3" placeholder="Opsi keterangan transaksi..."></textarea>
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-semibold">Sumber Transaksi</span></label>
+                        <input type="text" class="input input-bordered bg-base-200" name="sumber_transaksi" value="MANUAL" readonly>
                     </div>
-                    <h6>Baris jurnal</h6>
-                    <div id="journal-lines">
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-semibold">Reff ID / ID Referensi</span></label>
+                        <input type="number" class="input input-bordered" name="reff_id" placeholder="ID Dokumen Asal (Opsional)">
+                    </div>
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold">Keterangan / Catatan</span></label>
+                    <textarea class="textarea textarea-bordered" name="keterangan" rows="3" placeholder="Opsi keterangan transaksi..."></textarea>
+                </div>
+                <div>
+                    <h6 class="mb-2 font-bold">Baris Jurnal</h6>
+                    <div class="flex flex-col gap-2">
                         @foreach ([0, 1] as $i)
-                            <div class="row g-2 mb-2 journal-line">
-                                <div class="col-md-5"><select class="form-select" data-app-picker
-                                        data-placeholder="Cari kode atau nama akun..."
-                                        name="details[{{ $i }}][coa_id]" required>
-                                        <option value="">Pilih akun</option>
-                                        @foreach ($coas as $coa)
-                                            <option value="{{ $coa->id }}">{{ $coa->kode_akun }} —
-                                                {{ $coa->nama_akun }}</option>
-                                        @endforeach
-                                    </select></div>
-                                <div class="col-md-3"><input class="form-control text-end" type="number" min="0"
-                                        step="0.01" name="details[{{ $i }}][debit]"
-                                        value="{{ $i === 0 ? '' : 0 }}" placeholder="Debit"></div>
-                                <div class="col-md-3"><input class="form-control text-end" type="number" min="0"
-                                        step="0.01" name="details[{{ $i }}][kredit]"
-                                        value="{{ $i === 1 ? '' : 0 }}" placeholder="Kredit"></div>
+                            <div class="grid grid-cols-1 gap-2 md:grid-cols-11">
+                                <select class="select select-bordered md:col-span-5" data-app-picker data-placeholder="Cari kode atau nama akun..." name="details[{{ $i }}][coa_id]" required>
+                                    <option value="">Pilih akun</option>
+                                    @foreach ($coas as $coa)
+                                        <option value="{{ $coa->id }}">{{ $coa->kode_akun }} — {{ $coa->nama_akun }}</option>
+                                    @endforeach
+                                </select>
+                                <input class="input input-bordered text-end md:col-span-3" type="number" min="0" step="0.01" name="details[{{ $i }}][debit]" value="{{ $i === 0 ? '' : 0 }}" placeholder="Debit">
+                                <input class="input input-bordered text-end md:col-span-3" type="number" min="0" step="0.01" name="details[{{ $i }}][kredit]" value="{{ $i === 1 ? '' : 0 }}" placeholder="Kredit">
                             </div>
                         @endforeach
                     </div>
                 </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary fw-bold">
-                        <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Header
-                    </button>
-                </div>
-            </form>
-        </div>
+            </div>
+            <div class="flex justify-end gap-2 border-t border-base-300 bg-base-100 px-6 py-4">
+                <button type="button" class="btn btn-ghost" onclick="closeAjaxModal(this)">Batal</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Simpan Header</button>
+            </div>
+        </form>
     </div>
-</div>
+</dialog>

@@ -249,35 +249,46 @@
     }
 @endphp
 
-<button type="button" class="page-help-button" data-bs-toggle="offcanvas" data-bs-target="#pageHelpCanvas"
-    aria-controls="pageHelpCanvas" title="Cara menggunakan halaman ini" aria-label="Buka panduan halaman">
-    <i class="fa-solid fa-question"></i>
-</button>
+<div x-data="{ open: false }">
+    <button type="button" class="page-help-button" @click="open = true"
+        title="Cara menggunakan halaman ini" aria-label="Buka panduan halaman">
+        <i class="fa-solid fa-question"></i>
+    </button>
 
-<div class="offcanvas offcanvas-end page-help-canvas" tabindex="-1" id="pageHelpCanvas" aria-labelledby="pageHelpTitle">
-    <div class="offcanvas-header border-bottom">
-        <div>
-            <span class="page-help-kicker">PUSAT BANTUAN</span>
-            <h5 class="offcanvas-title mt-1" id="pageHelpTitle">{{ $help['title'] }}</h5>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Tutup"></button>
-    </div>
-    <div class="offcanvas-body">
-        <p class="text-muted">{{ $help['intro'] }}</p>
-        <ol class="page-help-steps">
-            @foreach ($help['steps'] as $step)
-                <li><span>{{ $step }}</span></li>
-            @endforeach
-        </ol>
-        @if (!empty($help['note']))
-            <div class="page-help-note">
-                <i class="fa-solid fa-circle-info"></i>
-                <span>{{ $help['note'] }}</span>
+    <div x-show="open" x-cloak class="fixed inset-0 z-50 bg-black/40" @click="open = false"
+        x-transition.opacity></div>
+
+    <div x-show="open" x-cloak
+        class="fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col bg-base-100 shadow-2xl"
+        x-transition:enter="transition ease-out duration-200" x-transition:enter-start="translate-x-full"
+        x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full">
+        <div class="flex items-start justify-between border-b border-base-300 p-4">
+            <div>
+                <span class="text-xs font-semibold uppercase tracking-wide text-primary">Pusat Bantuan</span>
+                <h5 class="mt-1 text-lg font-bold">{{ $help['title'] }}</h5>
             </div>
-        @endif
-        <div class="page-help-role mt-4">
-            <span>Hak akses aktif</span>
-            <strong>{{ $roleName }} ({{ $userType }})</strong>
+            <button type="button" class="btn btn-ghost btn-sm btn-circle" @click="open = false" aria-label="Tutup">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-4">
+            <p class="text-base-content/60">{{ $help['intro'] }}</p>
+            <ol class="page-help-steps mt-3 flex flex-col gap-2 list-decimal pl-5">
+                @foreach ($help['steps'] as $step)
+                    <li><span>{{ $step }}</span></li>
+                @endforeach
+            </ol>
+            @if (!empty($help['note']))
+                <div class="mt-4 flex items-start gap-2 rounded-lg bg-info/10 p-3 text-sm text-base-content">
+                    <i class="fa-solid fa-circle-info mt-0.5 text-info"></i>
+                    <span>{{ $help['note'] }}</span>
+                </div>
+            @endif
+            <div class="mt-4 flex items-center justify-between rounded-lg bg-base-200 p-3 text-sm">
+                <span class="text-base-content/50">Hak akses aktif</span>
+                <strong>{{ $roleName }} ({{ $userType }})</strong>
+            </div>
         </div>
     </div>
 </div>

@@ -311,6 +311,48 @@ class WmsControlFrameworkTest extends TestCase
         $this->actingAs($warehouse)->get(route('retur-pembelian.create'))->assertOk()->assertSee('Buat Retur Pembelian Baru');
     }
 
+    public function test_lpb_index_and_create_views_render_without_a_stray_detail_row_template(): void
+    {
+        $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
+
+        $index = $this->actingAs($warehouse)->get(route('lpb.index'));
+        $index->assertOk()->assertSee('Daftar Penerimaan');
+        $index->assertSeeInOrder(['x-for="row in rows" :key="row.id"', '<tbody>', 'toggleExpand(row.id)', 'expanded[row.id]', '</tbody>'], false);
+
+        $this->actingAs($warehouse)->get(route('lpb.create'))->assertOk()->assertSee('LPB');
+    }
+
+    public function test_request_index_and_create_views_render_without_a_stray_detail_row_template(): void
+    {
+        $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
+
+        $index = $this->actingAs($warehouse)->get(route('request.index'));
+        $index->assertOk()->assertSee('Daftar Request');
+        $index->assertSeeInOrder(['x-for="row in rows" :key="row.id"', '<tbody>', 'toggleExpand(row.id)', 'expanded[row.id]', '</tbody>'], false);
+
+        $this->actingAs($warehouse)->get(route('request.create'))->assertOk();
+    }
+
+    public function test_pembelian_index_view_renders_without_a_stray_detail_row_template(): void
+    {
+        $purchasing = User::factory()->create(['type' => User::ROLE_PURCHASING]);
+
+        $index = $this->actingAs($purchasing)->get(route('pembelian.index'));
+        $index->assertOk()->assertSee('Daftar Transaksi Pembelian');
+        $index->assertSeeInOrder(['x-for="row in rows" :key="row.no_po"', '<tbody>', 'toggleExpand(row.no_po)', 'expanded[row.no_po]', '</tbody>'], false);
+    }
+
+    public function test_invoice_lpb_create_view_renders_supplier_and_receipt_picker(): void
+    {
+        $accounting = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);
+
+        $create = $this->actingAs($accounting)->get(route('invoice-lpb.create'));
+        $create->assertOk();
+        $create->assertSee('Pilih Supplier');
+        $create->assertSee('Pilih LPB / BAP Supplier');
+        $create->assertSee('function invoiceCreateForm', false);
+    }
+
     public function test_purchase_return_reduces_stock_and_grni_then_can_be_reversed(): void
     {
         $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);

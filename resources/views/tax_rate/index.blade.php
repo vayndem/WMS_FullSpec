@@ -1,120 +1,171 @@
 @extends('layouts.app')
+
 @section('content')
-    <div class="content-page">
-        <div class="container-fluid">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <h4 class="mb-1">Master Tarif Pajak</h4>
-                    <p class="text-muted mb-0">Tarif bertanggal efektif; transaksi menyimpan snapshot.</p>
-                </div><button class="btn btn-primary" id="addRate"><i class="fa-solid fa-plus me-2"></i>Tambah Tarif</button>
+    <div class="content-page"
+        x-data="{
+                ...wmsDataTable({
+                    url: '{{ route('tax-rate.index') }}',
+                    columns: [
+                        { data: 'tax_type' }, { data: 'rate' }, { data: 'effective_from' },
+                        { data: 'effective_until' }, { data: 'is_active' }, { data: 'description' },
+                        { data: 'aksi', orderable: false, searchable: false },
+                    ],
+                }),
+                editingId: null,
+                form: { tax_type: 'PPN', rate: '', effective_from: '', effective_until: '', description: '', is_active: true },
+                saving: false,
+                openCreate() {
+                    this.editingId = null;
+                    this.form = { tax_type: 'PPN', rate: '', effective_from: '', effective_until: '', description: '', is_active: true };
+                    this.$refs.rateDialog.showModal();
+                },
+                openEdit(row) {
+                    this.editingId = row.id;
+                    this.form = {
+                        tax_type: row.tax_type, rate: row.rate,
+                        effective_from: (row.effective_from || '').substring(0, 10),
+                        effective_until: (row.effective_until || '').substring(0, 10),
+                        description: row.description || '', is_active: !!row.is_active,
+                    };
+                    this.$refs.rateDialog.showModal();
+                },
+                async save() {
+                    this.saving = true;
+                    try {
+                        const url = this.editingId ? `{{ url('tax-rate') }}/${this.editingId}` : '{{ route('tax-rate.store') }}';
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ...this.form, is_active: this.form.is_active ? 1 : 0, _method: this.editingId ? 'PUT' : 'POST' }),
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok) { window.AppAlert.ajaxError(data); return; }
+                        window.AppAlert.success(data.message || 'Tarif pajak berhasil disimpan.');
+                        this.$refs.rateDialog.close();
+                        this.fetchData();
+                    } catch (error) {
+                        window.AppAlert.error('Gagal menyimpan tarif pajak.');
+                    } finally {
+                        this.saving = false;
+                    }
+                },
+            }">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h3 class="text-2xl font-bold">Master Tarif Pajak</h3>
+                <p class="text-base-content/60">Tarif bertanggal efektif; transaksi menyimpan snapshot.</p>
             </div>
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table id="rateTable" class="table table-hover align-middle w-100">
-                            <thead>
-                                <tr>
-                                    <th>Jenis</th>
-                                    <th>Tarif</th>
-                                    <th>Berlaku mulai</th>
-                                    <th>Berlaku sampai</th>
-                                    <th>Status</th>
-                                    <th>Keterangan</th>
-                                    <th>Aksi</th>
-                                </tr>
-                            </thead>
-                        </table>
-                    </div>
+            <button type="button" class="btn btn-primary" @click="openCreate()">
+                <i class="fa-solid fa-plus"></i> Tambah Tarif
+            </button>
+        </div>
+
+        <div class="card border border-base-300 bg-base-100 shadow-sm">
+            <div class="overflow-x-auto">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Jenis</th>
+                            <th>Tarif</th>
+                            <th>Berlaku Mulai</th>
+                            <th>Berlaku Sampai</th>
+                            <th>Status</th>
+                            <th>Keterangan</th>
+                            <th class="text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-if="loading">
+                            <tr>
+                                <td colspan="7" class="py-6 text-center text-base-content/50">
+                                    <span class="loading loading-spinner loading-sm"></span> Memuat data...
+                                </td>
+                            </tr>
+                        </template>
+                        <template x-if="!loading && rows.length === 0">
+                            <tr>
+                                <td colspan="7" class="py-6 text-center text-base-content/50">Data tidak ditemukan</td>
+                            </tr>
+                        </template>
+                        <template x-for="row in rows" :key="row.id">
+                            <tr>
+                                <td class="font-semibold" x-text="row.tax_type"></td>
+                                <td x-text="`${Number(row.rate).toLocaleString('id-ID')}%`"></td>
+                                <td x-text="row.effective_from"></td>
+                                <td x-text="row.effective_until || '-'"></td>
+                                <td>
+                                    <span class="badge" :class="row.is_active ? 'badge-success' : 'badge-ghost'"
+                                        x-text="row.is_active ? 'Aktif' : 'Nonaktif'"></span>
+                                </td>
+                                <td x-text="row.description || '-'"></td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-outline btn-primary btn-sm" @click="openEdit(row)">
+                                        <i class="fa-solid fa-pen-to-square"></i> Edit
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 p-4 text-sm">
+                <span class="text-base-content/60">
+                    Menampilkan <span x-text="rangeStart"></span>–<span x-text="rangeEnd"></span> dari
+                    <span x-text="recordsFiltered"></span> data
+                </span>
+                <div class="join">
+                    <button type="button" class="join-item btn btn-sm" :disabled="currentPage === 0" @click="goToPage(currentPage - 1)">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <button type="button" class="join-item btn btn-sm btn-disabled" x-text="`${currentPage + 1} / ${pageCount}`"></button>
+                    <button type="button" class="join-item btn btn-sm" :disabled="currentPage >= pageCount - 1" @click="goToPage(currentPage + 1)">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
                 </div>
             </div>
         </div>
+
+            <dialog x-ref="rateDialog" class="modal">
+                <div class="modal-box max-w-md">
+                    <h3 class="mb-4 text-lg font-bold" x-text="editingId ? 'Edit Tarif' : 'Tambah Tarif'"></h3>
+                    <form @submit.prevent="save()" class="flex flex-col gap-3">
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Jenis</span></label>
+                            <select x-model="form.tax_type" class="select select-bordered">
+                                <option value="PPN">PPN</option>
+                                <option value="PPH23">PPH23</option>
+                            </select>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Tarif (%)</span></label>
+                            <input type="number" min="0" max="100" step="0.0001" x-model="form.rate" class="input input-bordered" required>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Berlaku Mulai</span></label>
+                            <input type="date" x-model="form.effective_from" class="input input-bordered" required>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Berlaku Sampai</span></label>
+                            <input type="date" x-model="form.effective_until" class="input input-bordered">
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Keterangan</span></label>
+                            <textarea x-model="form.description" class="textarea textarea-bordered" rows="2"></textarea>
+                        </div>
+                        <label class="label cursor-pointer justify-start gap-2">
+                            <input type="checkbox" x-model="form.is_active" class="checkbox">
+                            <span class="label-text">Aktif</span>
+                        </label>
+                        <div class="mt-2 flex justify-end gap-2">
+                            <button type="button" class="btn btn-ghost" @click="$refs.rateDialog.close()">Batal</button>
+                            <button type="submit" class="btn btn-primary" :disabled="saving">
+                                <span x-show="saving" class="loading loading-spinner loading-sm"></span> Simpan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-backdrop" @click="$refs.rateDialog.close()"></div>
+            </dialog>
     </div>
 @endsection
-@push('scripts')
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const table = $('#rateTable').DataTable({
-                processing: true,
-                serverSide: true,
-                ajax: '{{ route('tax-rate.index') }}',
-                columns: [{
-                        data: 'tax_type'
-                    }, {
-                        data: 'rate',
-                        render: v => `${Number(v).toLocaleString('id-ID')}%`
-                    }, {
-                        data: 'effective_from'
-                    }, {
-                        data: 'effective_until',
-                        defaultContent: '-'
-                    },
-                    {
-                        data: 'is_active',
-                        render: v =>
-                            `<span class="badge ${v?'bg-success':'bg-secondary'}">${v?'Aktif':'Nonaktif'}</span>`
-                    }, {
-                        data: 'description',
-                        defaultContent: '-'
-                    },
-                    {
-                        data: null,
-                        orderable: false,
-                        searchable: false,
-                        render: r =>
-                            `<button class="btn btn-sm btn-outline-primary edit-rate" data-row="${encodeURIComponent(JSON.stringify(r))}">Edit</button>`
-                    }
-                ]
-            });
-            async function form(row = null) {
-                const result = await Swal.fire({
-                    title: row ? 'Edit tarif' : 'Tambah tarif',
-                    html: `
-   <div class="text-start"><label class="form-label">Jenis</label><select id="tax_type" class="form-select mb-3"><option>PPN</option><option>PPH23</option></select>
-   <label class="form-label">Tarif (%)</label><input id="rate" type="number" min="0" max="100" step=".0001" class="form-control mb-3">
-   <label class="form-label">Berlaku mulai</label><input id="from" type="date" class="form-control mb-3"><label class="form-label">Berlaku sampai</label><input id="until" type="date" class="form-control mb-3">
-   <label class="form-label">Keterangan</label><textarea id="description" class="form-control mb-3"></textarea><div class="form-check"><input id="active" type="checkbox" class="form-check-input"><label class="form-check-label">Aktif</label></div></div>`,
-                    showCancelButton: true,
-                    confirmButtonText: 'Simpan',
-                    cancelButtonText: 'Batal',
-                    didOpen: () => {
-                        document.getElementById('tax_type').value = row?.tax_type || 'PPN';
-                        document.getElementById('rate').value = row?.rate || '';
-                        document.getElementById('from').value = row?.effective_from?.substring(0,
-                            10) || '';
-                        document.getElementById('until').value = row?.effective_until?.substring(0,
-                            10) || '';
-                        document.getElementById('description').value = row?.description || '';
-                        document.getElementById('active').checked = row ? !!row.is_active : true;
-                    },
-                    preConfirm: () => ({
-                        tax_type: document.getElementById('tax_type').value,
-                        rate: document.getElementById('rate').value,
-                        effective_from: document.getElementById('from').value,
-                        effective_until: document.getElementById('until').value || '',
-                        description: document.getElementById('description').value,
-                        is_active: document.getElementById('active').checked ? 1 : 0
-                    })
-                });
-                if (!result.isConfirmed) return;
-                try {
-                    await $.ajax({
-                        url: row ? '{{ url('tax-rate') }}/' + row.id : '{{ route('tax-rate.store') }}',
-                        method: row ? 'PUT' : 'POST',
-                        data: {
-                            _token: '{{ csrf_token() }}',
-                            ...result.value
-                        }
-                    });
-                    table.ajax.reload();
-                    AppAlert.success('Tarif pajak berhasil disimpan.');
-                } catch (xhr) {
-                    AppAlert.ajaxError(xhr);
-                }
-            }
-            $('#addRate').on('click', () => form());
-            $('#rateTable').on('click', '.edit-rate', function() {
-                form(JSON.parse(decodeURIComponent(this.dataset.row)));
-            });
-        });
-    </script>
-@endpush

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-WMS FullSpec is a Laravel 10 / PHP 8.1+ / MySQL modular monolith connecting warehouse, procurement, finance, and accounting into one controlled flow: request → PO → LPB (receipt) → multi-warehouse stock → NPK (usage) → supplier invoice → payment → GL journal. Stock movements and financial postings are not administrative side notes — they drive inventory value, FIFO layers, payables, and the general ledger together.
+WMS FullSpec is a Laravel 12 / PHP 8.2+ / MySQL modular monolith connecting warehouse, procurement, finance, and accounting into one controlled flow: request → PO → LPB (receipt) → multi-warehouse stock → NPK (usage) → supplier invoice → payment → GL journal. Stock movements and financial postings are not administrative side notes — they drive inventory value, FIFO layers, payables, and the general ledger together.
 
 Business-level documentation is bilingual Indonesian/English in [README.md](README.md) (product overview) and [feed.MD](feed.MD) (technical reference — role matrix, domain flows, database tables, WMS control framework, technical debt). Read `feed.MD` section 14 ("Source of truth") when docs and code disagree: migration > policy > controller+form request > service > model > tests.
 
@@ -55,7 +55,19 @@ These are hard constraints, not style suggestions — the architecture test fail
 | Models | `app/Models` | relations, casts, domain helpers |
 | Migrations | `database/migrations` | schema + constraints |
 | Seeders | `database/seeders` | roles, users, master data, demo data |
-| Views | `resources/views` | Blade + Bootstrap 5 + jQuery/DataTables |
+| Views | `resources/views` | Blade + Tailwind CSS + daisyUI + Alpine.js |
+
+## Frontend conventions (Tailwind + daisyUI + Alpine, since 2026-09-01)
+
+The UI was fully migrated off Bootstrap 5 / jQuery / DataTables.js — there is zero jQuery or Bootstrap JS in the codebase now. Keep it that way for any new view or edit:
+
+- **Stack**: Tailwind CSS + daisyUI components, compiled via Vite (`resources/css/app.css`, `resources/js/app.js`). Interactivity is Alpine.js, not jQuery.
+- **Server-side tables**: list pages talk to the existing Yajra (`datatables()->of(...)`) JSON endpoints through the reusable `wmsDataTable()` Alpine factory (`resources/js/data-table.js`) — do not reintroduce DataTables.js. Row markup is a Blade `<template x-for>`, not server-built HTML strings.
+- **Modals**: use a native `<dialog class="modal">` + `.modal-box`, opened via `openAjaxModal()` / closed via `closeAjaxModal()` (`resources/js/ajax-modal.js`), not Bootstrap's `data-bs-toggle="modal"`.
+- **Simple CRUD forms**: use `submitAjaxForm($event)` / `confirmAjaxDelete($event, message)` instead of writing a new `$.ajax` handler per view.
+- **Searchable `<select>`**: add `data-app-picker` — `resources/js/smart-picker.js` auto-enhances it (no jQuery involved).
+- **`.modal-box` must scroll, never clip**: it has a global `max-height` + `overflow-y: auto` in `app.css` specifically so a tall form's footer buttons stay reachable instead of being cut off — don't override that with a fixed height or `overflow-hidden` on a per-view basis.
+- **Responsiveness is a hard requirement, not an afterthought.** Every new or edited view must be checked at mobile width, not just desktop: use Tailwind's responsive prefixes (`sm:`/`md:`/`lg:`) on grids and flex layouts instead of a single fixed multi-column layout, wrap any wide table in `overflow-x-auto`, and actually resize the browser (or check devtools' responsive mode) before calling a view done — do not assume a desktop-only render is good enough.
 
 Cross-model processes (posting a document, reversing it, computing FIFO cost) belong in `app/Services`, not controllers. Gates (`AuthServiceProvider`) are used only for capabilities that span multiple models (e.g. `viewWmsControl`, `operateWarehouse`); everything else uses per-model Policies.
 
@@ -116,11 +128,11 @@ Found during a full read-through of the payment/COA flow (`InvoicePaymentControl
 - **Done (2026-09-01).** `InvoicePaymentController::destroy()` now aborts with a clear 422 (`'Pembayaran ini sudah dibatalkan sebelumnya.'`) if the payment is already `VOID`, instead of falling through to a generic 404 from the journal-reversal lookup.
 - `Accounting` role has very broad power by design (can create/edit/delete supplier invoices *and* fully control COA/journals/period locks/reversals) — no maker-checker separation. Likely intentional (single back-office role) but worth flagging if this ever handles real money at scale. **Not changed** — this is a design/policy decision for the user to make, not a bug.
 
-## Planned future work (not started — do not begin without explicit go-ahead)
+## Planned future work
 
-The user's direction for this project's *next* phase (given 2026-09-01, deferred):
+The user's 4-phase modernization plan, approved 2026-09-01:
 
-1. **Framework upgrade**: move off the current old Laravel baseline to **Laravel 12**, integrated with **Tailwind CSS + daisyUI** (replacing the current Blade + Bootstrap 5 + jQuery/DataTables stack).
-2. **Database naming**: rename tables/columns to Indonesian, using consistent `snake_case_seperti_ini` — no more mixed/odd naming. This touches migrations through controllers.
-3. **File/class naming**: must match what `php artisan make:model -a` generates (model + migration + factory + seeder + controller + policy + form requests all named consistently off the same model name) — this is a hard readability requirement for the next phase.
-4. **Structural convention to standardize and carry into the user's future projects, not just this one**: Controllers stay thin; validation lives in Form Requests; authorization lives in Policies; any logic reused more than once belongs in a Service class. This is the target pattern going forward — keep it in mind for any new code even before the big refactor lands.
+1. **Framework upgrade** — Laravel 10 → **12**, plus **Tailwind CSS + daisyUI + Alpine.js** replacing Bootstrap 5/jQuery/DataTables. ✅ **Done (2026-09-01).** Verified via `composer test:case-sensitive` + full test suite (56/56) staying green throughout, and manual browser check. See "Frontend conventions" above for the resulting pattern.
+2. **Database naming**: rename tables/columns to Indonesian, using consistent `snake_case_seperti_ini` — no more mixed/odd naming. This touches migrations through controllers. **Deferred** — explicitly postponed by the user (2026-09-01); do not start without a fresh go-ahead.
+3. **File/class naming**: must match what `php artisan make:model -a` generates (model + migration + factory + seeder + controller + policy + form requests all named consistently off the same model name) — this is a hard readability requirement for the next phase. **Not started.**
+4. **Structural convention to standardize and carry into the user's future projects, not just this one**: Controllers stay thin; validation lives in Form Requests; authorization lives in Policies; any logic reused more than once belongs in a Service class. This is the target pattern going forward — keep it in mind for any new code even before the rest of the refactor lands.

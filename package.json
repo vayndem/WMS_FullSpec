@@ -6,13 +6,16 @@
         "build": "vite build"
     },
     "devDependencies": {
+        "autoprefixer": "^10.5.4",
         "axios": "^1.19.0",
+        "daisyui": "^4.12.24",
         "laravel-vite-plugin": "^3.2.0",
+        "tailwindcss": "^3.4.19",
         "vite": "^8.2.1"
     },
     "dependencies": {
-        "@coreui/coreui": "^5.2.0",
-        "@coreui/coreui-pro": "^5.8.0"
+        "alpinejs": "^3.17.1",
+        "sweetalert2": "^11.26.25"
     },
     "overrides": {
         "vite-plugin-full-reload": {

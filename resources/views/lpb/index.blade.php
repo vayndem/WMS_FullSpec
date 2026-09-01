@@ -2,316 +2,215 @@
 
 @section('content')
     <div class="content-page">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-lg-12">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
-                        <div>
-                            <h4 class="mb-1 fw-bold text-dark">Daftar Penerimaan (LPB & BAP)</h4>
-                            <p class="mb-0 text-muted">Kelola penerimaan barang dan dimulainya pekerjaan jasa dari supplier</p>
-                        </div>
-                        @can('create', App\Models\Lpb::class)
-                            <button type="button" class="btn btn-primary add-list shadow-sm btn-open-modal"
-                                data-url="{{ route('lpb.create') }}">
-                                <i class="fa-solid fa-plus me-2"></i>Buat LPB Baru
-                            </button>
-                        @endcan
-                    </div>
-                </div>
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h3 class="text-2xl font-bold">Daftar Penerimaan (LPB &amp; BAP)</h3>
+                <p class="text-base-content/60">Kelola penerimaan barang dan dimulainya pekerjaan jasa dari supplier</p>
+            </div>
+            @can('create', App\Models\Lpb::class)
+                <button type="button" class="btn btn-primary" onclick="openAjaxModal('{{ route('lpb.create') }}')">
+                    <i class="fa-solid fa-plus"></i> Buat LPB Baru
+                </button>
+            @endcan
+        </div>
 
-                <div class="col-lg-12">
-                    <div class="card shadow-sm border-0 mb-4">
-                        <div class="card-body">
-                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-                                <div class="btn-group receipt-type-filter" role="group" aria-label="Filter jenis penerimaan">
-                                    <input type="radio" class="btn-check" name="jenis_lpb_filter" id="jenisSemua"
-                                        value="">
-                                    <label class="btn btn-outline-primary" for="jenisSemua">
-                                        <i class="fa-solid fa-layer-group me-1"></i>Semua
-                                    </label>
-                                    <input type="radio" class="btn-check" name="jenis_lpb_filter" id="jenisBarang"
-                                        value="1" checked>
-                                    <label class="btn btn-outline-primary" for="jenisBarang">
-                                        <i class="fa-solid fa-box me-1"></i>LPB Barang
-                                    </label>
-                                    <input type="radio" class="btn-check" name="jenis_lpb_filter" id="jenisJasa"
-                                        value="3">
-                                    <label class="btn btn-outline-primary" for="jenisJasa">
-                                        <i class="fa-solid fa-screwdriver-wrench me-1"></i>BAP Jasa
-                                    </label>
-                                </div>
-                                <input type="hidden" id="filter_jenis_lpb" value="1">
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table table-hover table-striped mb-0" id="table-lpb" width="100%"
-                                    cellspacing="0" data-report-url="{{ route('lpb.report.pdf') }}"
-                                    data-filter-columns="1:id_lpb,3:tanggal,4:no_po,5:supplier_nama,6:gudang_nama,7:no_sj,8:user_nama">
-                                    <thead class="bg-light text-uppercase font-size-12">
-                                        <tr>
-                                            <th width="5%" class="text-center py-3"></th>
-                                            <th width="15%" class="py-3 ps-2">No LPB</th>
-                                            <th width="11%" class="py-3">Jenis</th>
-                                            <th width="12%" class="py-3">Tanggal</th>
-                                            <th width="15%" class="py-3">No PO</th>
-                                            <th class="py-3">Supplier</th>
-                                            <th class="py-3">Gudang</th>
-                                            <th width="12%" class="py-3">No SJ</th>
-                                            <th width="12%" class="py-3">Petugas</th>
-                                            <th width="15%" class="text-center py-3 pe-4">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+        <div class="card border border-base-300 bg-base-100 shadow-sm"
+            x-data="wmsDataTable({
+                url: '{{ route('lpb.index') }}',
+                reportUrl: '{{ route('lpb.report.pdf') }}',
+                extraParams: { jenis_lpb: '1' },
+                columns: [
+                    { data: 'id_lpb' }, { data: 'jenis_lpb_label' }, { data: 'tanggal' }, { data: 'no_po' },
+                    { data: 'supplier_nama' }, { data: 'gudang_nama' }, { data: 'no_sj' }, { data: 'user_nama' },
+                    { data: 'aksi', orderable: false, searchable: false },
+                ],
+            })">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 p-4">
+                <div role="tablist" class="tabs tabs-boxed">
+                    <a role="tab" class="tab" :class="extraParams.jenis_lpb === '' && 'tab-active'" @click="extraParams.jenis_lpb = ''">
+                        <i class="fa-solid fa-layer-group"></i>&nbsp;Semua
+                    </a>
+                    <a role="tab" class="tab" :class="extraParams.jenis_lpb === '1' && 'tab-active'" @click="extraParams.jenis_lpb = '1'">
+                        <i class="fa-solid fa-box"></i>&nbsp;LPB Barang
+                    </a>
+                    <a role="tab" class="tab" :class="extraParams.jenis_lpb === '3' && 'tab-active'" @click="extraParams.jenis_lpb = '3'">
+                        <i class="fa-solid fa-screwdriver-wrench"></i>&nbsp;BAP Jasa
+                    </a>
+                </div>
+                <label class="input input-bordered flex w-full max-w-xs items-center gap-2">
+                    <i class="fa-solid fa-magnifying-glass text-base-content/40"></i>
+                    <input type="search" class="grow" placeholder="Cari LPB..." x-model="search">
+                </label>
+                <a :href="buildReportUrl()" target="_blank" rel="noopener" class="btn btn-error btn-sm">
+                    <i class="fa-solid fa-file-pdf"></i> PDF
+                </a>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th class="w-8"></th>
+                            <th class="cursor-pointer select-none" @click="sortBy(0)">No LPB</th>
+                            <th>Jenis</th>
+                            <th class="cursor-pointer select-none" @click="sortBy(2)">Tanggal</th>
+                            <th class="cursor-pointer select-none" @click="sortBy(3)">No PO</th>
+                            <th class="cursor-pointer select-none" @click="sortBy(4)">Supplier</th>
+                            <th class="cursor-pointer select-none" @click="sortBy(5)">Gudang</th>
+                            <th class="cursor-pointer select-none" @click="sortBy(6)">No SJ</th>
+                            <th class="cursor-pointer select-none" @click="sortBy(7)">Petugas</th>
+                            <th class="text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-if="loading">
+                            <tr>
+                                <td colspan="10" class="py-6 text-center text-base-content/50">
+                                    <span class="loading loading-spinner loading-sm"></span> Memuat data...
+                                </td>
+                            </tr>
+                        </template>
+                        <template x-if="!loading && rows.length === 0">
+                            <tr>
+                                <td colspan="10" class="py-6 text-center text-base-content/50">Data tidak ditemukan</td>
+                            </tr>
+                        </template>
+                    </tbody>
+                    <template x-for="row in rows" :key="row.id">
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <button type="button" class="btn btn-outline btn-primary btn-xs btn-circle" @click="toggleExpand(row.id)">
+                                        <i class="fa-solid" :class="expanded[row.id] ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+                                    </button>
+                                </td>
+                                <td class="font-bold text-primary" x-text="row.id_lpb"></td>
+                                <td>
+                                    <span class="badge" :class="row.document_type === 'SERVICE_BAP' ? 'badge-info' : 'badge-primary'" x-text="row.jenis_lpb_label"></span>
+                                </td>
+                                <td x-text="row.tanggal"></td>
+                                <td class="font-bold" x-text="row.no_po"></td>
+                                <td x-text="row.supplier_nama"></td>
+                                <td x-text="row.gudang_nama"></td>
+                                <td x-text="row.no_sj"></td>
+                                <td x-text="row.user_nama"></td>
+                                <td class="text-center">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button type="button" class="btn btn-outline btn-primary btn-sm" @click="toggleExpand(row.id)">
+                                            <i class="fa-solid fa-eye"></i> Detail
+                                        </button>
+                                        <button type="button" x-show="row.can_delete" class="btn btn-outline btn-error btn-sm"
+                                            @click="AppAlert.confirm('Hapus LPB draft ini? LPB yang sudah diposting tidak dapat dihapus.').then(r => { if (r.isConfirmed) fetch(`{{ url('lpb') }}/${row.id}`, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ _method: 'DELETE' }) }).then(r => r.json()).then(d => { AppAlert.auto(d.message || 'Data berhasil dihapus.'); fetchData(); }).catch(() => AppAlert.error('Gagal menghapus data.')) })">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr x-show="expanded[row.id]" x-cloak>
+                                <td></td>
+                                <td colspan="9" class="bg-base-200/40">
+                                    <div class="my-2 rounded-lg border border-base-300 bg-base-100 p-4">
+                                        <h6 class="mb-2 font-bold">
+                                            <i class="fa-solid fa-list-check"></i>
+                                            <span x-text="row.document_type === 'SERVICE_BAP' ? 'Detail BAP Jasa' : 'Detail Item LPB'"></span>
+                                            (<span x-text="row.id_lpb"></span>)
+                                        </h6>
+                                        <div class="overflow-x-auto">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th x-text="row.document_type === 'SERVICE_BAP' ? 'Pekerjaan Jasa' : 'Nama Barang / Bahan'"></th>
+                                                        <th class="text-center">Kategori</th>
+                                                        <th x-text="row.document_type === 'SERVICE_BAP' ? 'Cost Center / Datapesanan' : 'Lot Number'"></th>
+                                                        <th class="text-center" x-text="row.document_type === 'SERVICE_BAP' ? 'Status Pekerjaan' : 'Qty Diterima'"></th>
+                                                        @if ($financial)
+                                                            <th class="text-end" x-text="row.document_type === 'SERVICE_BAP' ? 'Nilai BAP' : 'Harga Satuan'"></th>
+                                                        @endif
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <template x-if="row.document_type === 'SERVICE_BAP'">
+                                                        <template x-if="!row.service_details || row.service_details.length === 0">
+                                                            <tr>
+                                                                <td colspan="5" class="text-center text-base-content/50">Tidak ada detail item penerimaan.</td>
+                                                            </tr>
+                                                        </template>
+                                                    </template>
+                                                    <template x-if="row.document_type === 'SERVICE_BAP'">
+                                                        <template x-for="item in (row.service_details || [])" :key="item.id">
+                                                            <tr>
+                                                                <td x-text="item.service_po_detail?.description || '-'"></td>
+                                                                <td class="text-center">
+                                                                    <span class="badge badge-primary badge-outline" x-text="item.service_po_detail?.category?.display_code || '-'"></span>
+                                                                    <span x-text="item.service_po_detail?.category?.name || ''"></span>
+                                                                </td>
+                                                                <td>
+                                                                    <template x-if="item.allocations && item.allocations.length > 0">
+                                                                        <span>
+                                                                            <template x-for="alloc in item.allocations" :key="alloc.datapesanan_code">
+                                                                                <span class="badge badge-ghost mr-1 mb-1" x-text="`${alloc.datapesanan_code} (${Number(alloc.percentage).toLocaleString('id-ID')}%)`"></span>
+                                                                            </template>
+                                                                        </span>
+                                                                    </template>
+                                                                    <span x-show="!item.allocations || item.allocations.length === 0" x-text="item.department_cost_center || '-'"></span>
+                                                                </td>
+                                                                <td class="text-center">
+                                                                    <span class="badge" :class="row.no_invoice ? 'badge-success' : 'badge-warning'" x-text="row.no_invoice ? 'Selesai 100%' : 'Sedang dikerjakan'"></span>
+                                                                </td>
+                                                                @if ($financial)
+                                                                    <td class="text-end font-semibold" x-text="'Rp ' + Number(item.amount || 0).toLocaleString('id-ID')"></td>
+                                                                @endif
+                                                            </tr>
+                                                        </template>
+                                                    </template>
+                                                    <template x-if="row.document_type !== 'SERVICE_BAP'">
+                                                        <template x-if="!row.details || row.details.length === 0">
+                                                            <tr>
+                                                                <td colspan="5" class="text-center text-base-content/50">Tidak ada detail item penerimaan.</td>
+                                                            </tr>
+                                                        </template>
+                                                    </template>
+                                                    <template x-if="row.document_type !== 'SERVICE_BAP'">
+                                                        <template x-for="item in (row.details || [])" :key="item.id">
+                                                            <tr>
+                                                                <td x-text="item.bahan ? item.bahan.nama : '-'"></td>
+                                                                <td class="text-center" x-text="item.kategori ? item.kategori.katnama : '-'"></td>
+                                                                <td class="text-center" x-text="item.lot_number ?? '-'"></td>
+                                                                <td class="text-center font-bold text-success" x-text="item.jumlah_barang_diterima"></td>
+                                                                @if ($financial)
+                                                                    <td class="text-end" x-text="item.harga ? 'Rp ' + Number(item.harga).toLocaleString('id-ID') : '-'"></td>
+                                                                @endif
+                                                            </tr>
+                                                        </template>
+                                                    </template>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </template>
+                </table>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 p-4 text-sm">
+                <span class="text-base-content/60">
+                    Menampilkan <span x-text="rangeStart"></span>–<span x-text="rangeEnd"></span> dari
+                    <span x-text="recordsFiltered"></span> data
+                </span>
+                <div class="join">
+                    <button type="button" class="join-item btn btn-sm" :disabled="currentPage === 0" @click="goToPage(currentPage - 1)">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <button type="button" class="join-item btn btn-sm btn-disabled" x-text="`${currentPage + 1} / ${pageCount}`"></button>
+                    <button type="button" class="join-item btn btn-sm" :disabled="currentPage >= pageCount - 1" @click="goToPage(currentPage + 1)">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
     <div id="modal-container"></div>
-
-    @push('scripts')
-        <script>
-            function formatChildRow(d) {
-                const isService = d.document_type === 'SERVICE_BAP';
-                let itemsHtml = '';
-                if (isService && d.service_details && d.service_details.length > 0) {
-                    d.service_details.forEach(function(item) {
-                        const poDetail = item.service_po_detail || {};
-                        const category = poDetail.category || {};
-                        let allocation = item.department_cost_center || '-';
-                        if (item.allocations && item.allocations.length > 0) {
-                            allocation = item.allocations.map(value =>
-                                `<span class="badge bg-light text-dark border me-1 mb-1">${value.datapesanan_code} (${Number(value.percentage).toLocaleString('id-ID')}%)</span>`
-                            ).join('');
-                        }
-                        itemsHtml += `
-                            <tr>
-                                <td>${poDetail.description || '-'}</td>
-                                <td class="text-center">
-                                    <span class="badge bg-primary-subtle text-primary">${category.display_code || '-'}</span>
-                                    ${category.name || ''}
-                                </td>
-                                <td>${allocation}</td>
-                                <td class="text-center">
-                                    <span class="badge ${d.no_invoice ? 'bg-success' : 'bg-warning text-dark'}">
-                                        ${d.no_invoice ? 'Selesai 100%' : 'Sedang dikerjakan'}
-                                    </span>
-                                </td>
-                                @if ($financial)
-                                    <td class="text-end fw-semibold">Rp ${Number(item.amount || 0).toLocaleString('id-ID')}</td>
-                                @endif
-                            </tr>
-                        `;
-                    });
-                } else if (!isService && d.details && d.details.length > 0) {
-                    d.details.forEach(function(item) {
-                        itemsHtml += `
-                            <tr>
-                                <td>${item.bahan ? item.bahan.nama : '-'}</td>
-                                <td class="text-center">${item.kategori ? item.kategori.katnama : '-'}</td>
-                                <td class="text-center">${item.lot_number ?? '-'}</td>
-                                <td class="text-center text-success fw-bold">${item.jumlah_barang_diterima}</td>
-                                @if ($financial)
-                                    <td class="text-end">${item.harga ? 'Rp ' + Number(item.harga).toLocaleString('id-ID') : '-'}</td>
-                                @endif
-                            </tr>
-                        `;
-                    });
-                } else {
-                    itemsHtml =
-                        '<tr><td colspan="5" class="text-center text-muted">Tidak ada detail item penerimaan.</td></tr>';
-                }
-
-                return `
-                    <div class="p-3 bg-light rounded border m-2">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="fw-bold text-dark mb-0">
-                                <i class="fa-solid fa-list-check me-2 text-primary"></i>
-                                ${isService ? 'Detail BAP Jasa' : 'Detail Item LPB'} (${d.id_lpb})
-                            </h6>
-                        </div>
-                        <table class="table table-sm table-bordered bg-white mb-0">
-                            <thead class="bg-primary text-white">
-                                <tr>
-                                    <th>${isService ? 'Pekerjaan Jasa' : 'Nama Barang / Bahan'}</th>
-                                    <th width="20%" class="text-center">Kategori</th>
-                                    <th width="20%" class="${isService ? '' : 'text-center'}">${isService ? 'Cost Center / Datapesanan' : 'Lot Number'}</th>
-                                    <th width="16%" class="text-center">${isService ? 'Status Pekerjaan' : 'Qty Diterima'}</th>
-                                    @if ($financial)
-                                        <th width="18%" class="text-end">${isService ? 'Nilai BAP' : 'Harga Satuan'}</th>
-                                    @endif
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${itemsHtml}
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-            }
-
-            $(document).ready(function() {
-                let table = $('#table-lpb').DataTable({
-                    processing: true,
-                    serverSide: true,
-                    ajax: {
-                        url: "{{ route('lpb.index') }}",
-                        data: function(params) {
-                            params.jenis_lpb = $('input[name="jenis_lpb_filter"]:checked').val();
-                        }
-                    },
-                    columns: [{
-                            className: 'dt-control text-center align-middle',
-                            orderable: false,
-                            data: null,
-                            defaultContent: '<button type="button" class="btn btn-sm btn-outline-primary btn-expand"><i class="fa-solid fa-chevron-right"></i></button>'
-                        },
-                        {
-                            data: 'id_lpb',
-                            name: 'id_lpb',
-                            className: 'align-middle ps-2 fw-bold text-primary'
-                        },
-                        {
-                            data: 'jenis_lpb_label',
-                            name: 'document_type',
-                            className: 'align-middle',
-                            render: function(value, type, row) {
-                                if (type !== 'display') return value;
-                                const service = row.document_type === 'SERVICE_BAP';
-                                return `<span class="badge ${service ? 'bg-info-subtle text-info-emphasis' : 'bg-primary-subtle text-primary-emphasis'}">${value}</span>`;
-                            }
-                        },
-                        {
-                            data: 'tanggal',
-                            name: 'tanggal',
-                            className: 'align-middle'
-                        },
-                        {
-                            data: 'no_po',
-                            name: 'no_po',
-                            className: 'align-middle fw-bold'
-                        },
-                        {
-                            data: 'supplier_nama',
-                            name: 'supplier_nama',
-                            className: 'align-middle'
-                        },
-                        {
-                            data: 'gudang_nama',
-                            name: 'gudang_nama',
-                            className: 'align-middle'
-                        },
-                        {
-                            data: 'no_sj',
-                            name: 'no_sj',
-                            className: 'align-middle'
-                        },
-                        {
-                            data: 'user_nama',
-                            name: 'user_nama',
-                            className: 'align-middle'
-                        },
-                        {
-                            data: null,
-                            orderable: false,
-                            searchable: false,
-                            className: 'text-center align-middle pe-4',
-                            render: function(data) {
-                                let btnDetail = `
-                                    <button type="button" class="btn btn-sm btn-outline-primary me-1 btn-toggle-detail">
-                                        <i class="fa-solid fa-eye me-1"></i> Detail
-                                    </button>
-                                `;
-                                let btnDelete = '';
-                                if (data.can_delete) {
-                                    btnDelete = `
-                                        <button type="button" class="btn btn-sm btn-outline-danger btn-delete" data-id="${data.id}">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    `;
-                                }
-                                return btnDetail + btnDelete;
-                            }
-                        }
-                    ]
-                });
-
-                $('input[name="jenis_lpb_filter"]').on('change', function() {
-                    $('#filter_jenis_lpb').val(this.value);
-                    table.ajax.reload();
-                });
-
-                function toggleRow(tr) {
-                    let row = table.row(tr);
-                    let icon = tr.find('button.btn-expand i');
-
-                    if (row.child.isShown()) {
-                        row.child.hide();
-                        tr.removeClass('shown');
-                        icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
-                    } else {
-                        row.child(formatChildRow(row.data())).show();
-                        tr.addClass('shown');
-                        icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                    }
-                }
-
-                $('#table-lpb tbody').on('click', 'button.btn-expand, button.btn-toggle-detail', function() {
-                    let tr = $(this).closest('tr');
-                    toggleRow(tr);
-                });
-
-                $(document).on('click', '.btn-open-modal', function(e) {
-                    e.preventDefault();
-                    let url = $(this).data('url');
-
-                    $.ajax({
-                        url: url,
-                        type: 'GET',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        success: function(html) {
-                            $('#modal-container').html(html);
-                            $('#createLpbModal').modal('show');
-                        },
-                        error: function(err) {
-                            AppAlert.auto(err.responseJSON?.message ||
-                                'Anda tidak memiliki hak akses untuk tindakan ini.');
-                        }
-                    });
-                });
-
-                if (new URLSearchParams(window.location.search).get('create') === '1') {
-                    $('.btn-open-modal').first().trigger('click');
-                }
-
-                $(document).on('click', '.btn-delete', function() {
-                    let id = $(this).data('id');
-                    AppAlert.confirm("Hapus LPB draft ini? LPB yang sudah diposting tidak dapat dihapus.").then(function(result) {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: "/lpb/" + id,
-                            type: "DELETE",
-                            data: {
-                                _token: "{{ csrf_token() }}"
-                            },
-                            success: function(res) {
-                                if (res.success) {
-                                    table.ajax.reload();
-                                }
-                            },
-                            error: function(err) {
-                                AppAlert.auto("Gagal menghapus data.");
-                            }
-                        });
-                    }});
-                });
-            });
-        </script>
-    @endpush
 @endsection

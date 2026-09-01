@@ -1,408 +1,301 @@
-<div class="modal fade" id="createInvoiceModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-create" role="document">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-primary text-white py-3 px-4">
-                <h5 class="modal-title fw-bold text-white d-flex align-items-center">
-                    <i class="fa-solid fa-file-invoice-dollar me-2"></i>Buat Invoice Supplier Baru
-                </h5>
-                <button type="button" class="btn-close btn-close-white  opacity-100" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
-            </div>
-            <form id="form-store-invoice" action="{{ route('invoice-lpb.store') }}" method="POST" data-autosave
-                data-autosave-key="invoice-lpb-create">
-                @csrf
-                <div class="modal-body p-4 bg-light">
-                    <div class="card border-0 shadow-sm p-3 mb-3 bg-white rounded-lg">
-                        <div class="row g-3">
-                            <div class="col-md-6 mb-3">
-                                <label class="fw-bold text-dark small text-uppercase">1. Pilih Supplier <span
-                                        class="text-danger">*</span></label>
-                                <select class="d-none" name="kode_supplier" id="modal_kode_supplier">
-                                    <option value=""></option>
-                                    @foreach ($suppliers as $supplier)
-                                        <option value="{{ $supplier->id }}" data-name="{{ $supplier->nama }}"
-                                            data-phone="{{ $supplier->telp }}" data-address="{{ $supplier->alamat }}">
-                                            {{ $supplier->nama }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <div class="dropdown" id="supplier-picker">
-                                    <button class="form-select text-start" type="button" data-bs-toggle="dropdown"
-                                        data-bs-auto-close="outside" id="supplier-picker-button">
-                                        Cari dan pilih supplier
-                                    </button>
-                                    <div class="dropdown-menu w-100 p-2 shadow">
-                                        <input class="form-control mb-2" id="supplier-search"
-                                            placeholder="Ketik nama, telepon, atau alamat..." autocomplete="off">
-                                        <div id="supplier-results" class="overflow-auto" style="max-height: 260px">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div id="supplier-preview" class="border rounded-3 bg-body-tertiary p-3 mt-2 d-none">
-                                    <div class="fw-bold text-primary supplier-name"></div>
-                                    <small class="text-muted supplier-meta"></small>
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="fw-bold text-dark small text-uppercase">2. Pilih LPB / BAP Supplier <span
-                                        class="text-danger">*</span></label>
-                                <select class="d-none" name="lpb_ids[]" id="modal_select_id_lpb" multiple disabled>
-                                    @foreach ($lpbs as $lpb)
-                                        <option value="{{ $lpb->id }}" data-code="{{ $lpb->id_lpb }}"
-                                            data-supplier="{{ $lpb->pembelian->supplier_id ?? '' }}"
-                                            data-type="{{ $lpb->document_type === 'SERVICE_BAP' ? 'BAP Jasa' : 'LPB Barang' }}"
-                                            data-date="{{ $lpb->tanggal?->format('d-m-Y') }}"
-                                            data-po="{{ $lpb->no_po }}">
-                                            {{ $lpb->document_type === 'SERVICE_BAP' ? '[BAP JASA]' : '[LPB BARANG]' }}
-                                            {{ $lpb->id_lpb }} · {{ $lpb->tanggal?->format('d-m-Y') }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <div class="dropdown" id="receipt-picker">
-                                    <button class="form-select text-start" type="button" data-bs-toggle="dropdown"
-                                        data-bs-auto-close="outside" id="receipt-picker-button" disabled>
-                                        Pilih supplier terlebih dahulu
-                                    </button>
-                                    <div class="dropdown-menu w-100 p-2 shadow">
-                                        <input class="form-control mb-2" id="receipt-search"
-                                            placeholder="Cari nomor LPB, BAP, PO, atau tanggal..." autocomplete="off">
-                                        <div id="receipt-results" class="overflow-auto" style="max-height: 300px"></div>
-                                    </div>
-                                </div>
-                                <div class="form-text" id="receipt-help">Pilih supplier terlebih dahulu.</div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="fw-bold text-dark small text-uppercase">No. Invoice Supplier
-                                    <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="no_invoice"
-                                    placeholder="Masukkan Nomor Invoice" required>
-                            </div>
-                            <div class="col-md-4 mb-3 mb-md-0">
-                                <label class="fw-bold text-dark small text-uppercase">Tanggal Invoice <span
-                                        class="text-danger">*</span></label>
-                                <input type="date" class="form-control" name="tanggal" value="{{ date('Y-m-d') }}"
-                                    required>
-                            </div>
-                            <div class="col-md-4 mb-3 mb-md-0">
-                                <label class="fw-bold text-dark small text-uppercase">Deadline
-                                    Pembayaran</label>
-                                <input type="date" class="form-control" name="tgl_deadline_pembayaran">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card border-0 shadow-sm p-3 mb-3 bg-white rounded-lg">
-                        <h6 class="fw-bold text-dark mb-3">
-                            <i class="fa-solid fa-boxes-stacked me-2 text-primary"></i>Preview Item LPB / BAP Terpilih
-                        </h6>
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-sm mb-0" id="modal-table-lpb-items">
-                                <thead class="bg-light text-uppercase font-size-12">
-                                    <tr>
-                                        <th width="4%" class="text-center">#</th>
-                                        <th>Nama Bahan</th>
-                                        <th width="15%" class="text-center">Qty Diterima</th>
-                                        <th width="20%" class="text-end">Harga Satuan</th>
-                                        <th width="20%" class="text-end">Total Harga</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td colspan="5" class="text-center text-muted py-3">Pilih Nomor LPB
-                                            terlebih
-                                            dahulu.</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3 mb-md-0">
-                            <div class="card border-0 shadow-sm p-3 bg-white rounded-lg h-100">
-                                <label class="fw-bold text-dark small text-uppercase">Catatan / Note</label>
-                                <textarea class="form-control" name="note" rows="5" placeholder="Catatan opsional untuk invoice ini..."></textarea>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card border-0 shadow-sm p-3 bg-white rounded-lg">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="fw-bold text-muted">Sub Total:</span>
-                                    <span class="fw-bold h6 text-dark mb-0" id="text_sub_total">Rp 0</span>
-                                </div>
-                                <div class="mb-3 mb-2 d-flex align-items-center justify-content-between">
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input" name="is_ppn"
-                                            id="is_ppn" value="1">
-                                        <label class="form-check-label fw-bold" for="is_ppn">Gunakan PPN
-                                            (11%)</label>
-                                    </div>
-                                    <span class="fw-bold text-muted" id="text_ppn">Rp 0</span>
-                                </div>
-                                <div class="mb-3 mb-2 d-none" id="wrap_no_faktur_pajak">
-                                    <label class="fw-bold text-dark small text-uppercase">No. Faktur Pajak (NSFP)
-                                        <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control form-control-sm" name="no_faktur_pajak"
-                                        id="input_no_faktur_pajak" placeholder="010.001-23.12345678"
-                                        pattern="\d{3}\.\d{3}-\d{2}\.\d{8}">
-                                    <div class="form-text">Format: 010.001-23.12345678 — wajib diisi bila PPN dipakai, syarat kredit PPN Masukan.</div>
-                                </div>
-                                <div class="mb-3 mb-2 row align-items-center">
-                                    <label class="col-sm-4 col-form-label fw-bold py-0">Diskon:</label>
-                                    <div class="col-sm-8">
-                                        <input type="number" step="any" min="0"
-                                            class="form-control form-control-sm text-end fw-bold" name="diskon"
-                                            id="input_diskon" value="0">
-                                    </div>
-                                </div>
-                                <div class="mb-3 mb-2 row align-items-center">
-                                    <label class="col-sm-4 col-form-label fw-bold py-0">Ongkir:</label>
-                                    <div class="col-sm-8">
-                                        <input type="number" step="any" min="0"
-                                            class="form-control form-control-sm text-end fw-bold" name="ongkir"
-                                            id="input_ongkir" value="0">
-                                    </div>
-                                </div>
-                                <div class="alert alert-info mb-2" data-keep-alert>PPh 23 dicatat saat pembayaran,
-                                    bukan saat invoice diterima.</div>
-                                <hr class="my-2">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h5 class="fw-bold text-dark mb-0">Grand Total:</h5>
-                                    <h5 class="fw-bold text-primary mb-0" id="text_grand_total">Rp 0</h5>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer bg-white border-top py-3 px-4">
-                    <button type="button" class="btn btn-light border fw-bold px-4"
-                        data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm" id="btn-submit-invoice">
-                        <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Invoice
-                    </button>
-                </div>
-            </form>
+<dialog id="createInvoiceModal" class="modal">
+    <div class="modal-box max-w-6xl p-0 overflow-hidden" x-data="invoiceCreateForm({
+        suppliers: {{ Js::from($suppliers->map(fn($s) => ['id' => $s->id, 'nama' => $s->nama, 'telp' => $s->telp, 'alamat' => $s->alamat])) }},
+        lpbs: {{ Js::from($lpbs->map(fn($l) => [
+                'id' => $l->id,
+                'code' => $l->id_lpb,
+                'supplier_id' => $l->pembelian->supplier_id ?? '',
+                'type' => $l->document_type === 'SERVICE_BAP' ? 'BAP Jasa' : 'LPB Barang',
+                'date' => $l->tanggal?->format('d-m-Y'),
+                'po' => $l->no_po,
+            ])) }},
+    })">
+        <div class="bg-primary px-6 py-4 text-primary-content">
+            <h3 class="text-lg font-bold"><i class="fa-solid fa-file-invoice-dollar"></i> Buat Invoice Supplier Baru</h3>
         </div>
+        <form @submit.prevent="submit()" data-autosave data-autosave-key="invoice-lpb-create" class="flex flex-col">
+            <div class="max-h-[75vh] overflow-y-auto p-6">
+                <div class="card border border-base-300 bg-base-100 p-4 shadow-sm">
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div class="form-control relative">
+                            <label class="label"><span class="label-text font-semibold">1. Pilih Supplier <span class="text-error">*</span></span></label>
+                            <button type="button" class="select select-bordered text-left" @click="supplierPickerOpen = !supplierPickerOpen">
+                                <span x-text="selectedSupplier ? selectedSupplier.nama : 'Cari dan pilih supplier'"></span>
+                            </button>
+                            <div x-show="supplierPickerOpen" x-cloak @click.outside="supplierPickerOpen = false"
+                                class="absolute top-full z-30 mt-1 w-full rounded-box border border-base-300 bg-base-100 p-2 shadow-lg">
+                                <input type="search" class="input input-bordered input-sm mb-2 w-full" placeholder="Ketik nama, telepon, atau alamat..." x-model="supplierSearch">
+                                <div class="max-h-64 overflow-auto">
+                                    <template x-if="filteredSuppliers.length === 0">
+                                        <div class="py-3 text-center text-base-content/50">Supplier tidak ditemukan.</div>
+                                    </template>
+                                    <template x-for="item in filteredSuppliers" :key="item.id">
+                                        <button type="button" class="block w-full rounded-lg p-2 text-left hover:bg-base-200" @click="pickSupplier(item)">
+                                            <span class="block font-semibold" x-text="item.nama"></span>
+                                            <small class="text-base-content/50" x-text="`${item.telp || '-'} · ${item.alamat || '-'}`"></small>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                            <template x-if="selectedSupplier">
+                                <div class="mt-2 rounded-lg border border-base-300 bg-base-200/40 p-3">
+                                    <div class="font-bold text-primary" x-text="selectedSupplier.nama"></div>
+                                    <small class="text-base-content/50" x-text="`${selectedSupplier.telp || '-'} · ${selectedSupplier.alamat || '-'}`"></small>
+                                </div>
+                            </template>
+                        </div>
+
+                        <div class="form-control relative">
+                            <label class="label"><span class="label-text font-semibold">2. Pilih LPB / BAP Supplier <span class="text-error">*</span></span></label>
+                            <button type="button" class="select select-bordered text-left" :disabled="!supplierId" @click="receiptPickerOpen = !receiptPickerOpen">
+                                <span x-text="receiptButtonLabel"></span>
+                            </button>
+                            <div x-show="receiptPickerOpen" x-cloak @click.outside="receiptPickerOpen = false"
+                                class="absolute top-full z-30 mt-1 w-full rounded-box border border-base-300 bg-base-100 p-2 shadow-lg">
+                                <input type="search" class="input input-bordered input-sm mb-2 w-full" placeholder="Cari nomor LPB, BAP, PO, atau tanggal..." x-model="receiptSearch">
+                                <div class="max-h-72 overflow-auto">
+                                    <template x-if="filteredReceipts.length === 0">
+                                        <div class="py-3 text-center text-base-content/50">Tidak ada LPB/BAP yang cocok.</div>
+                                    </template>
+                                    <template x-for="item in filteredReceipts" :key="item.id">
+                                        <label class="flex items-start gap-2 rounded-lg p-2 hover:bg-base-200">
+                                            <input type="checkbox" class="checkbox checkbox-sm mt-1" :value="item.id" :checked="selectedLpbIds.includes(item.id)" @change="toggleReceipt(item.id)">
+                                            <span class="flex-1">
+                                                <span class="flex items-center justify-between gap-2">
+                                                    <strong x-text="item.code"></strong>
+                                                    <span class="badge badge-primary badge-outline" x-text="item.type"></span>
+                                                </span>
+                                                <small class="text-base-content/50" x-text="`Tanggal ${item.date} · PO ${item.po || '-'}`"></small>
+                                            </span>
+                                        </label>
+                                    </template>
+                                </div>
+                            </div>
+                            <span class="label-text-alt mt-1 text-base-content/50" x-text="receiptHelp"></span>
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">No. Invoice Supplier <span class="text-error">*</span></span></label>
+                            <input type="text" x-model="form.no_invoice" class="input input-bordered" placeholder="Masukkan Nomor Invoice" required>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="form-control">
+                                <label class="label"><span class="label-text font-semibold">Tanggal Invoice <span class="text-error">*</span></span></label>
+                                <input type="date" x-model="form.tanggal" class="input input-bordered" required>
+                            </div>
+                            <div class="form-control">
+                                <label class="label"><span class="label-text font-semibold">Deadline Pembayaran</span></label>
+                                <input type="date" x-model="form.tgl_deadline_pembayaran" class="input input-bordered">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-4 border border-base-300 bg-base-100 p-4 shadow-sm">
+                    <h6 class="mb-3 font-bold"><i class="fa-solid fa-boxes-stacked text-primary"></i> Preview Item LPB / BAP Terpilih</h6>
+                    <div class="overflow-x-auto">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th class="text-center">#</th>
+                                    <th>Nama Bahan</th>
+                                    <th class="text-center">Qty Diterima</th>
+                                    <th class="text-end">Harga Satuan</th>
+                                    <th class="text-end">Total Harga</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-if="previewItems.length === 0">
+                                    <tr>
+                                        <td colspan="5" class="py-3 text-center text-base-content/50">Pilih LPB atau BAP terlebih dahulu.</td>
+                                    </tr>
+                                </template>
+                                <template x-for="(item, idx) in previewItems" :key="idx">
+                                    <tr>
+                                        <td class="text-center" x-text="idx + 1"></td>
+                                        <td class="font-bold" x-text="item.nama_bahan"></td>
+                                        <td class="text-center font-bold text-success" x-text="item.jumlah_barang_diterima"></td>
+                                        <td class="text-end" x-text="'Rp ' + Number(item.harga).toLocaleString('id-ID')"></td>
+                                        <td class="text-end font-bold" x-text="'Rp ' + Number(item.total_harga).toLocaleString('id-ID')"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div class="card border border-base-300 bg-base-100 p-4 shadow-sm">
+                        <label class="label"><span class="label-text font-semibold">Catatan / Note</span></label>
+                        <textarea x-model="form.note" class="textarea textarea-bordered h-full" rows="5" placeholder="Catatan opsional untuk invoice ini..."></textarea>
+                    </div>
+                    <div class="card border border-base-300 bg-base-100 p-4 shadow-sm">
+                        <div class="mb-2 flex items-center justify-between">
+                            <span class="font-semibold text-base-content/60">Sub Total:</span>
+                            <span class="text-lg font-bold" x-text="'Rp ' + subTotal.toLocaleString('id-ID')"></span>
+                        </div>
+                        <div class="mb-2 flex items-center justify-between">
+                            <label class="flex cursor-pointer items-center gap-2">
+                                <input type="checkbox" x-model="form.is_ppn" class="checkbox">
+                                <span class="font-semibold">Gunakan PPN (11%)</span>
+                            </label>
+                            <span class="font-semibold text-base-content/60" x-text="'Rp ' + ppnNominal.toLocaleString('id-ID')"></span>
+                        </div>
+                        <div x-show="form.is_ppn" x-cloak class="mb-2">
+                            <label class="label"><span class="label-text font-semibold">No. Faktur Pajak (NSFP) <span class="text-error">*</span></span></label>
+                            <input type="text" x-model="form.no_faktur_pajak" class="input input-bordered input-sm w-full" placeholder="010.001-23.12345678" pattern="\d{3}\.\d{3}-\d{2}\.\d{8}">
+                            <span class="label-text-alt mt-1 text-base-content/50">Format: 010.001-23.12345678 — wajib diisi bila PPN dipakai, syarat kredit PPN Masukan.</span>
+                        </div>
+                        <div class="mb-2 flex items-center gap-3">
+                            <label class="w-24 font-semibold">Diskon:</label>
+                            <input type="number" step="any" min="0" x-model.number="form.diskon" class="input input-bordered input-sm flex-1 text-end">
+                        </div>
+                        <div class="mb-2 flex items-center gap-3">
+                            <label class="w-24 font-semibold">Ongkir:</label>
+                            <input type="number" step="any" min="0" x-model.number="form.ongkir" class="input input-bordered input-sm flex-1 text-end">
+                        </div>
+                        <div role="alert" class="alert alert-info mb-2 text-sm">PPh 23 dicatat saat pembayaran, bukan saat invoice diterima.</div>
+                        <div class="divider my-1"></div>
+                        <div class="flex items-center justify-between">
+                            <h5 class="text-lg font-bold">Grand Total:</h5>
+                            <h5 class="text-lg font-bold text-primary" x-text="'Rp ' + grandTotal.toLocaleString('id-ID')"></h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 border-t border-base-300 bg-base-100 px-6 py-4">
+                <button type="button" class="btn btn-ghost" onclick="closeAjaxModal(this)">Batal</button>
+                <button type="submit" class="btn btn-primary" :disabled="submitting">
+                    <span x-show="submitting" class="loading loading-spinner loading-sm"></span>
+                    <i class="fa-solid fa-floppy-disk" x-show="!submitting"></i> Simpan Invoice
+                </button>
+            </div>
+        </form>
     </div>
-</div>
+</dialog>
 
 <script>
-    $(document).ready(function() {
-        let currentSubTotal = 0;
-        let currentSupplier = '';
-        const esc = value => $('<div>').text(value ?? '').html();
+    function invoiceCreateForm(config) {
+        return {
+            suppliers: config.suppliers,
+            lpbs: config.lpbs,
+            supplierId: '',
+            supplierPickerOpen: false,
+            supplierSearch: '',
+            selectedLpbIds: [],
+            receiptPickerOpen: false,
+            receiptSearch: '',
+            previewItems: [],
+            subTotal: 0,
+            submitting: false,
+            form: {
+                no_invoice: '', tanggal: new Date().toISOString().substring(0, 10), tgl_deadline_pembayaran: '',
+                is_ppn: false, no_faktur_pajak: '', diskon: 0, ongkir: 0, note: '',
+            },
 
-        function renderSuppliers(term = '') {
-            term = term.toLowerCase();
-            const rows = $('#modal_kode_supplier option[value!=""]').filter(function() {
-                const option = $(this);
-                return `${option.data('name')} ${option.data('phone')} ${option.data('address')}`
-                    .toLowerCase().includes(term);
-            }).map(function() {
-                const option = $(this);
-                return `<button type="button" class="dropdown-item rounded-2 py-2 supplier-choice"
-                    data-id="${this.value}">
-                    <span class="d-block fw-semibold">${esc(option.data('name'))}</span>
-                    <small class="text-muted text-wrap">${esc(option.data('phone') || '-')} · ${esc(option.data('address') || '-')}</small>
-                </button>`;
-            }).get();
-            $('#supplier-results').html(rows.length ? rows.join('') :
-                '<div class="text-muted text-center py-3">Supplier tidak ditemukan.</div>');
-        }
+            get selectedSupplier() {
+                return this.suppliers.find((item) => String(item.id) === String(this.supplierId)) || null;
+            },
+            get filteredSuppliers() {
+                const term = this.supplierSearch.trim().toLowerCase();
+                if (!term) return this.suppliers;
+                return this.suppliers.filter((item) => `${item.nama} ${item.telp} ${item.alamat}`.toLowerCase().includes(term));
+            },
+            get availableReceipts() {
+                return this.lpbs.filter((item) => String(item.supplier_id) === String(this.supplierId));
+            },
+            get filteredReceipts() {
+                const term = this.receiptSearch.trim().toLowerCase();
+                if (!term) return this.availableReceipts;
+                return this.availableReceipts.filter((item) => `${item.code} ${item.type} ${item.date} ${item.po}`.toLowerCase().includes(term));
+            },
+            get receiptButtonLabel() {
+                if (!this.supplierId) return 'Pilih supplier terlebih dahulu';
+                if (this.selectedLpbIds.length === 0) return 'Pilih LPB / BAP (bisa lebih dari satu)';
+                const codes = this.lpbs.filter((item) => this.selectedLpbIds.includes(item.id)).map((item) => item.code);
+                return `${codes.length} dokumen dipilih: ${codes.join(', ')}`;
+            },
+            get receiptHelp() {
+                return this.supplierId ? `${this.availableReceipts.length} dokumen LPB/BAP belum ditagih tersedia.` : 'Pilih supplier terlebih dahulu.';
+            },
+            get ppnNominal() {
+                return this.form.is_ppn ? Math.round((this.subTotal * 11) / 100) : 0;
+            },
+            get grandTotal() {
+                return (this.subTotal + this.ppnNominal + (Number(this.form.ongkir) || 0)) - (Number(this.form.diskon) || 0);
+            },
 
-        function renderReceipts(term = '') {
-            term = term.toLowerCase();
-            const selected = ($('#modal_select_id_lpb').val() || []).map(String);
-            const rows = $('#modal_select_id_lpb option[value!=""]').filter(function() {
-                const option = $(this);
-                if (String(option.data('supplier')) !== String(currentSupplier)) return false;
-                return `${option.data('code')} ${option.data('type')} ${option.data('date')} ${option.data('po')}`
-                    .toLowerCase().includes(term);
-            }).map(function() {
-                const option = $(this);
-                const checked = selected.includes(String(this.value)) ? 'checked' : '';
-                return `<label class="dropdown-item rounded-2 py-2 d-flex gap-2 align-items-start receipt-choice">
-                    <input class="form-check-input mt-1 receipt-check" type="checkbox" value="${this.value}" ${checked}>
-                    <span class="flex-grow-1">
-                        <span class="d-flex justify-content-between gap-2">
-                            <strong>${esc(option.data('code'))}</strong>
-                            <span class="badge bg-primary-subtle text-primary">${esc(option.data('type'))}</span>
-                        </span>
-                        <small class="text-muted">Tanggal ${esc(option.data('date'))} · PO ${esc(option.data('po') || '-')}</small>
-                    </span>
-                </label>`;
-            }).get();
-            $('#receipt-results').html(rows.length ? rows.join('') :
-                '<div class="text-muted text-center py-3">Tidak ada LPB/BAP yang cocok.</div>');
-        }
+            pickSupplier(item) {
+                this.supplierId = item.id;
+                this.supplierPickerOpen = false;
+                this.selectedLpbIds = [];
+                this.previewItems = [];
+                this.subTotal = 0;
+            },
 
-        renderSuppliers();
-        $('#supplier-search').on('input', function() {
-            renderSuppliers(this.value);
-        });
-        $('#receipt-search').on('input', function() {
-            renderReceipts(this.value);
-        });
-        $('#supplier-picker').on('shown.bs.dropdown', () => $('#supplier-search').trigger('focus'));
-        $('#receipt-picker').on('shown.bs.dropdown', function() {
-            renderReceipts($('#receipt-search').val());
-            $('#receipt-search').trigger('focus');
-        });
-        $(document).on('click', '.supplier-choice', function() {
-            $('#modal_kode_supplier').val($(this).data('id')).trigger('change');
-            bootstrap.Dropdown.getOrCreateInstance($('#supplier-picker-button')[0]).hide();
-        });
-        $(document).on('change', '.receipt-check', function() {
-            let selected = ($('#modal_select_id_lpb').val() || []).map(String);
-            const value = String(this.value);
-            selected = this.checked ? [...new Set([...selected, value])] :
-                selected.filter(id => id !== value);
-            $('#modal_select_id_lpb').val(selected).trigger('change');
-        });
-
-        $('#modal_kode_supplier').on('change', function() {
-            currentSupplier = this.value || '';
-            $('#modal_select_id_lpb').val(null).trigger('change').prop('disabled', !currentSupplier);
-            $('#receipt-picker-button').prop('disabled', !currentSupplier)
-                .text(currentSupplier ? 'Pilih LPB / BAP (bisa lebih dari satu)' :
-                    'Pilih supplier terlebih dahulu');
-            const option = $(this).find(':selected');
-            if (currentSupplier) {
-                $('#supplier-picker-button').text(option.data('name') || option.text());
-                $('#supplier-preview').removeClass('d-none');
-                $('#supplier-preview .supplier-name').text(option.data('name') || option.text());
-                $('#supplier-preview .supplier-meta').text(
-                    `${option.data('phone') || '-'} · ${option.data('address') || '-'}`
-                );
-                const total = $('#modal_select_id_lpb option').filter(function() {
-                    return String($(this).data('supplier')) === String(currentSupplier);
-                }).length;
-                $('#receipt-help').text(`${total} dokumen LPB/BAP belum ditagih tersedia.`);
-            } else {
-                $('#supplier-picker-button').text('Cari dan pilih supplier');
-                $('#supplier-preview').addClass('d-none');
-                $('#receipt-help').text('Pilih supplier terlebih dahulu.');
-            }
-        });
-
-        function calculateTotals() {
-            let isPpn = $('#is_ppn').is(':checked');
-            let ppnNominal = isPpn ? Math.round((currentSubTotal * 11) / 100) : 0;
-            let diskon = parseFloat($('#input_diskon').val()) || 0;
-            let ongkir = parseFloat($('#input_ongkir').val()) || 0;
-            let grandTotal = (currentSubTotal + ppnNominal + ongkir) - diskon;
-
-            $('#text_sub_total').text('Rp ' + currentSubTotal.toLocaleString('id-ID'));
-            $('#text_ppn').text('Rp ' + ppnNominal.toLocaleString('id-ID'));
-            $('#text_grand_total').text('Rp ' + grandTotal.toLocaleString('id-ID'));
-        }
-
-        $('#modal_select_id_lpb').on('change', function() {
-            let selected = $(this).find(':selected').filter(function() {
-                return String(this.value).trim() !== '';
-            });
-            const count = selected.length;
-            $('#receipt-picker-button').text(count ?
-                `${count} dokumen dipilih: ${selected.map(function() { return $(this).data('code'); }).get().join(', ')}` :
-                (currentSupplier ? 'Pilih LPB / BAP (bisa lebih dari satu)' :
-                    'Pilih supplier terlebih dahulu'));
-            if (!selected.length) {
-                $('#modal-table-lpb-items tbody').html(
-                    '<tr><td colspan="5" class="text-center text-muted py-3">Pilih LPB atau BAP terlebih dahulu.</td></tr>'
-                );
-                currentSubTotal = 0;
-                calculateTotals();
-                return;
-            }
-
-            let suppliers = [...new Set(selected.map(function() {
-                return $(this).data('supplier');
-            }).get())];
-            if (suppliers.length !== 1) {
-                AppAlert.warning('Semua LPB harus berasal dari supplier yang sama.');
-                $(this).val(null).trigger('change');
-                return;
-            }
-            if (String(suppliers[0]) !== String(currentSupplier)) {
-                AppAlert.warning('Dokumen penerimaan tidak sesuai supplier terpilih.');
-                $(this).val(null).trigger('change');
-                return;
-            }
-            currentSubTotal = 0;
-            let rows = [];
-            Promise.all(selected.map(function() {
-                return $.getJSON("/invoice-lpb/lpb-detail/" + $(this).data('code'));
-            }).get()).then(function(results) {
-                results.forEach(function(res) {
-                    if (res.success) {
-                        currentSubTotal += Number(res.sub_total);
-                        $.each(res.items, function(i, item) {
-                            rows.push(`<tr>
-                                <td class="text-center align-middle">${rows.length + 1}</td>
-                                <td class="align-middle fw-bold">${item.nama_bahan}</td>
-                                <td class="text-center align-middle fw-bold text-success">${item.jumlah_barang_diterima}</td>
-                                <td class="text-end align-middle">Rp ${Number(item.harga).toLocaleString('id-ID')}</td>
-                                <td class="text-end align-middle fw-bold">Rp ${Number(item.total_harga).toLocaleString('id-ID')}</td>
-                            </tr>`);
-                        });
-
-                    }
-                });
-                $('#modal-table-lpb-items tbody').html(rows.join(''));
-                calculateTotals();
-            }).catch(function(xhr) {
-                AppAlert.ajaxError(xhr);
-            });
-        });
-
-        function toggleFakturPajak() {
-            const isPpn = $('#is_ppn').is(':checked');
-            $('#wrap_no_faktur_pajak').toggleClass('d-none', !isPpn);
-            $('#input_no_faktur_pajak').prop('required', isPpn);
-        }
-
-        $('#is_ppn, #input_diskon, #input_ongkir').on('input change', function() {
-            calculateTotals();
-            toggleFakturPajak();
-        });
-        toggleFakturPajak();
-
-        $('#form-store-invoice').on('submit', function(e) {
-            e.preventDefault();
-            if (!$('#modal_kode_supplier').val()) {
-                AppAlert.warning('Supplier wajib dipilih dari dropdown.');
-                return;
-            }
-            if (!$('#modal_select_id_lpb').val()?.length) {
-                AppAlert.warning('Pilih minimal satu LPB atau BAP dari supplier tersebut.');
-                return;
-            }
-            if ($('#is_ppn').is(':checked') && !/^\d{3}\.\d{3}-\d{2}\.\d{8}$/.test($('#input_no_faktur_pajak').val().trim())) {
-                AppAlert.warning('Nomor Faktur Pajak wajib diisi dengan format yang benar saat PPN dipakai.');
-                return;
-            }
-            let btn = $('#btn-submit-invoice');
-            btn.prop('disabled', true).html(
-                '<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyimpan...');
-
-            $.ajax({
-                url: $(this).attr('action'),
-                type: "POST",
-                data: $(this).serialize(),
-                dataType: "JSON",
-                success: function(res) {
-                    if (res.success) {
-                        $('#createInvoiceModal').modal('hide');
-                        $('#table-invoice-lpb').DataTable().ajax.reload();
-                        AppAlert.auto(res.message);
-                    }
-                },
-                error: function(xhr) {
-                    btn.prop('disabled', false).html(
-                        '<i class="fa-solid fa-floppy-disk me-1"></i> Simpan Invoice');
-                    AppAlert.ajaxError(xhr);
+            toggleReceipt(id) {
+                if (this.selectedLpbIds.includes(id)) {
+                    this.selectedLpbIds = this.selectedLpbIds.filter((item) => item !== id);
+                } else {
+                    this.selectedLpbIds = [...this.selectedLpbIds, id];
                 }
-            });
-        });
-    });
+                this.loadPreview();
+            },
+
+            async loadPreview() {
+                if (this.selectedLpbIds.length === 0) {
+                    this.previewItems = [];
+                    this.subTotal = 0;
+                    return;
+                }
+                try {
+                    const codes = this.lpbs.filter((item) => this.selectedLpbIds.includes(item.id)).map((item) => item.code);
+                    const results = await Promise.all(codes.map((code) =>
+                        fetch(`{{ url('invoice-lpb/lpb-detail') }}/${code}`, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } }).then((r) => r.json())
+                    ));
+                    let subTotal = 0;
+                    const items = [];
+                    results.forEach((res) => {
+                        if (res.success) {
+                            subTotal += Number(res.sub_total);
+                            items.push(...res.items);
+                        }
+                    });
+                    this.previewItems = items;
+                    this.subTotal = subTotal;
+                } catch (error) {
+                    window.AppAlert.error('Gagal memuat detail LPB/BAP.');
+                }
+            },
+
+            async submit() {
+                if (!this.supplierId) { window.AppAlert.warning('Supplier wajib dipilih dari dropdown.'); return; }
+                if (this.selectedLpbIds.length === 0) { window.AppAlert.warning('Pilih minimal satu LPB atau BAP dari supplier tersebut.'); return; }
+                if (this.form.is_ppn && !/^\d{3}\.\d{3}-\d{2}\.\d{8}$/.test((this.form.no_faktur_pajak || '').trim())) {
+                    window.AppAlert.warning('Nomor Faktur Pajak wajib diisi dengan format yang benar saat PPN dipakai.');
+                    return;
+                }
+
+                this.submitting = true;
+                try {
+                    const payload = { ...this.form, kode_supplier: this.supplierId, lpb_ids: this.selectedLpbIds, is_ppn: this.form.is_ppn ? 1 : 0 };
+                    const response = await fetch('{{ route('invoice-lpb.store') }}', {
+                        method: 'POST',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) { window.AppAlert.ajaxError(data); return; }
+                    window.AppAlert.auto(data.message);
+                    this.$root.querySelector('form').dispatchEvent(new Event('wms:saved'));
+                    window.dispatchEvent(new CustomEvent('wms:table-refresh'));
+                    this.$root.closest('dialog').close();
+                } catch (error) {
+                    window.AppAlert.error('Gagal menyimpan invoice.');
+                } finally {
+                    this.submitting = false;
+                }
+            },
+        };
+    }
 </script>

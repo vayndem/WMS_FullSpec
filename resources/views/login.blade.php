@@ -4,109 +4,89 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Inventory MO</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>WMS</title>
 
-    <link rel="shortcut icon" href="../assets/images/icon/favicon.ico" />
-    <link rel="stylesheet" href="../assets/css/styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="../assets/vendor/remixicon/fonts/remixicon.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('assets/css/bootstrap5-modern.css') }}?v=6">
+    <script>
+        (() => {
+            const saved = localStorage.getItem('inventory-theme');
+            const theme = saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'wms-dark' : 'wms');
+        })();
+    </script>
+    <link rel="icon" type="image/svg+xml" href="{{ asset('assets/images/icon/favicon.svg') }}" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
-<body>
+<body class="min-h-screen bg-base-200">
     <div id="loading">
-        <div id="loading-center">
-        </div>
+        <div id="loading-center"></div>
     </div>
 
-    <div class="wrapper">
-        <section class="login-content">
-            <div class="container h-100">
-                <div class="row align-items-center justify-content-center h-100">
-                    <div class="col-12 col-sm-10 col-md-7 col-lg-5 col-xl-4">
-                        <div class="card border-0 shadow-lg">
-                            <div class="card-body p-4 p-md-5">
-                                <div class="auth-logo text-center mb-4">
-                                    <img src="../assets/images/logo.png" class="img-fluid rounded-normal"
-                                        alt="Logo Inventory" style="max-height: 72px;">
-                                </div>
-                                <h2 class="mb-2 text-center">Masuk</h2>
-                                <p class="text-muted text-center mb-4">Gunakan akun perusahaan untuk mengakses Inventory
-                                    MO.</p>
-
-                                <!-- Form Login -->
-                                <form action="{{ url('/login') }}" method="POST">
-                                    @csrf
-
-                                    <!-- Email Input -->
-                                    <div class="mb-3">
-                                        <label class="form-label" for="email">Email</label>
-                                        <input class="form-control" type="email" name="email" id="email"
-                                            value="{{ old('email') }}" placeholder="nama@perusahaan.com"
-                                            autocomplete="email" autofocus required>
-                                    </div>
-
-                                    <!-- Password Input -->
-                                    <div class="mb-3">
-                                        <label class="form-label" for="password">Password</label>
-                                        <input class="form-control" type="password" name="password" id="password"
-                                            placeholder="Masukkan password" autocomplete="current-password" required>
-                                    </div>
-
-                                    <!-- Remember Me -->
-                                    <div class="mb-4">
-                                        <div class="form-check">
-                                            <input type="checkbox" class="form-check-input" id="remember"
-                                                name="remember">
-                                            <label class="form-check-label" for="remember">Ingat saya</label>
-                                        </div>
-                                    </div>
-
-                                    <!-- Error Messages -->
-                                    @if ($errors->any())
-                                        <div class="alert alert-danger mt-3">
-                                            <ul>
-                                                @foreach ($errors->all() as $error)
-                                                    <li>{{ $error }}</li>
-                                                @endforeach
-                                            </ul>
-                                        </div>
-                                    @endif
-
-                                    <!-- Login Button -->
-                                    <div class="d-grid gap-3">
-                                        <button type="submit" class="btn btn-primary">
-                                            <i class="fa-solid fa-right-to-bracket me-2"></i>Masuk
-                                        </button>
-                                        <button type="button" id="forgot-password"
-                                            class="btn btn-link text-decoration-none shadow-none">
-                                            Lupa password?
-                                        </button>
-                                    </div>
-                                </form>
-                                <!-- End Form Login -->
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <section class="flex min-h-screen items-center justify-center px-4">
+        <div class="w-full max-w-md rounded-2xl bg-base-100 p-8 shadow-xl border border-base-300">
+            <div class="mb-6 text-center">
+                <span class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-content text-3xl">
+                    <i class="fa-solid fa-warehouse"></i>
+                </span>
+                <h1 class="text-xl font-bold">WMS</h1>
+                <h2 class="text-2xl font-bold">Masuk</h2>
+                <p class="mt-1 text-sm text-base-content/60">Gunakan akun perusahaan untuk mengakses WMS.</p>
             </div>
-        </section>
-    </div>
 
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="{{ asset('assets/js/ui-foundation.js') }}"></script>
-    <script src="{{ asset('assets/js/app-shell.js') }}"></script>
+            <form action="{{ url('/login') }}" method="POST" class="flex flex-col gap-4">
+                @csrf
+
+                <div class="form-control">
+                    <label class="label" for="email">
+                        <span class="label-text">Email</span>
+                    </label>
+                    <input class="input input-bordered w-full" type="email" name="email" id="email"
+                        value="{{ old('email') }}" placeholder="nama@perusahaan.com" autocomplete="email" autofocus
+                        required>
+                </div>
+
+                <div class="form-control">
+                    <label class="label" for="password">
+                        <span class="label-text">Password</span>
+                    </label>
+                    <input class="input input-bordered w-full" type="password" name="password" id="password"
+                        placeholder="Masukkan password" autocomplete="current-password" required>
+                </div>
+
+                <label class="label cursor-pointer justify-start gap-2">
+                    <input type="checkbox" class="checkbox checkbox-sm" id="remember" name="remember">
+                    <span class="label-text">Ingat saya</span>
+                </label>
+
+                @if ($errors->any())
+                    <div role="alert" class="alert alert-error text-sm">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <ul class="list-disc pl-5">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                <div class="flex flex-col gap-2">
+                    <button type="submit" class="btn btn-primary w-full">
+                        <i class="fa-solid fa-right-to-bracket"></i> Masuk
+                    </button>
+                    <button type="button" id="forgot-password" class="btn btn-link btn-sm no-underline">
+                        Lupa password?
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
     <script>
-        // SweetAlert2 for Forgot Password
-        document.getElementById('forgot-password').addEventListener('click', function() {
-            Swal.fire({
-                icon: 'info',
-                title: 'Hubungi IT',
-                text: 'Silakan hubungi tim IT untuk reset password Anda.',
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('forgot-password').addEventListener('click', function () {
+                window.AppAlert.show('Silakan hubungi tim IT untuk reset password Anda.', { title: 'Hubungi IT' });
             });
         });
     </script>

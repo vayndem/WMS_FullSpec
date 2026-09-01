@@ -1,219 +1,203 @@
-<div class="modal fade" id="createLpbModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-create" role="document">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold text-white"><i class="fa-solid fa-boxes-packing me-2"></i>Buat
-                    Penerimaan Barang (LPB)</h5>
-                <button type="button" class="btn-close btn-close-white " data-bs-dismiss="modal"
-                    aria-label="Close"></button>
-            </div>
-            <form id="form-store-lpb" action="{{ route('lpb.store') }}" method="POST" data-autosave
-                data-autosave-key="lpb-create">
-                @csrf
-                <input type="hidden" name="confirm_over_receive" id="confirm_over_receive" value="0">
-                <div class="modal-body">
-                    <div class="create-section">
-                        <div class="create-section__title"><i class="fa-solid fa-truck-ramp-box"></i>Dokumen Penerimaan
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-4 mb-3">
-                                <label class="fw-bold">Nomor LPB</label>
-                                <input type="text" class="form-control bg-white" name="id_lpb"
-                                    value="{{ $documentNumber }}" readonly>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="fw-bold">Nomor PO <span class="text-danger">*</span></label>
-                                <select class="form-select" name="no_po" id="modal_select_no_po" required
-                                    data-app-picker data-placeholder="Cari nomor PO atau supplier...">
-                                    <option value="">-- Pilih / Cari PO --</option>
-                                    @foreach ($pos as $po)
-                                        <option value="{{ $po->no_po }}"
-                                            data-subtitle="{{ $po->supplier->nama ?? 'Supplier tidak tersedia' }}"
-                                            data-meta="{{ $po->tanggal ?? '-' }} · {{ $po->details->count() }} item"
-                                            data-badge="PO Barang">{{ $po->no_po }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="fw-bold">Tanggal Terima <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" name="tanggal" value="{{ date('Y-m-d') }}"
-                                    required>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="fw-bold">No. Surat Jalan <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="no_sj"
-                                    placeholder="Masukkan No. SJ..." required>
-                            </div>
-                            <div class="col-md-4 mb-3 mb-0">
-                                <label class="fw-bold">No. Invoice</label>
-                                <input type="text" class="form-control" name="no_invoice"
-                                    placeholder="Opsi Tambahan...">
-                            </div>
-                            <div class="col-md-4 mb-3 mb-0">
-                                <label class="fw-bold">Jenis LPB</label>
-                                <select class="form-control" name="jenis_lpb">
-                                    <option value="1">Reguler</option>
-                                    <option value="2">Pengganti / Retur</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4 mb-3 mb-0">
-                                <label class="fw-bold">Supplier</label>
-                                <input type="text" class="form-control bg-light" id="modal_supplier_nama" readonly
-                                    placeholder="Terisi dari PO">
-                            </div>
-                            <div class="col-md-4 mb-3 mb-0">
-                                <label class="fw-bold">Gudang Tujuan PO</label>
-                                <input type="text" class="form-control bg-light" id="modal_gudang_nama" readonly
-                                    placeholder="Terisi dari PO">
-                            </div>
-                        </div>
-
-                    </div>
-                    <div class="create-section">
-                        <h6 class="fw-bold text-dark mb-3"><i
-                                class="fa-solid fa-list-check me-2 text-primary"></i>Rincian
-                            Item Diterima</h6>
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-sm mb-0" id="modal-table-items">
-                                <thead class="bg-light text-uppercase font-size-12">
-                                    <tr>
-                                        <th width="4%" class="text-center">#</th>
-                                        <th>Nama Bahan</th>
-                                        <th width="18%">Kategori Barang <span class="text-danger">*</span></th>
-                                        <th width="10%" class="text-center">Qty PO</th>
-                                        <th width="10%" class="text-center">Diterima</th>
-                                        <th width="10%" class="text-center">Sisa</th>
-                                        <th width="14%" class="text-center">Terima Fisik <span
-                                                class="text-danger">*</span></th>
-                                        <th width="14%">Lot Number</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td colspan="8" class="text-center text-muted py-3">Pilih Nomor PO terlebih
-                                            dahulu.</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary fw-bold"><i
-                            class="fa-solid fa-floppy-disk me-1"></i>
-                        Simpan LPB</button>
-                </div>
-            </form>
+<dialog id="createLpbModal" class="modal">
+    <div class="modal-box max-w-6xl p-0 overflow-hidden" x-data="lpbCreateForm({ kategoris: {{ Js::from($kategoris) }} })">
+        <div class="flex items-center gap-3 bg-primary px-6 py-4 text-primary-content">
+            <i class="fa-solid fa-boxes-packing"></i>
+            <h3 class="text-lg font-bold">Buat Penerimaan Barang (LPB)</h3>
         </div>
+        <form action="{{ route('lpb.store') }}" method="POST" @submit.prevent="submit()" data-autosave data-autosave-key="lpb-create" class="flex flex-col">
+            @csrf
+            <div class="max-h-[70vh] overflow-y-auto p-6">
+                <div class="rounded-lg border border-base-300 p-4">
+                    <h6 class="mb-3 font-bold"><i class="fa-solid fa-truck-ramp-box"></i> Dokumen Penerimaan</h6>
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Nomor LPB</span></label>
+                            <input type="text" class="input input-bordered bg-base-200" name="id_lpb" value="{{ $documentNumber }}" readonly>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Nomor PO <span class="text-error">*</span></span></label>
+                            <select class="select select-bordered" name="no_po" x-model="noPo" @change="loadPo()" required
+                                data-app-picker data-placeholder="Cari nomor PO atau supplier...">
+                                <option value="">-- Pilih / Cari PO --</option>
+                                @foreach ($pos as $po)
+                                    <option value="{{ $po->no_po }}"
+                                        data-subtitle="{{ $po->supplier->nama ?? 'Supplier tidak tersedia' }}"
+                                        data-meta="{{ $po->tanggal ?? '-' }} · {{ $po->details->count() }} item"
+                                        data-badge="PO Barang">{{ $po->no_po }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Tanggal Terima <span class="text-error">*</span></span></label>
+                            <input type="date" class="input input-bordered" name="tanggal" value="{{ date('Y-m-d') }}" required>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">No. Surat Jalan <span class="text-error">*</span></span></label>
+                            <input type="text" class="input input-bordered" name="no_sj" placeholder="Masukkan No. SJ..." required>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">No. Invoice</span></label>
+                            <input type="text" class="input input-bordered" name="no_invoice" placeholder="Opsi Tambahan...">
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Jenis LPB</span></label>
+                            <select class="select select-bordered" name="jenis_lpb">
+                                <option value="1">Reguler</option>
+                                <option value="2">Pengganti / Retur</option>
+                            </select>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Supplier</span></label>
+                            <input type="text" class="input input-bordered bg-base-200" :value="supplierNama" readonly placeholder="Terisi dari PO">
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Gudang Tujuan PO</span></label>
+                            <input type="text" class="input input-bordered bg-base-200" :value="gudangNama" readonly placeholder="Terisi dari PO">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 rounded-lg border border-base-300 p-4">
+                    <h6 class="mb-3 font-bold"><i class="fa-solid fa-list-check text-primary"></i> Rincian Item Diterima</h6>
+                    <div class="overflow-x-auto">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th class="text-center">#</th>
+                                    <th>Nama Bahan</th>
+                                    <th>Kategori Barang <span class="text-error">*</span></th>
+                                    <th class="text-center">Qty PO</th>
+                                    <th class="text-center">Diterima</th>
+                                    <th class="text-center">Sisa</th>
+                                    <th class="text-center">Terima Fisik <span class="text-error">*</span></th>
+                                    <th>Lot Number</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-if="items.length === 0">
+                                    <tr>
+                                        <td colspan="8" class="py-3 text-center text-base-content/50">Pilih Nomor PO terlebih dahulu.</td>
+                                    </tr>
+                                </template>
+                                <template x-for="(item, idx) in items" :key="idx">
+                                    <tr>
+                                        <td class="text-center" x-text="idx + 1"></td>
+                                        <td>
+                                            <input type="hidden" :name="`details[${idx}][id_bahan]`" :value="item.bahan_id">
+                                            <strong x-text="item.nama_bahan"></strong>
+                                        </td>
+                                        <td>
+                                            <select class="select select-bordered select-sm" :name="`details[${idx}][id_kategori]`" x-model="item.id_kategori" required
+                                                data-app-picker data-placeholder="Cari kategori...">
+                                                <option value="">-- Pilih Kategori --</option>
+                                                <template x-for="kat in kategoris" :key="kat.id">
+                                                    <option :value="kat.id" x-text="kat.katnama"></option>
+                                                </template>
+                                            </select>
+                                        </td>
+                                        <td class="text-center font-bold" x-text="item.jumlah_po"></td>
+                                        <td class="text-center font-bold text-primary" x-text="item.diterima"></td>
+                                        <td class="text-center font-bold text-error" x-text="item.sisa"></td>
+                                        <td>
+                                            <input type="number" step="any" min="0.01" :name="`details[${idx}][jumlah_barang_diterima]`"
+                                                x-model="item.jumlah_barang_diterima" class="input input-bordered input-sm text-center font-bold text-success" required>
+                                        </td>
+                                        <td>
+                                            <input type="text" :name="`details[${idx}][lot_number]`" x-model="item.lot_number" class="input input-bordered input-sm" placeholder="No. Lot">
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 border-t border-base-300 bg-base-100 px-6 py-4">
+                <button type="button" class="btn btn-ghost" onclick="closeAjaxModal(this)">Batal</button>
+                <button type="submit" class="btn btn-primary" :disabled="submitting">
+                    <span x-show="submitting" class="loading loading-spinner loading-sm"></span>
+                    <i class="fa-solid fa-floppy-disk" x-show="!submitting"></i> Simpan LPB
+                </button>
+            </div>
+        </form>
     </div>
-</div>
+</dialog>
 
 <script>
-    window.listKategori = @json($kategoris);
+    function lpbCreateForm(config) {
+        return {
+            kategoris: config.kategoris,
+            noPo: '',
+            supplierNama: '',
+            gudangNama: '',
+            items: [],
+            submitting: false,
+            confirmOverReceive: false,
 
-    $(document).ready(function() {
-        $('#modal_select_no_po').on('change', function() {
-            let no_po = $(this).val();
-            if (!no_po) {
-                $('#modal-table-items tbody').html(
-                    '<tr><td colspan="8" class="text-center text-muted py-3">Pilih Nomor PO terlebih dahulu.</td></tr>'
-                );
-                $('#modal_supplier_nama').val('');
-                $('#modal_gudang_nama').val('');
-                return;
-            }
+            async loadPo() {
+                if (!this.noPo) {
+                    this.items = [];
+                    this.supplierNama = '';
+                    this.gudangNama = '';
+                    return;
+                }
+                try {
+                    const response = await fetch(`{{ url('lpb/po') }}/${this.noPo}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                    });
+                    const res = await response.json();
+                    if (!res.success) return;
+                    this.supplierNama = res.po.supplier ? res.po.supplier.nama : '-';
+                    this.gudangNama = res.po.gudang ? res.po.gudang.nama : '-';
+                    this.items = res.items.map((item) => ({
+                        bahan_id: item.bahan_id, nama_bahan: item.nama_bahan, id_kategori: item.id_kategori || '',
+                        jumlah_po: item.jumlah_po, diterima: item.diterima, sisa: item.sisa,
+                        jumlah_barang_diterima: item.sisa, lot_number: '',
+                    }));
+                } catch (error) {
+                    window.AppAlert.error('Gagal memuat data PO.');
+                }
+            },
 
-            $.ajax({
-                url: "/lpb/po/" + no_po,
-                type: "GET",
-                dataType: "JSON",
-                success: function(res) {
-                    if (res.success) {
-                        $('#modal_supplier_nama').val(res.po.supplier ? res.po.supplier
-                            .nama : '-');
-                        $('#modal_gudang_nama').val(res.po.gudang ? res.po.gudang.nama :
-                            '-');
+            async submit() {
+                this.submitting = true;
+                try {
+                    const form = this.$root.querySelector('form');
+                    const payload = new FormData(form);
+                    payload.set('confirm_over_receive', this.confirmOverReceive ? '1' : '0');
 
-                        let rows = '';
-                        $.each(res.items, function(i, item) {
-                            let kategoriOptions =
-                                '<option value="">-- Pilih Kategori --</option>';
-                            $.each(window.listKategori, function(idx, kat) {
-                                let selected = (item.id_kategori == kat
-                                    .id) ? 'selected' : '';
-                                kategoriOptions +=
-                                    `<option value="${kat.id}" ${selected}>${kat.katnama}</option>`;
-                            });
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                        body: payload,
+                    });
+                    const res = await response.json().catch(() => ({}));
 
-                            rows += `<tr>
-                                <td class="text-center align-middle">${i + 1}</td>
-                                <td class="align-middle">
-                                    <input type="hidden" name="details[${i}][id_bahan]" value="${item.bahan_id}">
-                                    <strong>${item.nama_bahan}</strong>
-                                </td>
-                                <td class="align-middle">
-                                    <select class="form-select form-select-sm" name="details[${i}][id_kategori]" required
-                                        data-app-picker data-placeholder="Cari kategori...">
-                                        ${kategoriOptions}
-                                    </select>
-                                </td>
-                                <td class="text-center align-middle fw-bold">${item.jumlah_po}</td>
-                                <td class="text-center align-middle text-primary fw-bold">${item.diterima}</td>
-                                <td class="text-center align-middle text-danger fw-bold">${item.sisa}</td>
-                                <td>
-                                    <input type="number" step="any" min="0.01" class="form-control form-control-sm text-center fw-bold text-success" name="details[${i}][jumlah_barang_diterima]" value="${item.sisa}" required>
-                                </td>
-                                <td>
-                                    <input type="text" class="form-control form-control-sm" name="details[${i}][lot_number]" placeholder="No. Lot">
-                                </td>
-                            </tr>`;
+                    if (response.status === 422 && res.requires_confirmation) {
+                        let msg = `${res.message}\n\nKonfirmasi over-receive item:\n`;
+                        (res.over_items || []).forEach((item) => {
+                            msg += `- ${item.nama}: Input ${item.input} (Sisa PO: ${item.minta_sisa})\n`;
                         });
-
-                        $('#modal-table-items tbody').html(rows);
-                    }
-                }
-            });
-        });
-
-        $('#form-store-lpb').on('submit', function(e) {
-            e.preventDefault();
-            $.ajax({
-                url: $(this).attr('action'),
-                type: "POST",
-                data: $(this).serialize(),
-                dataType: "JSON",
-                success: function(res) {
-                    if (res.success) {
-                        $('#createLpbModal').modal('hide');
-                        $('#table-lpb').DataTable().ajax.reload();
-                    }
-                },
-                error: function(xhr) {
-                    if (xhr.status === 422) {
-                        let res = xhr.responseJSON;
-                        if (res.requires_confirmation) {
-                            let msg = res.message + "\n\nKonfirmasi over-receive item:\n";
-                            $.each(res.over_items, function(i, item) {
-                                msg +=
-                                    `- ${item.nama}: Input ${item.input} (Sisa PO: ${item.minta_sisa})\n`;
-                            });
-                            AppAlert.confirm(msg, {
-                                title: 'Penerimaan melebihi PO'
-                            }).then(function(result) {
-                                if (result.isConfirmed) {
-                                    $('#confirm_over_receive').val(1);
-                                    $('#form-store-lpb').submit();
-                                }
-                            });
-                        } else {
-                            AppAlert.ajaxError(xhr);
+                        const result = await window.AppAlert.confirm(msg, { title: 'Penerimaan melebihi PO' });
+                        if (result.isConfirmed) {
+                            this.confirmOverReceive = true;
+                            await this.submit();
                         }
-                    } else {
-                        AppAlert.ajaxError(xhr);
+                        return;
                     }
+
+                    if (!response.ok) { window.AppAlert.ajaxError(res); return; }
+
+                    window.AppAlert.auto(res.message);
+                    form.dispatchEvent(new Event('wms:saved'));
+                    window.dispatchEvent(new CustomEvent('wms:table-refresh'));
+                    this.$root.closest('dialog').close();
+                } catch (error) {
+                    window.AppAlert.error('Gagal menyimpan LPB.');
+                } finally {
+                    this.submitting = false;
                 }
-            });
-        });
-    });
+            },
+        };
+    }
 </script>

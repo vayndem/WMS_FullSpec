@@ -2,615 +2,371 @@
 
 @section('content')
     <div class="content-page">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-lg-12">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
-                        <div>
-                            <h4 class="mb-1 fw-bold text-dark">Daftar Invoice LPB</h4>
-                            <p class="mb-0 text-muted">Kelola data tagihan dan pelunasan penerimaan barang</p>
-                        </div>
-                        @can('create', App\Models\Invoicelpb::class)
-                            <button type="button" class="btn btn-primary add-list shadow-sm btn-open-create-modal">
-                                <i class="fa-solid fa-plus me-2"></i>Buat Invoice LPB
-                            </button>
-                        @endcan
-                    </div>
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h3 class="text-2xl font-bold">Daftar Invoice LPB</h3>
+                <p class="text-base-content/60">Kelola data tagihan dan pelunasan penerimaan barang</p>
+            </div>
+            @can('create', App\Models\Invoicelpb::class)
+                <button type="button" class="btn btn-primary" onclick="openAjaxModal('{{ route('invoice-lpb.create') }}')">
+                    <i class="fa-solid fa-plus"></i> Buat Invoice LPB
+                </button>
+            @endcan
+        </div>
+
+        <div class="card border border-base-300 bg-base-100 shadow-sm"
+            x-data="invoiceLpbList({
+                paymentNumber: {{ Js::from($paymentNumber) }},
+                focusId: '{{ request()->query('invoice', '') }}',
+            })">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 p-4">
+                <div role="tablist" class="tabs tabs-boxed">
+                    <a role="tab" class="tab" :class="extraParams.payment_status === 'UNPAID' && 'tab-active'" @click="extraParams.payment_status = 'UNPAID'">
+                        <i class="fa-regular fa-clock"></i>&nbsp;Belum Lunas
+                    </a>
+                    <a role="tab" class="tab" :class="extraParams.payment_status === 'PARTIALLY_PAID' && 'tab-active'" @click="extraParams.payment_status = 'PARTIALLY_PAID'">
+                        <i class="fa-solid fa-circle-half-stroke"></i>&nbsp;Dibayar Sebagian
+                    </a>
+                    <a role="tab" class="tab" :class="extraParams.payment_status === 'PAID' && 'tab-active'" @click="extraParams.payment_status = 'PAID'">
+                        <i class="fa-solid fa-circle-check"></i>&nbsp;Lunas
+                    </a>
                 </div>
+                <label class="input input-bordered flex w-full max-w-xs items-center gap-2">
+                    <i class="fa-solid fa-magnifying-glass text-base-content/40"></i>
+                    <input type="search" class="grow" placeholder="Cari invoice..." x-model="search">
+                </label>
+                <a :href="buildReportUrl()" target="_blank" rel="noopener" class="btn btn-error btn-sm">
+                    <i class="fa-solid fa-file-pdf"></i> PDF
+                </a>
+            </div>
 
-                <div class="col-lg-12">
-                    <div class="card shadow-sm border-0 mb-4">
-                        <div class="card-body">
-                            <div class="invoice-status-filter mb-3" role="radiogroup"
-                                aria-label="Filter status pembayaran">
-                                <input class="btn-check" type="radio" name="invoice_payment_status"
-                                    id="invoice-status-unpaid" value="UNPAID" checked>
-                                <label for="invoice-status-unpaid">
-                                    <i class="fa-regular fa-clock"></i>Belum Lunas
-                                </label>
+            <div class="overflow-x-auto">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th class="cursor-pointer select-none" @click="sortBy(0)">No. Invoice</th>
+                            <th class="cursor-pointer select-none" @click="sortBy(1)">Tanggal</th>
+                            <th class="cursor-pointer select-none" @click="sortBy(2)">Supplier</th>
+                            <th class="cursor-pointer select-none" @click="sortBy(3)">Deadline</th>
+                            <th class="cursor-pointer select-none text-end" @click="sortBy(4)">Grand Total</th>
+                            <th class="cursor-pointer select-none text-end" @click="sortBy(5)">Sisa Tagihan</th>
+                            <th class="cursor-pointer select-none text-center" @click="sortBy(6)">Status</th>
+                            <th class="text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-if="loading">
+                            <tr>
+                                <td colspan="8" class="py-6 text-center text-base-content/50">
+                                    <span class="loading loading-spinner loading-sm"></span> Memuat data...
+                                </td>
+                            </tr>
+                        </template>
+                        <template x-if="!loading && rows.length === 0">
+                            <tr>
+                                <td colspan="8" class="py-6 text-center text-base-content/50">Data tidak ditemukan</td>
+                            </tr>
+                        </template>
+                        <template x-for="row in rows" :key="row.id">
+                            <tr>
+                                <td class="font-bold text-primary" x-text="row.no_invoice"></td>
+                                <td x-text="row.tanggal"></td>
+                                <td x-text="row.supplier_nama"></td>
+                                <td x-text="row.tgl_deadline_pembayaran || '-'"></td>
+                                <td class="text-end font-bold" x-text="'Rp ' + Number(row.grand_total).toLocaleString('id-ID')"></td>
+                                <td class="text-end font-bold text-error" x-text="'Rp ' + Number(row.sisa_tagihan).toLocaleString('id-ID')"></td>
+                                <td class="text-center">
+                                    <span class="badge"
+                                        :class="{ 'badge-success': row.status === 'PAID', 'badge-warning': row.status === 'PARTIALLY_PAID', 'badge-ghost': row.status === 'UNPAID' }"
+                                        x-text="row.status === 'PAID' ? 'Lunas' : (row.status === 'PARTIALLY_PAID' ? 'Dibayar Sebagian' : 'Belum Dibayar')"></span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button type="button" class="btn btn-outline btn-info btn-sm" title="Detail" @click="openShow(row.id)">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </button>
+                                        <button type="button" x-show="row.can_update" class="btn btn-outline btn-warning btn-sm" title="Edit Invoice"
+                                            @click="openAjaxModal(`{{ url('invoice-lpb') }}/${row.id}/edit`)">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </button>
+                                        <button type="button" x-show="row.can_delete" class="btn btn-outline btn-error btn-sm" title="Hapus"
+                                            @click="deleteInvoice(row.id)">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
 
-                                <input class="btn-check" type="radio" name="invoice_payment_status"
-                                    id="invoice-status-partial" value="PARTIALLY_PAID">
-                                <label for="invoice-status-partial">
-                                    <i class="fa-solid fa-circle-half-stroke"></i>Dibayar Sebagian
-                                </label>
-
-                                <input class="btn-check" type="radio" name="invoice_payment_status"
-                                    id="invoice-status-paid" value="PAID">
-                                <label for="invoice-status-paid">
-                                    <i class="fa-solid fa-circle-check"></i>Lunas
-                                </label>
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table table-hover table-striped mb-0" id="table-invoice-lpb" width="100%"
-                                    cellspacing="0" data-report-url="{{ route('invoice-lpb.report.pdf') }}"
-                                    data-filter-columns="0:no_invoice,1:tanggal,2:supplier_nama,3:tgl_deadline_pembayaran,4:grand_total,5:sisa_tagihan,6:status_pembayaran">
-                                    <thead class="bg-light text-uppercase font-size-12">
-                                        <tr>
-                                            <th width="15%" class="py-3 ps-3">No. Invoice</th>
-                                            <th width="12%" class="py-3">Tanggal</th>
-                                            <th class="py-3">Supplier</th>
-                                            <th width="12%" class="py-3">Deadline</th>
-                                            <th width="15%" class="text-end py-3">Grand Total</th>
-                                            <th width="15%" class="text-end py-3">Sisa Tagihan</th>
-                                            <th width="12%" class="text-center py-3">Status</th>
-                                            <th width="12%" class="text-center py-3 pe-3">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+            <div class="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 p-4 text-sm">
+                <span class="text-base-content/60">
+                    Menampilkan <span x-text="rangeStart"></span>–<span x-text="rangeEnd"></span> dari
+                    <span x-text="recordsFiltered"></span> data
+                </span>
+                <div class="join">
+                    <button type="button" class="join-item btn btn-sm" :disabled="currentPage === 0" @click="goToPage(currentPage - 1)">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <button type="button" class="join-item btn btn-sm btn-disabled" x-text="`${currentPage + 1} / ${pageCount}`"></button>
+                    <button type="button" class="join-item btn btn-sm" :disabled="currentPage >= pageCount - 1" @click="goToPage(currentPage + 1)">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
                 </div>
             </div>
+
+            <dialog x-ref="showDialog" class="modal">
+                <div class="modal-box max-w-5xl p-0 overflow-hidden" x-show="invoice">
+                    <div class="flex items-center justify-between bg-info px-6 py-4 text-info-content">
+                        <h3 class="text-lg font-bold"><i class="fa-solid fa-file-invoice-dollar"></i> Invoice: <span x-text="invoice?.no_invoice"></span></h3>
+                    </div>
+                    <div class="max-h-[75vh] overflow-y-auto p-6" x-show="invoice">
+                        <div class="card border border-base-300 bg-base-100 p-4 shadow-sm">
+                            <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+                                <div><p class="text-sm text-base-content/50">Supplier</p><p class="text-lg font-bold" x-text="invoice?.supplier?.nama || '-'"></p></div>
+                                <div><p class="text-sm text-base-content/50">Tanggal Invoice</p><p class="text-lg font-bold" x-text="invoice?.tanggal"></p></div>
+                                <div><p class="text-sm text-base-content/50">Deadline</p><p class="text-lg font-bold" x-text="invoice?.tgl_deadline_pembayaran || '-'"></p></div>
+                            </div>
+                            <div class="divider my-2"></div>
+                            <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+                                <div><p class="text-sm text-base-content/50">Sub Total</p><p class="font-bold" x-text="'Rp ' + Number(invoice?.sub_total || 0).toLocaleString('id-ID')"></p></div>
+                                <div><p class="text-sm text-base-content/50" x-text="`PPN (${Number(invoice?.tarif_ppn || 0).toLocaleString('id-ID')}%)`"></p><p class="font-bold" x-text="'Rp ' + Number(invoice?.ppn || 0).toLocaleString('id-ID')"></p></div>
+                                <div><p class="text-sm text-base-content/50">Grand Total</p><p class="text-lg font-bold text-primary" x-text="'Rp ' + Number(invoice?.grand_total || 0).toLocaleString('id-ID')"></p></div>
+                                <div><p class="text-sm text-base-content/50">Sisa Tagihan</p><p class="text-lg font-bold text-error" x-text="'Rp ' + Number(invoice?.sisa_tagihan || 0).toLocaleString('id-ID')"></p></div>
+                            </div>
+                            <template x-if="invoice?.no_faktur_pajak">
+                                <div class="mt-2"><p class="text-sm text-base-content/50">No. Faktur Pajak</p><p class="font-bold" x-text="invoice?.no_faktur_pajak"></p></div>
+                            </template>
+                        </div>
+
+                        <div class="mb-3 mt-4 flex items-center justify-between">
+                            <h6 class="font-bold"><i class="fa-solid fa-receipt text-info"></i> Riwayat Pembayaran</h6>
+                            <button type="button" x-show="invoice?.can_pay" class="btn btn-success btn-sm" @click="openPaymentPanel()">
+                                <i class="fa-solid fa-plus"></i> Tambah Pembayaran
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto rounded-lg border border-base-300 bg-base-100">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th class="text-center">#</th>
+                                        <th>No Pembayaran</th>
+                                        <th>Tgl Bayar</th>
+                                        <th>Metode</th>
+                                        <th>Akun Kas/Bank (COA)</th>
+                                        <th class="text-end">Jml Bayar</th>
+                                        <th class="text-end">PPh 23</th>
+                                        <th class="text-end">Selisih</th>
+                                        <th class="text-end">Total Pengurang</th>
+                                        <th>User Finance</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-if="!invoice?.payments || invoice.payments.length === 0">
+                                        <tr>
+                                            <td colspan="10" class="py-3 text-center text-base-content/50">Belum ada riwayat pembayaran.</td>
+                                        </tr>
+                                    </template>
+                                    <template x-for="(item, i) in (invoice?.payments || [])" :key="item.id">
+                                        <tr>
+                                            <td class="text-center" x-text="i + 1"></td>
+                                            <td class="font-semibold" x-text="item.payment_number ?? '-'"></td>
+                                            <td x-text="item.tanggal_pembayaran"></td>
+                                            <td class="font-bold" x-text="item.metode_pembayaran"></td>
+                                            <td class="font-bold text-info" x-text="item.coa_kas_bank ? `${item.coa_kas_bank.kode_akun} - ${item.coa_kas_bank.nama_akun}` : '-'"></td>
+                                            <td class="text-end" x-text="'Rp ' + Number(item.jumlah_pembayaran).toLocaleString('id-ID')"></td>
+                                            <td class="text-end" x-text="'Rp ' + Number(item.potongan_pph23).toLocaleString('id-ID')"></td>
+                                            <td class="text-end">
+                                                <span x-text="'Rp ' + Number(item.selisih_bayar).toLocaleString('id-ID')"></span>
+                                                <small class="block text-base-content/50" x-text="item.jenis_selisih ? item.jenis_selisih.replaceAll('_', ' ') : ''"></small>
+                                            </td>
+                                            <td class="text-end font-bold text-success" x-text="'Rp ' + Number(item.total_transaksi_pengurang_hutang).toLocaleString('id-ID')"></td>
+                                            <td x-text="item.user_finance ? item.user_finance.name : '-'"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div x-show="paymentPanelOpen" x-cloak class="mt-4 rounded-lg border border-base-300 bg-base-200/40 p-4">
+                            <div class="mb-3 flex items-center justify-between border-b border-base-300 pb-3">
+                                <h5 class="font-bold"><i class="fa-solid fa-money-bill-wave"></i> Catat Pembayaran</h5>
+                                <button type="button" class="btn btn-sm btn-outline" @click="paymentPanelOpen = false">
+                                    <i class="fa-solid fa-xmark"></i> Tutup
+                                </button>
+                            </div>
+                            <form @submit.prevent="submitPayment()" class="flex flex-col gap-3">
+                                <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold text-xs uppercase">Nomor Pembayaran</span></label>
+                                        <input type="text" class="input input-bordered bg-base-200" :value="paymentNumber" readonly>
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold text-xs uppercase">Tanggal Pembayaran <span class="text-error">*</span></span></label>
+                                        <input type="date" x-model="payment.tanggal_pembayaran" class="input input-bordered" required>
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold text-xs uppercase">Metode Pembayaran <span class="text-error">*</span></span></label>
+                                        <input type="text" x-model="payment.metode_pembayaran" class="input input-bordered" placeholder="Contoh: Transfer BCA" required>
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold text-xs uppercase">Akun Sumber (Kas/Bank) <span class="text-error">*</span></span></label>
+                                        <select x-model="payment.coa_kas_bank_id" class="select select-bordered" required>
+                                            <option value="">-- Pilih Akun Kas / Bank --</option>
+                                            <template x-for="coa in coaKasBankOptions" :key="coa.id">
+                                                <option :value="coa.id" x-text="`${coa.kode_akun} - ${coa.nama_akun}`"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold text-xs uppercase">Jumlah Pembayaran</span></label>
+                                        <input type="number" step="any" min="0" x-model.number="payment.jumlah_pembayaran" class="input input-bordered">
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold text-xs uppercase">Potongan PPh 23</span></label>
+                                        <input type="number" step="any" min="0" x-model.number="payment.potongan_pph23" class="input input-bordered">
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold text-xs uppercase">Materai Tambahan</span></label>
+                                        <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-base-300 bg-base-100 p-3">
+                                            <input type="checkbox" x-model="payment.potongan_materai" class="checkbox">
+                                            <span><strong class="block">Gunakan materai</strong><small class="text-base-content/50">Biaya tetap Rp10.000</small></span>
+                                        </label>
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold text-xs uppercase">Biaya Transfer Bank</span></label>
+                                        <input type="number" step="any" min="0" x-model.number="payment.biaya_transfer_bank" class="input input-bordered">
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold text-xs uppercase">Nominal Selisih / Kelebihan Bayar</span></label>
+                                        <input type="number" step="any" min="0" x-model.number="payment.selisih_bayar" class="input input-bordered">
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold text-xs uppercase">Jenis Selisih</span></label>
+                                        <select x-model="payment.jenis_selisih" class="select select-bordered">
+                                            <option value="">Tidak ada selisih</option>
+                                            <option value="PENDAPATAN_SELISIH">Pendapatan selisih</option>
+                                            <option value="BEBAN_SELISIH">Beban selisih</option>
+                                            <option value="UANG_MUKA_SUPPLIER">Uang muka supplier</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold text-xs uppercase">Akun Selisih / Uang Muka</span></label>
+                                        <select x-model="payment.coa_selisih_id" class="select select-bordered">
+                                            <option value="">-- Pilih Akun Selisih / Uang Muka --</option>
+                                            <template x-for="coa in coaPostableOptions" :key="coa.id">
+                                                <option :value="coa.id" x-text="`${coa.kode_akun} - ${coa.nama_akun}`"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold text-xs uppercase">Pakai Uang Muka Supplier</span></label>
+                                        <select x-model="payment.uang_muka_sumber_payment_id" @change="onAdvanceChange()" class="select select-bordered">
+                                            <option value="">Tidak memakai uang muka</option>
+                                            <template x-for="advance in advanceOptions" :key="advance.id">
+                                                <option :value="advance.id" :data-sisa="advance.sisa" x-text="`${advance.payment_number} (asal ${advance.no_invoice_asal}) — sisa Rp ${Number(advance.sisa).toLocaleString('id-ID')}`"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold text-xs uppercase">Nominal Uang Muka Dipakai</span></label>
+                                        <input type="number" step="any" min="0" x-model.number="payment.uang_muka_dipakai" class="input input-bordered" :disabled="!payment.uang_muka_sumber_payment_id">
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label"><span class="label-text font-semibold text-xs uppercase">Keterangan</span></label>
+                                        <input type="text" x-model="payment.keterangan" class="input input-bordered" placeholder="Catatan tambahan...">
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-3 rounded-lg bg-base-100 p-4 md:grid-cols-4">
+                                    <div><small class="text-base-content/50">Kas keluar</small><strong class="block" x-text="formatRupiah(draft.cashOut)"></strong><span class="text-xs text-base-content/40">Bayar + materai + transfer</span></div>
+                                    <div><small class="text-base-content/50">Pengurang hutang</small><strong class="block" x-text="formatRupiah(draft.reduction)"></strong><span class="text-xs text-base-content/40">Termasuk PPh dan selisih</span></div>
+                                    <div><small class="text-base-content/50">Biaya tambahan</small><strong class="block" x-text="formatRupiah(draft.extraCost)"></strong><span class="text-xs text-base-content/40">Materai + transfer</span></div>
+                                    <div>
+                                        <small class="text-base-content/50">Estimasi sisa tagihan</small>
+                                        <strong class="block" :class="draft.invalid ? 'text-error' : (draft.estimatedRemaining <= 0 ? 'text-success' : '')" x-text="formatRupiah(draft.estimatedRemaining)"></strong>
+                                        <span class="text-xs text-base-content/40" x-text="draft.invalid ? 'Periksa nominal — pengurang hutang tidak valid' : (draft.estimatedRemaining <= 0 ? 'Invoice akan menjadi lunas' : 'Invoice masih memiliki sisa')"></span>
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-end gap-2">
+                                    <button type="button" class="btn btn-ghost border border-base-300" @click="paymentPanelOpen = false">Batal</button>
+                                    <button type="submit" class="btn btn-success" :disabled="paymentSubmitting">
+                                        <span x-show="paymentSubmitting" class="loading loading-spinner loading-sm"></span>
+                                        <i class="fa-solid fa-floppy-disk" x-show="!paymentSubmitting"></i> Simpan Pembayaran
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="flex justify-end border-t border-base-300 bg-base-100 px-6 py-4">
+                        <button type="button" class="btn btn-ghost border border-base-300" @click="$refs.showDialog.close()">Tutup</button>
+                    </div>
+                </div>
+                <div class="modal-backdrop" @click="$refs.showDialog.close()"></div>
+            </dialog>
         </div>
     </div>
 
     <div id="modal-container"></div>
 
-    @push('scripts')
-        <script>
-            $(document).ready(function() {
-                let nextPaymentNumber = @json($paymentNumber);
-                let table = $('#table-invoice-lpb').DataTable({
-                    processing: true,
-                    serverSide: true,
-                    ajax: {
-                        url: "{{ route('invoice-lpb.index') }}",
-                        data: function(data) {
-                            data.focus = new URLSearchParams(window.location.search).get('invoice') || '';
-                            data.payment_status =
-                                $('input[name="invoice_payment_status"]:checked').val();
-                        }
-                    },
-                    columns: [{
-                            data: 'no_invoice',
-                            name: 'no_invoice',
-                            className: 'align-middle ps-3 fw-bold text-primary'
-                        },
-                        {
-                            data: 'tanggal',
-                            name: 'tanggal',
-                            className: 'align-middle'
-                        },
-                        {
-                            data: 'supplier_nama',
-                            name: 'supplier_nama',
-                            className: 'align-middle'
-                        },
-                        {
-                            data: 'tgl_deadline_pembayaran',
-                            name: 'tgl_deadline_pembayaran',
-                            className: 'align-middle',
-                            defaultContent: '-'
-                        },
-                        {
-                            data: 'grand_total',
-                            name: 'grand_total',
-                            className: 'text-end align-middle fw-bold',
-                            render: function(data) {
-                                return 'Rp ' + Number(data).toLocaleString('id-ID');
-                            }
-                        },
-                        {
-                            data: 'sisa_tagihan',
-                            name: 'sisa_tagihan',
-                            className: 'text-end align-middle fw-bold text-danger',
-                            render: function(data) {
-                                return 'Rp ' + Number(data).toLocaleString('id-ID');
-                            }
-                        },
-                        {
-                            data: 'status_pembayaran',
-                            name: 'status_pembayaran',
-                            className: 'text-center align-middle',
-                            render: function(data, type, row) {
-                                if (row.status === 'PAID') {
-                                    return '<span class="badge bg-success p-2">Lunas</span>';
-                                } else if (row.status === 'PARTIALLY_PAID') {
-                                    return '<span class="badge bg-warning p-2 text-white">Dibayar Sebagian</span>';
-                                } else {
-                                    return '<span class="badge bg-secondary p-2">Belum Dibayar</span>';
-                                }
-                            }
-                        },
-                        {
-                            data: null,
-                            orderable: false,
-                            searchable: false,
-                            className: 'text-center align-middle pe-3',
-                            render: function(data) {
-                                let btnShow = `
-                                    <button type="button" class="btn btn-sm btn-outline-info me-1 btn-show" data-id="${data.id}" title="Detail">
-                                        <i class="fa-solid fa-eye"></i>
-                                    </button>
-                                `;
-                                let btnEdit = '';
-                                if (data.can_update) {
-                                    btnEdit = `
-                                        <button type="button" class="btn btn-sm btn-outline-warning me-1 btn-open-edit-modal" data-id="${data.id}" title="Edit Invoice">
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </button>
-                                    `;
-                                }
-                                let btnDelete = '';
-                                if (data.can_delete) {
-                                    btnDelete = `
-                                        <button type="button" class="btn btn-sm btn-outline-danger btn-delete" data-id="${data.id}" title="Hapus">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    `;
-                                }
-                                return btnShow + btnEdit + btnDelete;
-                            }
-                        }
+    <script>
+        function invoiceLpbList(config) {
+            return {
+                ...wmsDataTable({
+                    url: '{{ route('invoice-lpb.index') }}',
+                    reportUrl: '{{ route('invoice-lpb.report.pdf') }}',
+                    extraParams: { payment_status: 'UNPAID', focus: config.focusId || '' },
+                    columns: [
+                        { data: 'no_invoice' }, { data: 'tanggal' }, { data: 'supplier_nama' }, { data: 'tgl_deadline_pembayaran' },
+                        { data: 'grand_total' }, { data: 'sisa_tagihan' }, { data: 'status_pembayaran' }, { data: 'aksi', orderable: false, searchable: false },
                     ],
-                    initComplete: function() {
-                        if (new URLSearchParams(window.location.search).has('invoice')) {
-                            $('#table-invoice-lpb').one('draw.dt', () => $('#table-invoice-lpb .btn-show')
-                                .first().trigger('click'));
-                            setTimeout(() => $('#table-invoice-lpb .btn-show').first().trigger('click'), 0);
-                        }
+                }),
+                paymentNumber: config.paymentNumber,
+                invoice: null,
+                paymentPanelOpen: false,
+                paymentSubmitting: false,
+                coaKasBankOptions: [],
+                coaPostableOptions: [],
+                advanceOptions: [],
+                payment: {},
+
+                async init() {
+                    this.payment = this.defaultPayment();
+                    await this.fetchData();
+                    this.$watch('search', () => { this.start = 0; this.debouncedFetch(); });
+                    this.$watch('extraParams', () => { this.start = 0; this.fetchData(); }, { deep: true });
+                    this.$watch('length', () => { this.start = 0; this.fetchData(); });
+                    window.addEventListener('wms:table-refresh', () => this.fetchData());
+                    if (config.focusId && this.rows.length > 0) {
+                        this.openShow(this.rows[0].id);
                     }
-                });
+                },
 
-                $(document).on('click', '.btn-open-create-modal', function(e) {
-                    e.preventDefault();
-                    $.ajax({
-                        url: "{{ route('invoice-lpb.create') }}",
-                        type: 'GET',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        success: function(html) {
-                            $('#modal-container').html(html);
-                            $('#createInvoiceModal').modal('show');
-                        },
-                        error: function(err) {
-                            AppAlert.auto(err.responseJSON?.message || 'Gagal memuat form.');
-                        }
-                    });
-                });
+                defaultPayment() {
+                    return {
+                        tanggal_pembayaran: new Date().toISOString().substring(0, 10), metode_pembayaran: '',
+                        coa_kas_bank_id: '', jumlah_pembayaran: 0, potongan_pph23: 0, potongan_materai: false,
+                        biaya_transfer_bank: 0, selisih_bayar: 0, jenis_selisih: '', coa_selisih_id: '',
+                        uang_muka_sumber_payment_id: '', uang_muka_dipakai: 0, keterangan: '',
+                    };
+                },
 
-                $(document).on('click', '.btn-open-edit-modal', function(e) {
-                    e.preventDefault();
-                    let id = $(this).data('id');
-                    $.ajax({
-                        url: "/invoice-lpb/" + id + "/edit",
-                        type: 'GET',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        success: function(html) {
-                            $('#modal-container').html(html);
-                            $('#editInvoiceModal').modal('show');
-                        },
-                        error: function(err) {
-                            AppAlert.auto(err.responseJSON?.message || 'Gagal memuat form edit.');
-                        }
-                    });
-                });
+                formatRupiah(value) {
+                    return 'Rp ' + Number(value || 0).toLocaleString('id-ID');
+                },
 
-                $(document).on('click', '.btn-show', function(e) {
-                    e.preventDefault();
-                    let id = $(this).data('id');
-                    $.ajax({
-                        url: "/invoice-lpb/" + id,
-                        type: 'GET',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        success: function(res) {
-                            if (res.success) {
-                                renderShowModal(res.data);
-                            }
-                        },
-                        error: function() {
-                            AppAlert.auto('Gagal mengambil data detail invoice.');
-                        }
-                    });
-                });
-
-                $(document).on('click', '.btn-delete', function() {
-                    let id = $(this).data('id');
-                    AppAlert.confirm("Hapus invoice ini? Invoice yang sudah dibayar tidak dapat dihapus.").then(
-                        function(result) {
-                            if (result.isConfirmed) {
-                                $.ajax({
-                                    url: "/invoice-lpb/" + id,
-                                    type: "DELETE",
-                                    data: {
-                                        _token: "{{ csrf_token() }}"
-                                    },
-                                    success: function(res) {
-                                        if (res.success) {
-                                            table.ajax.reload();
-                                        }
-                                    },
-                                    error: function() {
-                                        AppAlert.auto("Gagal menghapus data.");
-                                    }
-                                });
-                            }
-                        });
-                });
-
-                function renderShowModal(data) {
-                    let detailsHtml = '';
-                    if (data.payments && data.payments.length > 0) {
-                        data.payments.forEach(function(item, i) {
-                            let coaInfo = item.coa_kas_bank ?
-                                `${item.coa_kas_bank.kode_akun} - ${item.coa_kas_bank.nama_akun}` : '-';
-                            detailsHtml += `
-                                <tr>
-                                    <td class="text-center align-middle">${i + 1}</td>
-                                    <td class="align-middle fw-semibold">${item.payment_number ?? '-'}</td>
-                                    <td class="align-middle">${item.tanggal_pembayaran}</td>
-                                    <td class="align-middle fw-bold">${item.metode_pembayaran}</td>
-                                    <td class="align-middle fw-bold text-info">${coaInfo}</td>
-                                    <td class="text-end align-middle">Rp ${Number(item.jumlah_pembayaran).toLocaleString('id-ID')}</td>
-                                    <td class="text-end align-middle">Rp ${Number(item.potongan_pph23).toLocaleString('id-ID')}</td>
-                                    <td class="text-end align-middle">Rp ${Number(item.selisih_bayar).toLocaleString('id-ID')}<small class="d-block text-muted">${item.jenis_selisih ? item.jenis_selisih.replaceAll('_',' ') : ''}</small></td>
-                                    <td class="text-end align-middle fw-bold text-success">Rp ${Number(item.total_transaksi_pengurang_hutang).toLocaleString('id-ID')}</td>
-                                    <td class="align-middle">${item.user_finance ? item.user_finance.name : '-'}</td>
-                                </tr>
-                            `;
-                        });
-                    } else {
-                        detailsHtml =
-                            '<tr><td colspan="10" class="text-center text-muted py-3">Belum ada riwayat pembayaran.</td></tr>';
-                    }
-
-                    let btnAddPayment = '';
-                    if (data.can_pay) {
-                        btnAddPayment = `
-                            <button type="button" class="btn btn-sm btn-success fw-bold btn-add-payment"
-                                data-id="${data.id}" data-remaining="${Number(data.sisa_tagihan || 0)}"
-                                data-supplier="${data.kode_supplier}">
-                                <i class="fa-solid fa-plus me-1"></i>Tambah Pembayaran
-                            </button>
-                        `;
-                    }
-
-                    let modalHtml = `
-                        <div class="modal fade" id="showInvoiceModal" tabindex="-1" role="dialog" aria-hidden="true">
-                            <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
-                                <div class="modal-content border-0 shadow">
-                                    <div class="modal-header bg-info text-white">
-                                        <h5 class="modal-title fw-bold text-white"><i class="fa-solid fa-file-invoice-dollar me-2"></i>Invoice: ${data.no_invoice}</h5>
-                                        <button type="button" class="btn-close btn-close-white " data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-body p-4 bg-light">
-                                        <div class="card border-0 shadow-sm p-3 mb-3 bg-white">
-                                            <div class="row">
-                                                <div class="col-md-4"><small class="text-muted d-block">Supplier</small><span class="fw-bold h6">${data.supplier ? data.supplier.nama : '-'}</span></div>
-                                                <div class="col-md-4"><small class="text-muted d-block">Tanggal Invoice</small><span class="fw-bold h6">${data.tanggal}</span></div>
-                                                <div class="col-md-4"><small class="text-muted d-block">Deadline</small><span class="fw-bold h6">${data.tgl_deadline_pembayaran ?? '-'}</span></div>
-                                            </div>
-                                            <hr class="my-2">
-                                            <div class="row">
-                                                <div class="col-md-3"><small class="text-muted d-block">Sub Total</small><span class="fw-bold">Rp ${Number(data.sub_total).toLocaleString('id-ID')}</span></div>
-                                                <div class="col-md-3"><small class="text-muted d-block">PPN (${Number(data.tarif_ppn || 0).toLocaleString('id-ID')}%)</small><span class="fw-bold">Rp ${Number(data.ppn).toLocaleString('id-ID')}</span></div>
-                                                <div class="col-md-3"><small class="text-muted d-block">Grand Total</small><span class="fw-bold text-primary h6">Rp ${Number(data.grand_total).toLocaleString('id-ID')}</span></div>
-                                                <div class="col-md-3"><small class="text-muted d-block">Sisa Tagihan</small><span class="fw-bold text-danger h6">Rp ${Number(data.sisa_tagihan).toLocaleString('id-ID')}</span></div>
-                                            </div>
-                                            ${data.no_faktur_pajak ? `<div class="mt-2"><small class="text-muted d-block">No. Faktur Pajak</small><span class="fw-bold">${data.no_faktur_pajak}</span></div>` : ''}
-                                        </div>
-
-                                        <div class="d-flex justify-content-between align-items-center mb-3">
-                                            <h6 class="fw-bold text-dark mb-0"><i class="fa-solid fa-receipt me-2 text-info"></i>Riwayat Pembayaran</h6>
-                                            ${btnAddPayment}
-                                        </div>
-                                        <div class="table-responsive bg-white rounded shadow-sm">
-                                            <table class="table table-bordered table-sm mb-0">
-                                                <thead class="bg-light font-size-12">
-                                                    <tr>
-                                                        <th width="4%" class="text-center">#</th>
-                                                        <th>No Pembayaran</th>
-                                                        <th width="10%">Tgl Bayar</th>
-                                                        <th>Metode</th>
-                                                        <th>Akun Kas/Bank (COA)</th>
-                                                        <th width="11%" class="text-end">Jml Bayar</th>
-                                                        <th width="10%" class="text-end">PPh 23</th>
-                                                        <th width="10%" class="text-end">Selisih</th>
-                                                        <th width="13%" class="text-end">Total Pengurang</th>
-                                                        <th width="10%">User Finance</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>${detailsHtml}</tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer bg-white border-top">
-                                        <button type="button" class="btn btn-secondary px-4 fw-bold" data-bs-dismiss="modal">Tutup</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-
-                    $('#modal-container').html(modalHtml);
-                    $('#showInvoiceModal').modal('show');
-                }
-
-                $(document).on('click', '.btn-add-payment', function() {
-                    let invoiceId = $(this).data('id');
-                    let remainingBalance = Number($(this).data('remaining') || 0);
-                    let supplierId = $(this).data('supplier');
-                    if ($('#addPaymentModal').length) {
-                        document.querySelector('#addPaymentModal')?.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'nearest'
-                        });
-                        return;
-                    }
-
-                    $.when(
-                        $.ajax({
-                            url: "/chart-of-accounts/kas-bank",
-                            type: "GET",
-                            dataType: "JSON"
-                        }),
-                        $.ajax({
-                            url: "/invoice-payments/available-advances/" + supplierId,
-                            type: "GET",
-                            dataType: "JSON"
-                        })
-                    ).done(function(coaResponse, advanceResponse) {
-                            let res = coaResponse[0];
-                            let advances = (advanceResponse[0] && advanceResponse[0].data) || [];
-                            let coaOptions =
-                                '<option value="">-- Pilih Akun Kas / Bank --</option>';
-                            if (res.data && res.data.length > 0) {
-                                res.data.forEach(function(coa) {
-                                    coaOptions +=
-                                        `<option value="${coa.id}">${coa.kode_akun} - ${coa.nama_akun}</option>`;
-                                });
-                            }
-                            let differenceCoaOptions =
-                                '<option value="">-- Pilih Akun Selisih / Uang Muka --</option>';
-                            (res.postable || []).forEach(function(coa) {
-                                differenceCoaOptions +=
-                                    `<option value="${coa.id}">${coa.kode_akun} - ${coa.nama_akun}</option>`;
-                            });
-                            let advanceOptions = '<option value="">Tidak memakai uang muka</option>';
-                            advances.forEach(function(advance) {
-                                advanceOptions +=
-                                    `<option value="${advance.id}" data-sisa="${advance.sisa}">${advance.payment_number} (asal ${advance.no_invoice_asal}) — sisa Rp ${Number(advance.sisa).toLocaleString('id-ID')}</option>`;
-                            });
-
-                            let modalPaymentHtml = `
-                                <div class="collapse mt-3" id="addPaymentModal">
-                                    <div class="create-section payment-inline-panel" data-remaining="${remainingBalance}">
-                                        <div>
-                                            <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
-                                                <h5 class="modal-title fw-bold text-white"><i class="fa-solid fa-money-bill-wave me-2"></i>Catat Pembayaran</h5>
-                                                <button type="button" class="btn btn-sm btn-light border"
-                                                    data-bs-toggle="collapse" data-bs-target="#addPaymentModal">
-                                                    <i class="fa-solid fa-xmark me-1"></i>Tutup
-                                                </button>
-                                            </div>
-                                            <form id="form-store-payment" action="{{ route('invoice-payments.store') }}" method="POST">
-                                                @csrf
-                                                <input type="hidden" name="invoice_lpb_id" value="${invoiceId}">
-                                                <div class="modal-body p-0 bg-light">
-                                                    <div class="card border-0 shadow-sm p-3 bg-white mb-0">
-                                                        <div class="row g-2 payment-compact-grid">
-                                                        <div class="col-xl-3 col-md-6">
-                                                            <label class="fw-bold text-dark small text-uppercase">Nomor Pembayaran</label>
-                                                            <input type="text" class="form-control bg-white" name="payment_number"
-                                                                value="${nextPaymentNumber ?? ''}" readonly>
-                                                        </div>
-                                                        <div class="col-xl-3 col-md-6">
-                                                            <label class="fw-bold text-dark small text-uppercase">Tanggal Pembayaran <span class="text-danger">*</span></label>
-                                                            <input type="date" class="form-control" name="tanggal_pembayaran" value="{{ date('Y-m-d') }}" required>
-                                                        </div>
-                                                        <div class="col-xl-3 col-md-6">
-                                                            <label class="fw-bold text-dark small text-uppercase">Metode Pembayaran <span class="text-danger">*</span></label>
-                                                            <input type="text" class="form-control" name="metode_pembayaran" placeholder="Contoh: Transfer BCA" required>
-                                                        </div>
-                                                        <div class="col-xl-3 col-md-6">
-                                                            <label class="fw-bold text-dark small text-uppercase">Akun Sumber (Kas / Bank) <span class="text-danger">*</span></label>
-                                                            <select class="form-select" name="coa_kas_bank_id" required data-app-picker data-placeholder="Cari akun kas atau bank...">${coaOptions}</select>
-                                                        </div>
-                                                            <div class="col-xl-3 col-md-6">
-                                                                <label class="fw-bold text-dark small text-uppercase">Jumlah Pembayaran</label>
-                                                                <input type="number" step="any" min="0" class="form-control"
-                                                                    name="jumlah_pembayaran" value="${remainingBalance}">
-                                                            </div>
-                                                            <div class="col-xl-3 col-md-6">
-                                                                <label class="fw-bold text-dark small text-uppercase">Potongan PPh 23</label>
-                                                                <input type="number" step="any" min="0" class="form-control" name="potongan_pph23" value="0">
-                                                            </div>
-                                                            <div class="col-xl-3 col-md-6">
-                                                                <label class="fw-bold text-dark small text-uppercase d-block">Materai Tambahan</label>
-                                                                <label class="payment-check-card">
-                                                                    <input type="checkbox" class="form-check-input" name="potongan_materai" value="10000">
-                                                                    <span>
-                                                                        <strong>Gunakan materai</strong>
-                                                                        <small>Biaya tetap Rp10.000</small>
-                                                                    </span>
-                                                                </label>
-                                                            </div>
-                                                            <div class="col-xl-3 col-md-6">
-                                                                <label class="fw-bold text-dark small text-uppercase">Biaya Transfer Bank</label>
-                                                                <input type="number" step="any" min="0" class="form-control" name="biaya_transfer_bank" value="0">
-                                                            </div>
-                                                            <div class="col-xl-3 col-md-6">
-                                                                <label class="fw-bold text-dark small text-uppercase">Nominal Selisih / Kelebihan Bayar</label>
-                                                                <input type="number" step="any" min="0" class="form-control" name="selisih_bayar" value="0">
-                                                            </div>
-                                                            <div class="col-xl-3 col-md-6">
-                                                                <label class="fw-bold text-dark small text-uppercase">Jenis Selisih</label>
-                                                                <select class="form-select" name="jenis_selisih">
-                                                                    <option value="">Tidak ada selisih</option>
-                                                                    <option value="PENDAPATAN_SELISIH">Pendapatan selisih</option>
-                                                                    <option value="BEBAN_SELISIH">Beban selisih</option>
-                                                                    <option value="UANG_MUKA_SUPPLIER">Uang muka supplier</option>
-                                                                </select>
-                                                            </div>
-                                                            <div class="col-xl-3 col-md-6">
-                                                                <label class="fw-bold text-dark small text-uppercase">Akun Selisih / Uang Muka</label>
-                                                                <select class="form-select" name="coa_selisih_id" data-app-picker data-placeholder="Cari akun selisih...">${differenceCoaOptions}</select>
-                                                            </div>
-                                                            <div class="col-xl-3 col-md-6">
-                                                                <label class="fw-bold text-dark small text-uppercase">Pakai Uang Muka Supplier</label>
-                                                                <select class="form-select" name="uang_muka_sumber_payment_id" id="input_uang_muka_sumber" data-app-picker data-placeholder="Tidak memakai uang muka...">${advanceOptions}</select>
-                                                            </div>
-                                                            <div class="col-xl-3 col-md-6">
-                                                                <label class="fw-bold text-dark small text-uppercase">Nominal Uang Muka Dipakai</label>
-                                                                <input type="number" step="any" min="0" class="form-control" name="uang_muka_dipakai" id="input_uang_muka_dipakai" value="0" disabled>
-                                                            </div>
-                                                        <div class="col-xl-3 col-md-6">
-                                                            <label class="fw-bold text-dark small text-uppercase">Keterangan</label>
-                                                            <input class="form-control" name="keterangan" placeholder="Catatan tambahan...">
-                                                        </div>
-                                                        </div>
-                                                        <div class="payment-draft-summary mt-3">
-                                                            <div>
-                                                                <small>Kas keluar</small>
-                                                                <strong id="draft-cash-out">Rp 0</strong>
-                                                                <span>Bayar + materai + transfer</span>
-                                                            </div>
-                                                            <div>
-                                                                <small>Pengurang hutang</small>
-                                                                <strong id="draft-ap-reduction">Rp 0</strong>
-                                                                <span>Termasuk PPh dan selisih</span>
-                                                            </div>
-                                                            <div>
-                                                                <small>Biaya tambahan</small>
-                                                                <strong id="draft-extra-cost">Rp 0</strong>
-                                                                <span>Materai + transfer</span>
-                                                            </div>
-                                                            <div>
-                                                                <small>Estimasi sisa tagihan</small>
-                                                                <strong id="draft-remaining">Rp ${remainingBalance.toLocaleString('id-ID')}</strong>
-                                                                <span id="draft-payment-status">Sebelum pembayaran disimpan</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer bg-white border-top">
-                                                    <button type="button" class="btn btn-light border fw-bold"
-                                                        data-bs-toggle="collapse" data-bs-target="#addPaymentModal">Batal</button>
-                                                    <button type="submit" class="btn btn-success fw-bold shadow-sm"><i class="fa-solid fa-floppy-disk me-1"></i>Simpan Pembayaran</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-
-                            $('#showInvoiceModal .modal-body').append(modalPaymentHtml);
-                            bootstrap.Collapse.getOrCreateInstance('#addPaymentModal', {
-                                toggle: false
-                            }).show();
-                            const paymentForm = $('#form-store-payment');
-                            const paymentPanel = paymentForm.closest('.payment-inline-panel');
-                            const readAmount = name => Number.parseFloat(
-                                paymentForm.find(`[name="${name}"]`).val()
-                            ) || 0;
-                            paymentForm.find('#input_uang_muka_sumber').on('change', function() {
-                                const sisa = Number.parseFloat($(this).find(':selected').data('sisa')) || 0;
-                                const amountInput = paymentForm.find('#input_uang_muka_dipakai');
-                                if ($(this).val()) {
-                                    amountInput.prop('disabled', false).attr('max', sisa).val(sisa);
-                                } else {
-                                    amountInput.prop('disabled', true).val(0);
-                                }
-                                amountInput.trigger('change');
-                            });
-                            const refreshPaymentDraft = () => {
-                                const remaining = Number.parseFloat(paymentPanel.attr('data-remaining')) || 0;
-                                const payment = readAmount('jumlah_pembayaran');
-                                const pph = readAmount('potongan_pph23');
-                                const stamp = paymentForm.find('[name="potongan_materai"]').prop('checked') ? 10000 : 0;
-                                const transfer = readAmount('biaya_transfer_bank');
-                                const difference = readAmount('selisih_bayar');
-                                const type = paymentForm.find('[name="jenis_selisih"]').val();
-                                const advanceUsed = paymentForm.find('#input_uang_muka_sumber').val() ? readAmount('uang_muka_dipakai') : 0;
-                                const cashAndTax = payment + pph;
-                                const remainingAfterAdvance = Math.max(0, remaining - advanceUsed);
-
-                                let cashReduction = cashAndTax;
-                                if (type === 'PENDAPATAN_SELISIH') cashReduction += difference;
-                                if (type === 'BEBAN_SELISIH') cashReduction -= difference;
-                                if (type === 'UANG_MUKA_SUPPLIER') cashReduction = Math.min(remainingAfterAdvance, cashAndTax);
-                                const reduction = Math.max(0, cashReduction) + advanceUsed;
-
-                                const cashOut = payment + stamp + transfer;
-                                const extraCost = stamp + transfer;
-                                const estimatedRemaining = Math.max(0, remaining - reduction);
-                                const invalid = reduction <= 0 || reduction > remaining + 0.01;
-
-                                paymentForm.find('#draft-cash-out').text(formatRupiah(cashOut));
-                                paymentForm.find('#draft-ap-reduction').text(formatRupiah(Math.max(0, reduction)));
-                                paymentForm.find('#draft-extra-cost').text(formatRupiah(extraCost));
-                                paymentForm.find('#draft-remaining').text(formatRupiah(estimatedRemaining))
-                                    .toggleClass('text-danger', invalid)
-                                    .toggleClass('text-success', !invalid && estimatedRemaining <= 0);
-                                paymentForm.find('#draft-payment-status').text(invalid
-                                    ? 'Periksa nominal — pengurang hutang tidak valid'
-                                    : (estimatedRemaining <= 0 ? 'Invoice akan menjadi lunas' : 'Invoice masih memiliki sisa'));
-                            };
-                            paymentForm.on('input change', 'input, select', refreshPaymentDraft);
-                            refreshPaymentDraft();
-                            document.querySelector('#addPaymentModal')?.scrollIntoView({
-                                behavior: 'smooth',
-                                block: 'nearest'
-                            });
-
-                            $('#addPaymentModal').on('hidden.bs.collapse', function() {
-                                $(this).remove();
-                            });
-                        })
-                        .fail(function() {
-                            AppAlert.auto("Gagal mengambil data akun Kas/Bank COA atau uang muka supplier.");
-                        });
-                });
-
-                $('input[name="invoice_payment_status"]').on('change', function() {
-                    table.ajax.reload(null, true);
-                });
-
-                function paymentNumber(name) {
-                    return Number($(`#form-store-payment [name="${name}"]`).val() || 0);
-                }
-
-                function updatePaymentDraft() {
-                    const panel = $('.payment-inline-panel');
-                    if (!panel.length) return;
-
-                    const remaining = Number(panel.data('remaining') || 0);
-                    const payment = paymentNumber('jumlah_pembayaran');
-                    const pph = paymentNumber('potongan_pph23');
-                    const stamp = $('#form-store-payment [name="potongan_materai"]').is(':checked') ? 10000 : 0;
-                    const transfer = paymentNumber('biaya_transfer_bank');
-                    const difference = paymentNumber('selisih_bayar');
-                    const type = $('#form-store-payment [name="jenis_selisih"]').val();
-                    const advanceUsed = $('#form-store-payment [name="uang_muka_sumber_payment_id"]').val() ?
-                        paymentNumber('uang_muka_dipakai') : 0;
+                get draft() {
+                    const remaining = Number(this.invoice?.sisa_tagihan || 0);
+                    const payment = Number(this.payment.jumlah_pembayaran) || 0;
+                    const pph = Number(this.payment.potongan_pph23) || 0;
+                    const stamp = this.payment.potongan_materai ? 10000 : 0;
+                    const transfer = Number(this.payment.biaya_transfer_bank) || 0;
+                    const difference = Number(this.payment.selisih_bayar) || 0;
+                    const type = this.payment.jenis_selisih;
+                    const advanceUsed = this.payment.uang_muka_sumber_payment_id ? (Number(this.payment.uang_muka_dipakai) || 0) : 0;
                     const cashAndTax = payment + pph;
                     const remainingAfterAdvance = Math.max(0, remaining - advanceUsed);
 
@@ -625,44 +381,87 @@
                     const estimatedRemaining = Math.max(0, remaining - reduction);
                     const invalid = reduction <= 0 || reduction > remaining + 0.01;
 
-                    $('#draft-cash-out').text(formatRupiah(cashOut));
-                    $('#draft-ap-reduction').text(formatRupiah(Math.max(0, reduction)));
-                    $('#draft-extra-cost').text(formatRupiah(extraCost));
-                    $('#draft-remaining').text(formatRupiah(estimatedRemaining))
-                        .toggleClass('text-danger', invalid)
-                        .toggleClass('text-success', !invalid && estimatedRemaining <= 0);
-                    $('#draft-payment-status').text(invalid
-                        ? 'Periksa nominal—pengurang hutang tidak valid'
-                        : (estimatedRemaining <= 0 ? 'Invoice akan menjadi lunas' : 'Invoice masih memiliki sisa'));
-                }
+                    return { cashOut, reduction, extraCost, estimatedRemaining, invalid };
+                },
 
-                $(document).on('input change',
-                    '#form-store-payment input, #form-store-payment select',
-                    updatePaymentDraft);
+                async openShow(id) {
+                    try {
+                        const response = await fetch(`{{ url('invoice-lpb') }}/${id}`, {
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                        });
+                        const res = await response.json();
+                        if (!res.success) return;
+                        this.invoice = res.data;
+                        this.paymentPanelOpen = false;
+                        this.$refs.showDialog.showModal();
+                    } catch (error) {
+                        window.AppAlert.error('Gagal mengambil data detail invoice.');
+                    }
+                },
 
-                $(document).on('submit', '#form-store-payment', function(e) {
-                    e.preventDefault();
-                    $.ajax({
-                        url: $(this).attr('action'),
-                        type: "POST",
-                        data: $(this).serialize(),
-                        dataType: "JSON",
-                        success: function(res) {
-                            if (res.success) {
-                                nextPaymentNumber = res.next_document_number ?? nextPaymentNumber;
-                                bootstrap.Collapse.getOrCreateInstance('#addPaymentModal', {
-                                    toggle: false
-                                }).hide();
-                                $('#showInvoiceModal').modal('hide');
-                                table.ajax.reload();
-                            }
-                        },
-                        error: function(xhr) {
-                            AppAlert.ajaxError(xhr);
-                        }
-                    });
-                });
-            });
-        </script>
-    @endpush
+                async openPaymentPanel() {
+                    this.payment = this.defaultPayment();
+                    this.payment.jumlah_pembayaran = Number(this.invoice?.sisa_tagihan || 0);
+                    try {
+                        const [coaRes, advanceRes] = await Promise.all([
+                            fetch('{{ url('chart-of-accounts/kas-bank') }}', { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } }).then((r) => r.json()),
+                            fetch(`{{ url('invoice-payments/available-advances') }}/${this.invoice.kode_supplier}`, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } }).then((r) => r.json()),
+                        ]);
+                        this.coaKasBankOptions = coaRes.data || [];
+                        this.coaPostableOptions = coaRes.postable || [];
+                        this.advanceOptions = advanceRes.data || [];
+                        this.paymentPanelOpen = true;
+                    } catch (error) {
+                        window.AppAlert.error('Gagal mengambil data akun Kas/Bank COA atau uang muka supplier.');
+                    }
+                },
+
+                onAdvanceChange() {
+                    const advance = this.advanceOptions.find((item) => String(item.id) === String(this.payment.uang_muka_sumber_payment_id));
+                    this.payment.uang_muka_dipakai = advance ? Number(advance.sisa) : 0;
+                },
+
+                async submitPayment() {
+                    this.paymentSubmitting = true;
+                    try {
+                        const payload = { ...this.payment, invoice_lpb_id: this.invoice.id, potongan_materai: this.payment.potongan_materai ? 10000 : 0 };
+                        const response = await fetch('{{ route('invoice-payments.store') }}', {
+                            method: 'POST',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload),
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok) { window.AppAlert.ajaxError(data); return; }
+                        window.AppAlert.auto(data.message);
+                        if (data.next_document_number) this.paymentNumber = data.next_document_number;
+                        this.paymentPanelOpen = false;
+                        this.$refs.showDialog.close();
+                        this.fetchData();
+                    } catch (error) {
+                        window.AppAlert.error('Gagal menyimpan pembayaran.');
+                    } finally {
+                        this.paymentSubmitting = false;
+                    }
+                },
+
+                async deleteInvoice(id) {
+                    const result = await window.AppAlert.confirm('Hapus invoice ini? Invoice yang sudah dibayar tidak dapat dihapus.');
+                    if (!result.isConfirmed) return;
+                    try {
+                        const response = await fetch(`{{ url('invoice-lpb') }}/${id}`, {
+                            method: 'POST',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ _method: 'DELETE' }),
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok) { window.AppAlert.ajaxError(data); return; }
+                        window.AppAlert.auto(data.message);
+                        this.fetchData();
+                    } catch (error) {
+                        window.AppAlert.error('Gagal menghapus data.');
+                    }
+                },
+            };
+        }
+    </script>
 @endsection

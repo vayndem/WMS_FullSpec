@@ -1,89 +1,72 @@
 @extends('layouts.app')
 @section('content')
     <div class="content-page">
-        <div class="container-fluid">
-            <h4>{{ $pemeriksaan->exists ? 'Edit' : 'Buat' }} Pemeriksaan Consider</h4>@include('warehouse_partials.alerts')
-            @php($ability = $pemeriksaan->exists ? 'update' : 'create')
-            @php($subject = $pemeriksaan->exists ? $pemeriksaan : App\Models\PemeriksaanConsider::class)
-            @can($ability, $subject)
-                <form method="POST"
-                    action="{{ $pemeriksaan->exists ? route('pemeriksaan-considers.update', $pemeriksaan) : route('pemeriksaan-considers.store') }}"
-                    class="card card-body">@csrf @if ($pemeriksaan->exists)
-                        @method('PUT')
-                    @endif
-                    <div class="row g-2 mb-3">
-                        <div class="col"><input name="nomor_pemeriksaan" class="form-control" readonly
-                                value="{{ old('nomor_pemeriksaan', $pemeriksaan->nomor_pemeriksaan) }}"></div>
-                        <div class="col"><input type="date" name="tanggal" class="form-control"
-                                value="{{ old('tanggal', optional($pemeriksaan->tanggal)->format('Y-m-d')) }}" required></div>
-                        <div class="col"><select name="gudang_consider_id" class="form-select" required>
-                                @foreach ($consider as $g)
-                                    <option value="{{ $g->id }}" @selected(old('gudang_consider_id', $pemeriksaan->gudang_consider_id) == $g->id)>{{ $g->nama }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col"><select name="gudang_baik_id" class="form-select" required>
-                                @foreach ($normal as $g)
-                                    <option value="{{ $g->id }}" @selected(old('gudang_baik_id', $pemeriksaan->gudang_baik_id) == $g->id)>{{ $g->nama }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col"><select name="gudang_rusak_id" class="form-select" required>
-                                @foreach ($rusak as $g)
-                                    <option value="{{ $g->id }}" @selected(old('gudang_rusak_id', $pemeriksaan->gudang_rusak_id) == $g->id)>{{ $g->nama }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                    <textarea name="catatan" class="form-control mb-3" placeholder="Catatan">{{ old('catatan', $pemeriksaan->catatan) }}</textarea>
-                    @php($details = old('details', $pemeriksaan->exists ? $pemeriksaan->details->toArray() : [['bahan_id' => '', 'jumlah_diperiksa' => '', 'jumlah_baik' => '', 'jumlah_rusak' => '', 'alasan' => '']]))<div id="considerRows">
-                        @foreach ($details as $i => $d)
-                            <div class="row g-2 mb-2 consider-row">
-                                <div class="col-md-4"><select name="details[{{ $i }}][bahan_id]" class="form-select"
-                                        required>
-                                        @foreach ($bahans as $b)
-                                            <option value="{{ $b->id }}" @selected(($d['bahan_id'] ?? null) == $b->id)>
-                                                {{ $b->nama }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                @foreach (['jumlah_diperiksa' => 'Diperiksa', 'jumlah_baik' => 'Baik', 'jumlah_rusak' => 'Rusak'] as $f => $p)
-                                    <div class="col"><input type="number" step="any" min="0"
-                                            name="details[{{ $i }}][{{ $f }}]" class="form-control"
-                                            value="{{ $d[$f] ?? '' }}" placeholder="{{ $p }}" required></div>
-                                @endforeach
-                                <div class="col-md-2">
-                                    <input name="details[{{ $i }}][alasan]" class="form-control"
-                                        value="{{ $d['alasan'] ?? '' }}" placeholder="Alasan">
-                                </div>
-                                <div class="col"><button type="button"
-                                        class="btn btn-outline-danger remove-consider">×</button></div>
-                            </div>
+        <h3 class="mb-4 text-2xl font-bold">{{ $pemeriksaan->exists ? 'Edit' : 'Buat' }} Pemeriksaan Consider</h3>
+        @include('warehouse_partials.alerts')
+        @php($ability = $pemeriksaan->exists ? 'update' : 'create')
+        @php($subject = $pemeriksaan->exists ? $pemeriksaan : App\Models\PemeriksaanConsider::class)
+        @can($ability, $subject)
+            <form method="POST"
+                action="{{ $pemeriksaan->exists ? route('pemeriksaan-considers.update', $pemeriksaan) : route('pemeriksaan-considers.store') }}"
+                class="card border border-base-300 bg-base-100 p-4 shadow-sm">
+                @csrf
+                @if ($pemeriksaan->exists)
+                    @method('PUT')
+                @endif
+                <div class="mb-3 grid grid-cols-1 gap-2 md:grid-cols-5">
+                    <input name="nomor_pemeriksaan" class="input input-bordered bg-base-200" readonly value="{{ old('nomor_pemeriksaan', $pemeriksaan->nomor_pemeriksaan) }}">
+                    <input type="date" name="tanggal" class="input input-bordered" value="{{ old('tanggal', optional($pemeriksaan->tanggal)->format('Y-m-d')) }}" required>
+                    <select name="gudang_consider_id" class="select select-bordered" required>
+                        @foreach ($consider as $g)
+                            <option value="{{ $g->id }}" @selected(old('gudang_consider_id', $pemeriksaan->gudang_consider_id) == $g->id)>{{ $g->nama }}</option>
                         @endforeach
-                    </div>
-                    <button type="button" id="addConsider" class="btn btn-sm btn-outline-secondary mb-3">Tambah Baris</button>
-                    <div><button class="btn btn-primary">Simpan Draft</button></div>
-                </form>
-            @endcan
-        </div>
+                    </select>
+                    <select name="gudang_baik_id" class="select select-bordered" required>
+                        @foreach ($normal as $g)
+                            <option value="{{ $g->id }}" @selected(old('gudang_baik_id', $pemeriksaan->gudang_baik_id) == $g->id)>{{ $g->nama }}</option>
+                        @endforeach
+                    </select>
+                    <select name="gudang_rusak_id" class="select select-bordered" required>
+                        @foreach ($rusak as $g)
+                            <option value="{{ $g->id }}" @selected(old('gudang_rusak_id', $pemeriksaan->gudang_rusak_id) == $g->id)>{{ $g->nama }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <textarea name="catatan" class="textarea textarea-bordered mb-3 w-full" placeholder="Catatan">{{ old('catatan', $pemeriksaan->catatan) }}</textarea>
+                @php($details = old('details', $pemeriksaan->exists ? $pemeriksaan->details->toArray() : [['bahan_id' => '', 'jumlah_diperiksa' => '', 'jumlah_baik' => '', 'jumlah_rusak' => '', 'alasan' => '']]))
+                <div id="considerRows" class="flex flex-col gap-2">
+                    @foreach ($details as $i => $d)
+                        <div class="consider-row grid grid-cols-1 gap-2 md:grid-cols-7">
+                            <select name="details[{{ $i }}][bahan_id]" class="select select-bordered md:col-span-2" required>
+                                @foreach ($bahans as $b)
+                                    <option value="{{ $b->id }}" @selected(($d['bahan_id'] ?? null) == $b->id)>{{ $b->nama }}</option>
+                                @endforeach
+                            </select>
+                            @foreach (['jumlah_diperiksa' => 'Diperiksa', 'jumlah_baik' => 'Baik', 'jumlah_rusak' => 'Rusak'] as $f => $p)
+                                <input type="number" step="any" min="0" name="details[{{ $i }}][{{ $f }}]" class="input input-bordered" value="{{ $d[$f] ?? '' }}" placeholder="{{ $p }}" required>
+                            @endforeach
+                            <input name="details[{{ $i }}][alasan]" class="input input-bordered" value="{{ $d['alasan'] ?? '' }}" placeholder="Alasan">
+                            <button type="button" class="btn btn-outline btn-error remove-consider">&times;</button>
+                        </div>
+                    @endforeach
+                </div>
+                <button type="button" id="addConsider" class="btn btn-outline btn-sm mb-3 mt-3">Tambah Baris</button>
+                <div><button class="btn btn-primary">Simpan Draft</button></div>
+            </form>
+        @endcan
     </div>
     <template id="considerTemplate">
-        <div class="row g-2 mb-2 consider-row">
-            <div class="col-md-4"><select data-name="bahan_id" class="form-select" required>
-                    @foreach ($bahans as $b)
-                        <option value="{{ $b->id }}">{{ $b->nama }}</option>
-                    @endforeach
-                </select>
-            </div>
+        <div class="consider-row grid grid-cols-1 gap-2 md:grid-cols-7">
+            <select data-name="bahan_id" class="select select-bordered md:col-span-2" required>
+                @foreach ($bahans as $b)
+                    <option value="{{ $b->id }}">{{ $b->nama }}</option>
+                @endforeach
+            </select>
             @foreach (['jumlah_diperiksa' => 'Diperiksa', 'jumlah_baik' => 'Baik', 'jumlah_rusak' => 'Rusak'] as $f => $p)
-                <div class="col"><input type="number" step="any" min="0" data-name="{{ $f }}"
-                        class="form-control" placeholder="{{ $p }}" required></div>
+                <input type="number" step="any" min="0" data-name="{{ $f }}" class="input input-bordered" placeholder="{{ $p }}" required>
             @endforeach
-            <div class="col-md-2"><input data-name="alasan" class="form-control" placeholder="Alasan"></div>
-            <div class="col"><button type="button" class="btn btn-outline-danger remove-consider">×</button></div>
+            <input data-name="alasan" class="input input-bordered" placeholder="Alasan">
+            <button type="button" class="btn btn-outline btn-error remove-consider">&times;</button>
         </div>
     </template>
     @push('scripts')
@@ -93,11 +76,12 @@
                 let n = document.querySelector('#considerTemplate').content.cloneNode(true);
                 n.querySelectorAll('[data-name]').forEach(e => e.name = `details[${cIndex}][${e.dataset.name}]`);
                 document.querySelector('#considerRows').append(n);
-                cIndex++
+                cIndex++;
             };
             document.addEventListener('click', e => {
-                if (e.target.classList.contains('remove-consider') && document.querySelectorAll('.consider-row')
-                    .length > 1) e.target.closest('.consider-row').remove()
+                if (e.target.classList.contains('remove-consider') && document.querySelectorAll('.consider-row').length > 1) {
+                    e.target.closest('.consider-row').remove();
+                }
             });
         </script>
     @endpush

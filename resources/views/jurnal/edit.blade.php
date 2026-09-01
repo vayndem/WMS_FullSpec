@@ -1,71 +1,57 @@
-<div class="modal fade" id="editJurnalModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-warning text-white">
-                <h5 class="modal-title fw-bold text-white">
-                    <i class="fa-solid fa-pen-to-square me-2"></i>Edit Header Jurnal
-                </h5>
-                <button type="button" class="btn-close btn-close-white " data-bs-dismiss="modal"
-                    aria-label="Close"></button>
-            </div>
-            <form id="form-update-jurnal" action="{{ route('jurnal.update', $jurnal->id) }}" method="POST"
-                data-autosave data-autosave-key="jurnal-edit-{{ $jurnal->id }}">
-                @csrf
-                @method('PUT')
-                <div class="modal-body p-4">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="fw-bold">No. Jurnal</label>
-                            <input type="text" class="form-control" name="no_jurnal" value="{{ $jurnal->no_jurnal }}" readonly>
-                            <small class="text-muted">Nomor jurnal tidak dapat diubah.</small>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="fw-bold">Tanggal Jurnal <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control" name="tanggal" value="{{ $jurnal->tanggal }}"
-                                required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="fw-bold">Sumber Transaksi</label>
-                            <input type="text" class="form-control" value="MANUAL" readonly>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="fw-bold">Reff ID / ID Referensi</label>
-                            <input type="text" class="form-control" value="Tidak digunakan untuk jurnal manual"
-                                readonly>
-                        </div>
-                    </div>
-                    <h6>Baris jurnal</h6>
-                    @foreach ($jurnal->details as $i => $detail)
-                        <div class="row g-2 mb-2">
-                            <div class="col-md-5"><select class="form-select"
-                                    name="details[{{ $i }}][coa_id]" required>
-                                    @foreach ($coas as $coa)
-                                        <option value="{{ $coa->id }}" @selected($detail->coa_id == $coa->id)>
-                                            {{ $coa->kode_akun }} — {{ $coa->nama_akun }}</option>
-                                    @endforeach
-                                </select></div>
-                            <div class="col-md-3"><input class="form-control text-end" type="number" min="0"
-                                    step=".01" name="details[{{ $i }}][debit]"
-                                    value="{{ $detail->debit }}"></div>
-                            <div class="col-md-3"><input class="form-control text-end" type="number" min="0"
-                                    step=".01" name="details[{{ $i }}][kredit]"
-                                    value="{{ $detail->kredit }}"></div>
-                        </div>
-                    @endforeach
-                    <div class="mb-3 mb-0">
-                        <label class="fw-bold">Keterangan / Catatan</label>
-                        <textarea class="form-control" name="keterangan" rows="3">{{ $jurnal->keterangan }}</textarea>
-                    </div>
-                </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-warning text-white fw-bold">
-                        <i class="fa-solid fa-floppy-disk me-1"></i> Perbarui Header
-                    </button>
-                </div>
-            </form>
+<dialog id="editJurnalModal" class="modal">
+    <div class="modal-box max-w-3xl p-0 overflow-hidden">
+        <div class="bg-warning px-6 py-4 text-warning-content">
+            <h3 class="text-lg font-bold"><i class="fa-solid fa-pen-to-square"></i> Edit Header Jurnal</h3>
         </div>
+        <form action="{{ route('jurnal.update', $jurnal->id) }}" method="POST" @submit.prevent="submitAjaxForm($event)"
+            data-autosave data-autosave-key="jurnal-edit-{{ $jurnal->id }}" class="flex flex-col">
+            @csrf
+            @method('PUT')
+            <div class="flex flex-col gap-4 p-6">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-semibold">No. Jurnal</span></label>
+                        <input type="text" class="input input-bordered bg-base-200" name="no_jurnal" value="{{ $jurnal->no_jurnal }}" readonly>
+                        <span class="label-text-alt mt-1 text-base-content/50">Nomor jurnal tidak dapat diubah.</span>
+                    </div>
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-semibold">Tanggal Jurnal <span class="text-error">*</span></span></label>
+                        <input type="date" class="input input-bordered" name="tanggal" value="{{ $jurnal->tanggal }}" required>
+                    </div>
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-semibold">Sumber Transaksi</span></label>
+                        <input type="text" class="input input-bordered bg-base-200" value="MANUAL" readonly>
+                    </div>
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-semibold">Reff ID / ID Referensi</span></label>
+                        <input type="text" class="input input-bordered bg-base-200" value="Tidak digunakan untuk jurnal manual" readonly>
+                    </div>
+                </div>
+                <div>
+                    <h6 class="mb-2 font-bold">Baris Jurnal</h6>
+                    <div class="flex flex-col gap-2">
+                        @foreach ($jurnal->details as $i => $detail)
+                            <div class="grid grid-cols-1 gap-2 md:grid-cols-11">
+                                <select class="select select-bordered md:col-span-5" data-app-picker data-placeholder="Cari kode atau nama akun..." name="details[{{ $i }}][coa_id]" required>
+                                    @foreach ($coas as $coa)
+                                        <option value="{{ $coa->id }}" @selected($detail->coa_id == $coa->id)>{{ $coa->kode_akun }} — {{ $coa->nama_akun }}</option>
+                                    @endforeach
+                                </select>
+                                <input class="input input-bordered text-end md:col-span-3" type="number" min="0" step="0.01" name="details[{{ $i }}][debit]" value="{{ $detail->debit }}">
+                                <input class="input input-bordered text-end md:col-span-3" type="number" min="0" step="0.01" name="details[{{ $i }}][kredit]" value="{{ $detail->kredit }}">
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold">Keterangan / Catatan</span></label>
+                    <textarea class="textarea textarea-bordered" name="keterangan" rows="3">{{ $jurnal->keterangan }}</textarea>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 border-t border-base-300 bg-base-100 px-6 py-4">
+                <button type="button" class="btn btn-ghost" onclick="closeAjaxModal(this)">Batal</button>
+                <button type="submit" class="btn btn-warning"><i class="fa-solid fa-floppy-disk"></i> Perbarui Header</button>
+            </div>
+        </form>
     </div>
-</div>
+</dialog>

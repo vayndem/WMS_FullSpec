@@ -1,141 +1,129 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="content-page">
-        <div class="container-fluid">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-            <div>
-                <h4 class="mb-1">Kunci Periode Akuntansi</h4>
-                <p class="text-muted mb-0">Cegah transaksi mengubah periode yang sudah ditutup.</p>
-            </div>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#lockModal"><i
-                    class="fa-solid fa-lock me-2"></i>Kunci Periode</button>
-        </div>
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table id="periodTable" class="table table-hover align-middle w-100">
-                        <thead>
-                            <tr>
-                                <th>Mulai</th>
-                                <th>Sampai</th>
-                                <th>Status</th>
-                                <th>Alasan</th>
-                                <th>Dikunci oleh</th>
-                                <th>Aksi</th>
-                            </tr>
-                        </thead>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-    </div>
-
-    <div class="modal fade" id="lockModal" tabindex="-1">
-        <div class="modal-dialog">
-            <form id="lockForm" class="modal-content">
-                @csrf
-                <div class="modal-header">
-                    <h5 class="modal-title">Kunci Periode</h5><button type="button" class="btn-close"
-                        data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="rounded-3 border border-warning-subtle bg-warning-subtle text-warning-emphasis p-3 mb-3"><i
-                            class="fa-solid fa-triangle-exclamation me-2"></i>Semua transaksi bertanggal dalam rentang ini
-                        akan ditolak.</div>
-                    <div class="row g-3">
-                        <div class="col-sm-6"><label class="form-label">Tanggal mulai</label><input name="period_start"
-                                type="date" class="form-control" required></div>
-                        <div class="col-sm-6"><label class="form-label">Tanggal akhir</label><input name="period_end"
-                                type="date" class="form-control" required></div>
-                        <div class="col-12"><label class="form-label">Alasan closing</label>
-                            <textarea name="reason" class="form-control" rows="3" required></textarea>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer"><button type="button" class="btn btn-light"
-                        data-bs-dismiss="modal">Batal</button><button class="btn btn-primary">Kunci</button></div>
-            </form>
-        </div>
-    </div>
-@endsection
-
-@push('scripts')
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const table = $('#periodTable').DataTable({
-                processing: true,
-                serverSide: true,
-                ajax: '{{ route('period-lock.index') }}',
-                columns: [{
-                        data: 'period_start'
-                    }, {
-                        data: 'period_end'
-                    },
-                    {
-                        data: 'status',
-                        render: s =>
-                            `<span class="badge ${s==='LOCKED'?'bg-danger':'bg-success'}">${s}</span>`
-                    },
-                    {
-                        data: 'reason'
-                    }, {
-                        data: 'locked_by_name',
-                        defaultContent: '-'
-                    },
-                    {
-                        data: null,
-                        orderable: false,
-                        searchable: false,
-                        render: r => r.can_unlock ?
-                            `<button class="btn btn-sm btn-outline-primary unlock" data-id="${r.id}"><i class="fa-solid fa-lock-open me-1"></i>Buka</button>` :
-                            '-'
-                    }
-                ]
-            });
-            $('#lockForm').on('submit', async function(e) {
-                e.preventDefault();
-                try {
-                    await $.ajax({
-                        url: '{{ route('period-lock.store') }}',
-                        method: 'POST',
-                        data: $(this).serialize()
-                    });
-                    bootstrap.Modal.getInstance(document.getElementById('lockModal')).hide();
-                    this.reset();
-                    table.ajax.reload();
-                    AppAlert.success('Periode berhasil dikunci.');
-                } catch (xhr) {
-                    AppAlert.ajaxError(xhr);
-                }
-            });
-            $('#periodTable').on('click', '.unlock', async function() {
-                const result = await Swal.fire({
+    <div class="content-page"
+        x-data="{
+            ...wmsDataTable({
+                url: '{{ route('period-lock.index') }}',
+                columns: [
+                    { data: 'period_start' }, { data: 'period_end' }, { data: 'status' },
+                    { data: 'reason' }, { data: 'locked_by_name' }, { data: 'aksi', orderable: false, searchable: false },
+                ],
+            }),
+            async unlock(row) {
+                const result = await window.Swal.fire({
                     title: 'Buka kembali periode?',
                     input: 'textarea',
                     inputLabel: 'Alasan wajib diisi',
                     showCancelButton: true,
                     confirmButtonText: 'Buka periode',
                     cancelButtonText: 'Batal',
-                    inputValidator: v => !v?.trim() ? 'Alasan wajib diisi' : undefined
+                    inputValidator: v => !v?.trim() ? 'Alasan wajib diisi' : undefined,
                 });
                 if (!result.isConfirmed) return;
                 try {
-                    await $.ajax({
-                        url: '{{ url('period-lock') }}/' + this.dataset.id + '/unlock',
+                    const response = await fetch(`{{ url('period-lock') }}/${row.id}/unlock`, {
                         method: 'POST',
-                        data: {
-                            _token: '{{ csrf_token() }}',
-                            unlock_reason: result.value
-                        }
+                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ unlock_reason: result.value }),
                     });
-                    table.ajax.reload();
-                    AppAlert.success('Periode berhasil dibuka.');
-                } catch (xhr) {
-                    AppAlert.ajaxError(xhr);
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) { window.AppAlert.ajaxError(data); return; }
+                    window.AppAlert.success('Periode berhasil dibuka.');
+                    this.fetchData();
+                } catch (error) {
+                    window.AppAlert.error('Gagal membuka periode.');
                 }
-            });
-        });
-    </script>
-@endpush
+            },
+        }">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h3 class="text-2xl font-bold">Kunci Periode Akuntansi</h3>
+                <p class="text-base-content/60">Cegah transaksi mengubah periode yang sudah ditutup.</p>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="lockPeriodDialog.showModal()">
+                <i class="fa-solid fa-lock"></i> Kunci Periode
+            </button>
+        </div>
+
+        <div class="card border border-base-300 bg-base-100 shadow-sm">
+            <div class="overflow-x-auto">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Mulai</th>
+                            <th>Sampai</th>
+                            <th>Status</th>
+                            <th>Alasan</th>
+                            <th>Dikunci Oleh</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-if="loading">
+                            <tr>
+                                <td colspan="6" class="py-6 text-center text-base-content/50">
+                                    <span class="loading loading-spinner loading-sm"></span> Memuat data...
+                                </td>
+                            </tr>
+                        </template>
+                        <template x-if="!loading && rows.length === 0">
+                            <tr>
+                                <td colspan="6" class="py-6 text-center text-base-content/50">Data tidak ditemukan</td>
+                            </tr>
+                        </template>
+                        <template x-for="row in rows" :key="row.id">
+                            <tr>
+                                <td x-text="row.period_start"></td>
+                                <td x-text="row.period_end"></td>
+                                <td>
+                                    <span class="badge" :class="row.status === 'LOCKED' ? 'badge-error' : 'badge-success'" x-text="row.status"></span>
+                                </td>
+                                <td x-text="row.reason"></td>
+                                <td x-text="row.locked_by_name || '-'"></td>
+                                <td>
+                                    <button type="button" x-show="row.can_unlock" class="btn btn-outline btn-primary btn-sm" @click="unlock(row)">
+                                        <i class="fa-solid fa-lock-open"></i> Buka
+                                    </button>
+                                    <span x-show="!row.can_unlock">-</span>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <dialog id="lockPeriodDialog" class="modal">
+        <div class="modal-box">
+            <h3 class="mb-4 text-lg font-bold">Kunci Periode</h3>
+            <form action="{{ route('period-lock.store') }}" method="POST" @submit.prevent="submitAjaxForm($event, { onSuccess: () => $event.target.reset() })">
+                @csrf
+                <div role="alert" class="alert alert-warning mb-4 text-sm">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>Semua transaksi bertanggal dalam rentang ini akan ditolak.</span>
+                </div>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-semibold">Tanggal Mulai</span></label>
+                        <input name="period_start" type="date" class="input input-bordered" required>
+                    </div>
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-semibold">Tanggal Akhir</span></label>
+                        <input name="period_end" type="date" class="input input-bordered" required>
+                    </div>
+                    <div class="form-control sm:col-span-2">
+                        <label class="label"><span class="label-text font-semibold">Alasan Closing</span></label>
+                        <textarea name="reason" class="textarea textarea-bordered" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="mt-4 flex justify-end gap-2">
+                    <button type="button" class="btn btn-ghost" onclick="lockPeriodDialog.close()">Batal</button>
+                    <button type="submit" class="btn btn-primary">Kunci</button>
+                </div>
+            </form>
+        </div>
+        <div class="modal-backdrop" onclick="lockPeriodDialog.close()"></div>
+    </dialog>
+@endsection

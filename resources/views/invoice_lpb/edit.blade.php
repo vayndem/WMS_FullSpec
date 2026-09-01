@@ -1,187 +1,126 @@
-<div class="modal fade" id="editInvoiceModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-create" role="document">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-warning text-white py-3 px-4">
-                <h5 class="modal-title fw-bold text-white d-flex align-items-center">
-                    <i class="fa-solid fa-pen-to-square me-2"></i>Edit Invoice LPB ({{ $invoice->no_invoice }})
-                </h5>
-                <button type="button" class="btn-close btn-close-white  opacity-100" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
-            </div>
-            <form id="form-update-invoice" action="{{ route('invoice-lpb.update', $invoice->id) }}" method="POST"
-                data-autosave data-autosave-key="invoice-lpb-edit-{{ $invoice->id }}">
-                @csrf
-                @method('PUT')
-                <input type="hidden" name="kode_supplier" value="{{ $invoice->kode_supplier }}">
-
-                <div class="modal-body p-4 bg-light">
-                    <div class="card border-0 shadow-sm p-3 mb-3 bg-white rounded-lg">
-                        <div class="row">
-                            <div class="col-12 mb-3">
-                                <label class="form-label fw-bold">LPB dalam invoice</label>
-                                <select class="form-select" name="lpb_ids[]" multiple required data-app-picker
-                                    data-placeholder="Cari dan pilih LPB/BAP supplier...">
-                                    @foreach ($lpbs as $lpb)
-                                        <option value="{{ $lpb->id }}" @selected($invoice->lpbs->contains('id', $lpb->id))>
-                                            {{ $lpb->id_lpb }} — {{ $lpb->pembelian->supplier->nama ?? '-' }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="fw-bold text-dark small text-uppercase">No. Invoice Supplier
-                                    <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="no_invoice"
-                                    value="{{ $invoice->no_invoice }}" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="fw-bold text-dark small text-uppercase">Supplier</label>
-                                <input type="text" class="form-control bg-light"
-                                    value="{{ $invoice->supplier->nama ?? '-' }}" readonly>
-                            </div>
-                            <div class="col-md-6 mb-3 mb-md-0">
-                                <label class="fw-bold text-dark small text-uppercase">Tanggal Invoice <span
-                                        class="text-danger">*</span></label>
-                                <input type="date" class="form-control" name="tanggal"
-                                    value="{{ $invoice->tanggal }}" required>
-                            </div>
-                            <div class="col-md-6 mb-0">
-                                <label class="fw-bold text-dark small text-uppercase">Deadline
-                                    Pembayaran</label>
-                                <input type="date" class="form-control" name="tgl_deadline_pembayaran"
-                                    value="{{ $invoice->tgl_deadline_pembayaran }}">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3 mb-md-0">
-                            <div class="card border-0 shadow-sm p-3 bg-white rounded-lg h-100">
-                                <label class="fw-bold text-dark small text-uppercase">Catatan / Note</label>
-                                <textarea class="form-control" name="note" rows="5" placeholder="Catatan opsional...">{{ $invoice->note }}</textarea>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card border-0 shadow-sm p-3 bg-white rounded-lg">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="fw-bold text-muted">Sub Total:</span>
-                                    <span class="fw-bold h6 text-dark mb-0">Rp
-                                        {{ number_format($invoice->sub_total, 0, ',', '.') }}</span>
-                                </div>
-                                <div class="mb-3 mb-2 d-flex align-items-center justify-content-between">
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input" name="is_ppn" id="edit_is_ppn"
-                                            value="1" {{ $invoice->ppn > 0 ? 'checked' : '' }}>
-                                        <label class="form-check-label fw-bold" for="edit_is_ppn">Gunakan
-                                            PPN (11%)</label>
-                                    </div>
-                                    <span class="fw-bold text-muted" id="edit_text_ppn">Rp
-                                        {{ number_format($invoice->ppn, 0, ',', '.') }}</span>
-                                </div>
-                                <div class="mb-3 mb-2 {{ $invoice->ppn > 0 ? '' : 'd-none' }}" id="edit_wrap_no_faktur_pajak">
-                                    <label class="fw-bold text-dark small text-uppercase">No. Faktur Pajak (NSFP)
-                                        <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control form-control-sm" name="no_faktur_pajak"
-                                        id="edit_input_no_faktur_pajak" value="{{ $invoice->no_faktur_pajak }}"
-                                        placeholder="010.001-23.12345678" pattern="\d{3}\.\d{3}-\d{2}\.\d{8}"
-                                        {{ $invoice->ppn > 0 ? 'required' : '' }}>
-                                    <div class="form-text">Format: 010.001-23.12345678 — wajib diisi bila PPN dipakai, syarat kredit PPN Masukan.</div>
-                                </div>
-                                <div class="mb-3 mb-2 row align-items-center">
-                                    <label class="col-sm-4 col-form-label fw-bold py-0">Diskon:</label>
-                                    <div class="col-sm-8">
-                                        <input type="number" step="any" min="0"
-                                            class="form-control form-control-sm text-end fw-bold" name="diskon"
-                                            id="edit_input_diskon" value="{{ $invoice->diskon }}">
-                                    </div>
-                                </div>
-                                <div class="mb-3 mb-2 row align-items-center">
-                                    <label class="col-sm-4 col-form-label fw-bold py-0">Ongkir:</label>
-                                    <div class="col-sm-8">
-                                        <input type="number" step="any" min="0"
-                                            class="form-control form-control-sm text-end fw-bold" name="ongkir"
-                                            id="edit_input_ongkir" value="{{ $invoice->ongkir }}">
-                                    </div>
-                                </div>
-                                <div class="alert alert-info mb-2" data-keep-alert>PPh 23 dicatat saat pembayaran.
-                                </div>
-                                <hr class="my-2">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h5 class="fw-bold text-dark mb-0">Grand Total:</h5>
-                                    <h5 class="fw-bold text-primary mb-0" id="edit_text_grand_total">Rp
-                                        {{ number_format($invoice->grand_total, 0, ',', '.') }}</h5>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer bg-white border-top py-3 px-4">
-                    <button type="button" class="btn btn-light border fw-bold px-4"
-                        data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-warning text-white fw-bold px-4 shadow-sm"
-                        id="btn-update-invoice">
-                        <i class="fa-solid fa-rotate me-1"></i> Perbarui Invoice
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<script>
-    $(document).ready(function() {
-        let currentSubTotal = {{ $invoice->sub_total }};
-
-        function calculateEditTotals() {
-            let isPpn = $('#edit_is_ppn').is(':checked');
-            let ppnNominal = isPpn ? Math.round((currentSubTotal * 11) / 100) : 0;
-            let diskon = parseFloat($('#edit_input_diskon').val()) || 0;
-            let ongkir = parseFloat($('#edit_input_ongkir').val()) || 0;
-            let grandTotal = (currentSubTotal + ppnNominal + ongkir) - diskon;
-
-            $('#edit_text_ppn').text('Rp ' + ppnNominal.toLocaleString('id-ID'));
-            $('#edit_text_grand_total').text('Rp ' + grandTotal.toLocaleString('id-ID'));
-        }
-
-        function toggleEditFakturPajak() {
-            const isPpn = $('#edit_is_ppn').is(':checked');
-            $('#edit_wrap_no_faktur_pajak').toggleClass('d-none', !isPpn);
-            $('#edit_input_no_faktur_pajak').prop('required', isPpn);
-        }
-
-        $('#edit_is_ppn, #edit_input_diskon, #edit_input_ongkir').on('input change',
-            function() {
-                calculateEditTotals();
-                toggleEditFakturPajak();
-            });
-
-        $('#form-update-invoice').on('submit', function(e) {
-            e.preventDefault();
-            if ($('#edit_is_ppn').is(':checked') && !/^\d{3}\.\d{3}-\d{2}\.\d{8}$/.test($('#edit_input_no_faktur_pajak').val().trim())) {
-                AppAlert.warning('Nomor Faktur Pajak wajib diisi dengan format yang benar saat PPN dipakai.');
+<dialog id="editInvoiceModal" class="modal">
+    <div class="modal-box max-w-5xl p-0 overflow-hidden" x-data="{
+        isPpn: {{ $invoice->ppn > 0 ? 'true' : 'false' }},
+        diskon: {{ $invoice->diskon }},
+        ongkir: {{ $invoice->ongkir }},
+        subTotal: {{ $invoice->sub_total }},
+        submitting: false,
+        get ppnNominal() { return this.isPpn ? Math.round((this.subTotal * 11) / 100) : 0; },
+        get grandTotal() { return (this.subTotal + this.ppnNominal + (Number(this.ongkir) || 0)) - (Number(this.diskon) || 0); },
+        async submit(event) {
+            const form = event.target;
+            if (this.isPpn && !/^\d{3}\.\d{3}-\d{2}\.\d{8}$/.test((form.no_faktur_pajak.value || '').trim())) {
+                window.AppAlert.warning('Nomor Faktur Pajak wajib diisi dengan format yang benar saat PPN dipakai.');
                 return;
             }
-            let btn = $('#btn-update-invoice');
-            btn.prop('disabled', true).html(
-                '<i class="fa-solid fa-spinner fa-spin me-1"></i> Memperbarui...');
+            this.submitting = true;
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                    body: new FormData(form),
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) { window.AppAlert.ajaxError(data); return; }
+                window.AppAlert.auto(data.message);
+                window.dispatchEvent(new CustomEvent('wms:table-refresh'));
+                form.closest('dialog').close();
+            } catch (error) {
+                window.AppAlert.error('Gagal memperbarui invoice.');
+            } finally {
+                this.submitting = false;
+            }
+        },
+    }">
+        <div class="bg-warning px-6 py-4 text-warning-content">
+            <h3 class="text-lg font-bold"><i class="fa-solid fa-pen-to-square"></i> Edit Invoice LPB ({{ $invoice->no_invoice }})</h3>
+        </div>
+        <form action="{{ route('invoice-lpb.update', $invoice->id) }}" method="POST" @submit.prevent="submit($event)"
+            data-autosave data-autosave-key="invoice-lpb-edit-{{ $invoice->id }}" class="flex flex-col">
+            @csrf
+            @method('PUT')
+            <input type="hidden" name="kode_supplier" value="{{ $invoice->kode_supplier }}">
 
-            $.ajax({
-                url: $(this).attr('action'),
-                type: "POST",
-                data: $(this).serialize(),
-                dataType: "JSON",
-                success: function(res) {
-                    if (res.success) {
-                        $('#editInvoiceModal').modal('hide');
-                        $('#table-invoice-lpb').DataTable().ajax.reload();
-                        AppAlert.auto(res.message);
-                    }
-                },
-                error: function(xhr) {
-                    btn.prop('disabled', false).html(
-                        '<i class="fa-solid fa-rotate me-1"></i> Perbarui Invoice');
-                    AppAlert.ajaxError(xhr);
-                }
-            });
-        });
-    });
-</script>
+            <div class="max-h-[70vh] overflow-y-auto p-6">
+                <div class="card border border-base-300 bg-base-100 p-4 shadow-sm">
+                    <div class="grid grid-cols-1 gap-4">
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">LPB dalam Invoice</span></label>
+                            <select class="select select-bordered" name="lpb_ids[]" multiple required data-app-picker data-placeholder="Cari dan pilih LPB/BAP supplier...">
+                                @foreach ($lpbs as $lpb)
+                                    <option value="{{ $lpb->id }}" @selected($invoice->lpbs->contains('id', $lpb->id))>
+                                        {{ $lpb->id_lpb }} — {{ $lpb->pembelian->supplier->nama ?? '-' }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div class="form-control">
+                                <label class="label"><span class="label-text font-semibold">No. Invoice Supplier <span class="text-error">*</span></span></label>
+                                <input type="text" class="input input-bordered" name="no_invoice" value="{{ $invoice->no_invoice }}" required>
+                            </div>
+                            <div class="form-control">
+                                <label class="label"><span class="label-text font-semibold">Supplier</span></label>
+                                <input type="text" class="input input-bordered bg-base-200" value="{{ $invoice->supplier->nama ?? '-' }}" readonly>
+                            </div>
+                            <div class="form-control">
+                                <label class="label"><span class="label-text font-semibold">Tanggal Invoice <span class="text-error">*</span></span></label>
+                                <input type="date" class="input input-bordered" name="tanggal" value="{{ $invoice->tanggal }}" required>
+                            </div>
+                            <div class="form-control">
+                                <label class="label"><span class="label-text font-semibold">Deadline Pembayaran</span></label>
+                                <input type="date" class="input input-bordered" name="tgl_deadline_pembayaran" value="{{ $invoice->tgl_deadline_pembayaran }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div class="card border border-base-300 bg-base-100 p-4 shadow-sm">
+                        <label class="label"><span class="label-text font-semibold">Catatan / Note</span></label>
+                        <textarea class="textarea textarea-bordered h-full" name="note" rows="5" placeholder="Catatan opsional...">{{ $invoice->note }}</textarea>
+                    </div>
+                    <div class="card border border-base-300 bg-base-100 p-4 shadow-sm">
+                        <div class="mb-2 flex items-center justify-between">
+                            <span class="font-semibold text-base-content/60">Sub Total:</span>
+                            <span class="text-lg font-bold">Rp {{ number_format($invoice->sub_total, 0, ',', '.') }}</span>
+                        </div>
+                        <div class="mb-2 flex items-center justify-between">
+                            <label class="flex cursor-pointer items-center gap-2">
+                                <input type="checkbox" name="is_ppn" value="1" x-model="isPpn" class="checkbox">
+                                <span class="font-semibold">Gunakan PPN (11%)</span>
+                            </label>
+                            <span class="font-semibold text-base-content/60" x-text="'Rp ' + ppnNominal.toLocaleString('id-ID')"></span>
+                        </div>
+                        <div x-show="isPpn" x-cloak class="mb-2">
+                            <label class="label"><span class="label-text font-semibold">No. Faktur Pajak (NSFP) <span class="text-error">*</span></span></label>
+                            <input type="text" class="input input-bordered input-sm w-full" name="no_faktur_pajak" value="{{ $invoice->no_faktur_pajak }}"
+                                placeholder="010.001-23.12345678" pattern="\d{3}\.\d{3}-\d{2}\.\d{8}">
+                            <span class="label-text-alt mt-1 text-base-content/50">Format: 010.001-23.12345678 — wajib diisi bila PPN dipakai, syarat kredit PPN Masukan.</span>
+                        </div>
+                        <div class="mb-2 flex items-center gap-3">
+                            <label class="w-24 font-semibold">Diskon:</label>
+                            <input type="number" step="any" min="0" name="diskon" x-model.number="diskon" class="input input-bordered input-sm flex-1 text-end">
+                        </div>
+                        <div class="mb-2 flex items-center gap-3">
+                            <label class="w-24 font-semibold">Ongkir:</label>
+                            <input type="number" step="any" min="0" name="ongkir" x-model.number="ongkir" class="input input-bordered input-sm flex-1 text-end">
+                        </div>
+                        <div role="alert" class="alert alert-info mb-2 text-sm">PPh 23 dicatat saat pembayaran.</div>
+                        <div class="divider my-1"></div>
+                        <div class="flex items-center justify-between">
+                            <h5 class="text-lg font-bold">Grand Total:</h5>
+                            <h5 class="text-lg font-bold text-primary" x-text="'Rp ' + grandTotal.toLocaleString('id-ID')"></h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 border-t border-base-300 bg-base-100 px-6 py-4">
+                <button type="button" class="btn btn-ghost" onclick="closeAjaxModal(this)">Batal</button>
+                <button type="submit" class="btn btn-warning" :disabled="submitting">
+                    <span x-show="submitting" class="loading loading-spinner loading-sm"></span>
+                    <i class="fa-solid fa-rotate" x-show="!submitting"></i> Perbarui Invoice
+                </button>
+            </div>
+        </form>
+    </div>
+</dialog>

@@ -1,410 +1,254 @@
-<style>
-    #createModal .input-group-text,
-    #createModal .form-control {
-        height: 42px;
-    }
-
-    #createModal select.form-control {
-        height: 42px !important;
-    }
-</style>
-
-<div class="modal fade" id="createModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-create" role="document">
-        <div class="modal-content border-0 shadow-lg rounded-3">
-            <div class="modal-header bg-primary text-white py-3 px-4">
-                <div class="d-flex align-items-center">
-                    <div class="bg-white text-primary rounded-circle p-2 me-3 d-flex align-items-center justify-content-center shadow-sm"
-                        style="width: 42px; height: 42px;">
-                        <i class="fa-solid fa-cart-flatbed fa-lg"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title fw-bold text-white mb-0">Form Pengajuan Request Barang</h5>
-                        <small class="text-white-50">Lengkapi detail pengajuan bahan atau barang kebutuhan
-                            perusahaan</small>
-                    </div>
-                </div>
-                <button type="button" class="btn-close btn-close-white  opacity-8" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+<dialog id="createModal" class="modal">
+    <div class="modal-box max-w-5xl p-0 overflow-hidden" x-data="requestCreateForm({
+        documentNumber: '{{ $documentNumber }}',
+        bahans: {{ \Illuminate\Support\Js::from($bahans->map(fn($b) => [
+                'id' => $b->id,
+                'nama' => $b->nama,
+                'satuan' => $b->satuan,
+                'kategori' => $b->kategori,
+                'tipe_gudang' => $b->tipe_gudang,
+                'tipe_barang' => $b->tipe_barang,
+                'berat_kecil' => $b->berat_kecil,
+                'satuan_kecil' => $b->satuan_kecil,
+                'keterangan_bahan' => $b->keterangan_bahan,
+            ])) }},
+    })">
+        <div class="flex items-center gap-3 bg-primary px-6 py-4 text-primary-content">
+            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+                <i class="fa-solid fa-cart-flatbed"></i>
             </div>
-            <form id="formStoreRequest" action="{{ route('request.store') }}" method="POST">
-                @csrf
-                <div class="modal-body p-4 bg-light">
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label class="fw-bold text-dark small text-uppercase mb-1">Nomor Request</label>
-                            <input type="text" name="no_request" class="form-control bg-white"
-                                value="{{ $documentNumber }}" readonly>
-                            <small class="text-muted">Nomor sudah disiapkan otomatis dan tidak dapat diubah.</small>
-                        </div>
-                    </div>
-                    <div id="items-container">
-                        <div class="item-row card border-0 shadow-sm mb-3 rounded-lg overflow-hidden">
-                            <div class="card-body p-4 bg-white">
-                                <div class="row mb-3">
-                                    <div class="col-lg-8 mb-2 mb-lg-0">
-                                        <label class="fw-bold text-dark small text-uppercase mb-1">
-                                            Nama Barang / Bahan <span class="text-danger">*</span>
-                                        </label>
-                                        <div class="input-group">
-                                            <div class="d-flex">
-                                                <span class="input-group-text bg-white border-right-0"><i
-                                                        class="fa-solid fa-box text-muted"></i></span>
-                                            </div>
-                                            <input type="hidden" name="items[0][bahan_id]" class="input-bahan-id">
-                                            <input type="text" name="items[0][nama_barang]"
-                                                class="form-control border-left-0 input-nama-barang bg-white"
-                                                placeholder="Ketik nama barang baru atau cari dari master..." required>
-                                            <div class="d-flex">
-                                                <button type="button"
-                                                    class="btn btn-outline-info btn-buka-modal-master px-3"
-                                                    title="Cari dari Master Bahan">
-                                                    <i class="fa-solid fa-magnifying-glass me-1"></i> Master
-                                                </button>
-                                                <button type="button"
-                                                    class="btn btn-outline-secondary btn-reset-master" title="Reset"
-                                                    style="display:none;">
-                                                    <i class="fa-solid fa-xmark"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-lg-4">
-                                        <label class="fw-bold text-dark small text-uppercase mb-1">Jumlah Minta
-                                            <span class="text-danger">*</span></label>
-                                        <div class="input-group">
-                                            <div class="d-flex">
-                                                <span class="input-group-text bg-white border-right-0"><i
-                                                        class="fa-solid fa-hashtag text-muted"></i></span>
-                                            </div>
-                                            <input type="number" step="any" min="0.01"
-                                                name="items[0][jumlah_minta]"
-                                                class="form-control border-left-0 input-jumlah-minta" placeholder="0"
-                                                required>
-                                        </div>
+            <div>
+                <h3 class="text-lg font-bold">Form Pengajuan Request Barang</h3>
+                <p class="text-sm text-primary-content/80">Lengkapi detail pengajuan bahan atau barang kebutuhan perusahaan</p>
+            </div>
+        </div>
+
+        <form action="{{ route('request.store') }}" method="POST" @submit.prevent="submit" class="flex flex-col">
+            @csrf
+            <div class="max-h-[70vh] overflow-y-auto p-6">
+                <div class="form-control mb-4 max-w-xs">
+                    <label class="label"><span class="label-text font-semibold">Nomor Request</span></label>
+                    <input type="text" class="input input-bordered bg-base-200" :value="documentNumber" readonly>
+                    <span class="label-text-alt mt-1 text-base-content/50">Nomor sudah disiapkan otomatis dan tidak dapat diubah.</span>
+                </div>
+
+                <template x-for="(item, idx) in items" :key="idx">
+                    <div class="card mb-3 border border-base-300 bg-base-100 shadow-sm">
+                        <div class="card-body gap-3 p-4">
+                            <div class="grid grid-cols-1 gap-3 lg:grid-cols-12">
+                                <div class="lg:col-span-8">
+                                    <label class="label"><span class="label-text font-semibold">Nama Barang / Bahan <span class="text-error">*</span></span></label>
+                                    <div class="join w-full">
+                                        <input type="text" x-model="item.nama_barang" :readonly="!!item.bahan_id"
+                                            class="input input-bordered join-item flex-1" placeholder="Ketik nama barang baru atau cari dari master..." required>
+                                        <button type="button" class="join-item btn btn-outline" @click="openPicker(idx)">
+                                            <i class="fa-solid fa-magnifying-glass"></i> Master
+                                        </button>
+                                        <button type="button" x-show="item.bahan_id" class="join-item btn btn-outline" @click="resetItem(idx)">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
                                     </div>
                                 </div>
-
-                                <div class="row">
-                                    <div class="col-xl-3 col-md-4 mb-3">
-                                        <label class="fw-bold text-dark small text-uppercase mb-1">Kategori
-                                            Bahan <span class="text-danger">*</span></label>
-                                        <select name="items[0][kategori]" class="form-select input-kategori" required
-                                            data-app-picker data-placeholder="Cari kategori bahan...">
-                                            <option value="">-- Pilih --</option>
-                                            @foreach ($kategoris as $k)
-                                                <option value="{{ $k->id }}">{{ $k->katnama }}</option>
-                                            @endforeach
-                                        </select>
-                                        <input type="hidden" name="items[0][tipe_barang]" class="input-tipe-barang">
-                                    </div>
-                                    <div class="col-xl-2 col-md-4 mb-3">
-                                        <label class="fw-bold text-dark small text-uppercase mb-1">Satuan Utama
-                                            <span class="text-danger">*</span></label>
-                                        <input type="text" name="items[0][satuan]" class="form-control input-satuan"
-                                            placeholder="PCS / KG" required>
-                                    </div>
-                                    <div class="col-xl-3 col-md-4 mb-3">
-                                        <label class="fw-bold text-dark small text-uppercase mb-1">Tipe Gudang
-                                            <span class="text-danger">*</span></label>
-                                        <select name="items[0][tipe_gudang]" class="form-select input-tipe-gudang"
-                                            required data-app-picker data-placeholder="Cari gudang...">
-                                            <option value="">-- Pilih --</option>
-                                            @foreach ($gudangs as $g)
-                                                <option value="{{ $g->id }}">{{ $g->nama }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-xl-1 col-md-2 mb-3">
-                                        <label class="fw-bold text-dark small text-uppercase mb-1">Isi/Utama</label>
-                                        <input type="number" step="any" name="items[0][berat_kecil]"
-                                            value="1.0" class="form-control input-berat-kecil"
-                                            title="Jumlah satuan kecil dalam 1 satuan utama">
-                                    </div>
-                                    <div class="col-xl-1 col-md-2 mb-3">
-                                        <label class="fw-bold text-dark small text-uppercase mb-1">Sat. Kecil</label>
-                                        <input type="text" name="items[0][satuan_kecil]"
-                                            class="form-control input-satuan-kecil" placeholder="Opsional">
-                                    </div>
-                                    <div class="col-xl-2 col-md-4 mb-3">
-                                        <label class="fw-bold text-dark small text-uppercase mb-1">Keterangan</label>
-                                        <div class="d-flex">
-                                            <input type="text" name="items[0][keterangan]"
-                                                class="form-control input-keterangan me-2" placeholder="Spesifikasi">
-                                            <button type="button" class="btn btn-outline-danger shadow-sm px-3"
-                                                onclick="window.removeItem(this)" title="Hapus Item"
-                                                style="height: 42px;">
-                                                <i class="fa-solid fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
+                                <div class="lg:col-span-4">
+                                    <label class="label"><span class="label-text font-semibold">Jumlah Minta <span class="text-error">*</span></span></label>
+                                    <input type="number" step="any" min="0.01" x-model="item.jumlah_minta"
+                                        class="input input-bordered w-full" placeholder="0" required>
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <div class="collapse mb-3" id="materialPickerCanvas">
-                        <div class="create-section material-picker-panel">
-                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                                <div>
-                                    <h6 class="fw-bold mb-1">
-                                        <i class="fa-solid fa-boxes-stacked text-primary me-2"></i>
-                                        Pilih Barang dari Master
-                                    </h6>
-                                    <small class="text-muted">Cari lalu pilih barang untuk baris request yang
-                                        aktif.</small>
-                                </div>
-                                <button type="button" class="btn btn-sm btn-light border" data-bs-toggle="collapse"
-                                    data-bs-target="#materialPickerCanvas">
-                                    <i class="fa-solid fa-xmark me-1"></i>Tutup
-                                </button>
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table table-hover table-striped w-100 mb-0"
-                                    id="table-modal-master-bahan">
-                                    <thead>
-                                        <tr>
-                                            <th>Nama Bahan</th>
-                                            <th>Satuan</th>
-                                            <th width="90" class="text-center">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach ($bahans as $b)
-                                            <tr>
-                                                <td class="fw-bold align-middle">{{ $b->nama }}</td>
-                                                <td class="align-middle text-secondary">{{ $b->satuan ?? '-' }}</td>
-                                                <td class="text-center align-middle">
-                                                    <button type="button"
-                                                        class="btn btn-sm btn-success btn-pilih-master-item shadow-sm"
-                                                        data-id="{{ $b->id }}" data-nama="{{ $b->nama }}"
-                                                        data-kategori="{{ $b->kategori }}"
-                                                        data-satuan="{{ $b->satuan }}"
-                                                        data-tipegudang="{{ $b->tipe_gudang }}"
-                                                        data-tipebarang="{{ $b->tipe_barang }}"
-                                                        data-beratkecil="{{ $b->berat_kecil }}"
-                                                        data-satuankecil="{{ $b->satuan_kecil }}"
-                                                        data-keterangan="{{ $b->keterangan_bahan }}">
-                                                        <i class="fa-solid fa-check me-1"></i>Pilih
-                                                    </button>
-                                                </td>
-                                            </tr>
+                            <div class="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
+                                <div class="xl:col-span-2">
+                                    <label class="label"><span class="label-text font-semibold text-xs">Kategori Bahan <span class="text-error">*</span></span></label>
+                                    <select x-model="item.kategori" class="select select-bordered w-full" required>
+                                        <option value="">-- Pilih --</option>
+                                        @foreach ($kategoris as $k)
+                                            <option value="{{ $k->id }}">{{ $k->katnama }}</option>
                                         @endforeach
-                                    </tbody>
-                                </table>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="label"><span class="label-text font-semibold text-xs">Satuan Utama <span class="text-error">*</span></span></label>
+                                    <input type="text" x-model="item.satuan" class="input input-bordered w-full" placeholder="PCS / KG" required>
+                                </div>
+                                <div class="xl:col-span-2">
+                                    <label class="label"><span class="label-text font-semibold text-xs">Tipe Gudang <span class="text-error">*</span></span></label>
+                                    <select x-model="item.tipe_gudang" class="select select-bordered w-full" required>
+                                        <option value="">-- Pilih --</option>
+                                        @foreach ($gudangs as $g)
+                                            <option value="{{ $g->id }}">{{ $g->nama }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="label"><span class="label-text font-semibold text-xs">Isi/Utama</span></label>
+                                    <input type="number" step="any" x-model="item.berat_kecil" class="input input-bordered w-full"
+                                        title="Jumlah satuan kecil dalam 1 satuan utama">
+                                </div>
+                                <div>
+                                    <label class="label"><span class="label-text font-semibold text-xs">Sat. Kecil</span></label>
+                                    <input type="text" x-model="item.satuan_kecil" class="input input-bordered w-full" placeholder="Opsional">
+                                </div>
+                                <div class="flex items-end gap-2 md:col-span-2 xl:col-span-3">
+                                    <div class="flex-1">
+                                        <label class="label"><span class="label-text font-semibold text-xs">Keterangan</span></label>
+                                        <input type="text" x-model="item.keterangan" class="input input-bordered w-full" placeholder="Spesifikasi">
+                                    </div>
+                                    <button type="button" class="btn btn-outline btn-error" @click="removeItem(idx)" x-show="items.length > 1">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
+                </template>
 
-                    <div class="mt-2">
-                        <button type="button" class="btn btn-outline-primary fw-bold shadow-sm px-4"
-                            onclick="window.addItemRow()">
-                            <i class="fa-solid fa-plus me-1"></i> Tambah Item Request
+                <div x-show="pickerOpen" x-cloak class="mb-3 rounded-lg border border-base-300 bg-base-200/40 p-4">
+                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <h6 class="font-bold"><i class="fa-solid fa-boxes-stacked text-primary"></i> Pilih Barang dari Master</h6>
+                            <p class="text-sm text-base-content/50">Cari lalu pilih barang untuk baris request yang aktif.</p>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline" @click="pickerOpen = false">
+                            <i class="fa-solid fa-xmark"></i> Tutup
                         </button>
                     </div>
+                    <label class="input input-bordered mb-3 flex w-full max-w-xs items-center gap-2">
+                        <i class="fa-solid fa-magnifying-glass text-base-content/40"></i>
+                        <input type="search" class="grow" placeholder="Cari bahan..." x-model="pickerSearch">
+                    </label>
+                    <div class="max-h-72 overflow-y-auto overflow-x-auto">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Nama Bahan</th>
+                                    <th>Satuan</th>
+                                    <th class="w-24 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="bahan in filteredBahans" :key="bahan.id">
+                                    <tr>
+                                        <td class="font-semibold" x-text="bahan.nama"></td>
+                                        <td x-text="bahan.satuan || '-'"></td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-success btn-xs" @click="pickBahan(bahan)">
+                                                <i class="fa-solid fa-check"></i> Pilih
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="modal-footer bg-white border-top-0 px-4 py-3">
-                    <button type="button" class="btn btn-light border px-4 fw-bold"
-                        data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary px-4 shadow-sm fw-bold" id="btnSubmitRequest">
-                        <i class="fa-solid fa-paper-plane me-2"></i> Kirim Request
-                    </button>
-                </div>
-            </form>
-        </div>
+
+                <button type="button" class="btn btn-outline btn-primary" @click="addItem()">
+                    <i class="fa-solid fa-plus"></i> Tambah Item Request
+                </button>
+            </div>
+            <div class="flex justify-end gap-2 border-t border-base-300 bg-base-100 px-6 py-4">
+                <button type="button" class="btn btn-ghost" onclick="closeAjaxModal(this)">Batal</button>
+                <button type="submit" class="btn btn-primary" :disabled="submitting">
+                    <span x-show="submitting" class="loading loading-spinner loading-sm"></span>
+                    <i class="fa-solid fa-paper-plane" x-show="!submitting"></i> Kirim Request
+                </button>
+            </div>
+        </form>
     </div>
-</div>
+</dialog>
 
 <script>
-    window.itemIdx = 1;
-    let currentRowTarget = null;
+    function requestCreateForm(config) {
+        return {
+            documentNumber: config.documentNumber,
+            bahans: config.bahans,
+            pickerOpen: false,
+            pickerSearch: '',
+            activePickerIndex: null,
+            submitting: false,
+            items: [{
+                bahan_id: '', nama_barang: '', jumlah_minta: '', kategori: '', tipe_barang: '',
+                satuan: '', tipe_gudang: '', berat_kecil: '1.0', satuan_kecil: '', keterangan: '',
+            }],
 
-    $(document).off('change', '.input-kategori').on('change', '.input-kategori', function() {
-        let val = $(this).val();
-        $(this).closest('.item-row').find('.input-tipe-barang').val(val);
-    });
+            get filteredBahans() {
+                const term = this.pickerSearch.trim().toLocaleLowerCase('id-ID');
+                if (!term) return this.bahans;
+                return this.bahans.filter((b) => b.nama.toLocaleLowerCase('id-ID').includes(term));
+            },
 
-    window.addItemRow = function() {
-        let container = document.getElementById('items-container');
-        let newRow = document.createElement('div');
-        newRow.className = 'item-row card border-0 shadow-sm mb-3 rounded-lg overflow-hidden';
-        newRow.innerHTML = `
-            <div class="card-body p-4 bg-white">
-                <div class="row mb-3">
-                    <div class="col-lg-8 mb-2 mb-lg-0">
-                        <label class="fw-bold text-dark small text-uppercase mb-1">
-                            Nama Barang / Bahan <span class="text-danger">*</span>
-                        </label>
-                        <div class="input-group">
-                            <div class="d-flex">
-                                <span class="input-group-text bg-white border-right-0"><i class="fa-solid fa-box text-muted"></i></span>
-                            </div>
-                            <input type="hidden" name="items[${window.itemIdx}][bahan_id]" class="input-bahan-id">
-                            <input type="text" name="items[${window.itemIdx}][nama_barang]" class="form-control border-left-0 input-nama-barang bg-white" placeholder="Ketik nama barang baru atau cari dari master..." required>
-                            <div class="d-flex">
-                                <button type="button" class="btn btn-outline-info btn-buka-modal-master px-3" title="Cari dari Master Bahan">
-                                    <i class="fa-solid fa-magnifying-glass me-1"></i> Master
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary btn-reset-master" title="Reset" style="display:none;">
-                                    <i class="fa-solid fa-xmark"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4">
-                        <label class="fw-bold text-dark small text-uppercase mb-1">Jumlah Minta <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <div class="d-flex">
-                                <span class="input-group-text bg-white border-right-0"><i class="fa-solid fa-hashtag text-muted"></i></span>
-                            </div>
-                            <input type="number" step="any" min="0.01" name="items[${window.itemIdx}][jumlah_minta]" class="form-control border-left-0 input-jumlah-minta" placeholder="0" required>
-                        </div>
-                    </div>
-                </div>
+            addItem() {
+                this.items.push({
+                    bahan_id: '', nama_barang: '', jumlah_minta: '', kategori: '', tipe_barang: '',
+                    satuan: '', tipe_gudang: '', berat_kecil: '1.0', satuan_kecil: '', keterangan: '',
+                });
+            },
 
-                <div class="row">
-                    <div class="col-xl-3 col-md-4 mb-3">
-                        <label class="fw-bold text-dark small text-uppercase mb-1">Kategori Bahan <span class="text-danger">*</span></label>
-                        <select name="items[${window.itemIdx}][kategori]" class="form-select input-kategori" required
-                            data-app-picker data-placeholder="Cari kategori bahan...">
-                            <option value="">-- Pilih --</option>
-                            @foreach ($kategoris as $k)
-                                <option value="{{ $k->id }}">{{ $k->katnama }}</option>
-                            @endforeach
-                        </select>
-                        <input type="hidden" name="items[${window.itemIdx}][tipe_barang]" class="input-tipe-barang">
-                    </div>
-                    <div class="col-xl-2 col-md-4 mb-3">
-                        <label class="fw-bold text-dark small text-uppercase mb-1">Satuan Utama <span class="text-danger">*</span></label>
-                        <input type="text" name="items[${window.itemIdx}][satuan]" class="form-control input-satuan" placeholder="PCS / KG" required>
-                    </div>
-                    <div class="col-xl-3 col-md-4 mb-3">
-                        <label class="fw-bold text-dark small text-uppercase mb-1">Tipe Gudang <span class="text-danger">*</span></label>
-                        <select name="items[${window.itemIdx}][tipe_gudang]" class="form-select input-tipe-gudang" required
-                            data-app-picker data-placeholder="Cari gudang...">
-                            <option value="">-- Pilih --</option>
-                            @foreach ($gudangs as $g)
-                                <option value="{{ $g->id }}">{{ $g->nama }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-xl-1 col-md-2 mb-3">
-                        <label class="fw-bold text-dark small text-uppercase mb-1">Isi/Utama</label>
-                        <input type="number" step="any" name="items[${window.itemIdx}][berat_kecil]" value="1.0" class="form-control input-berat-kecil" title="Jumlah satuan kecil dalam 1 satuan utama">
-                    </div>
-                    <div class="col-xl-1 col-md-2 mb-3">
-                        <label class="fw-bold text-dark small text-uppercase mb-1">Sat. Kecil</label>
-                        <input type="text" name="items[${window.itemIdx}][satuan_kecil]" class="form-control input-satuan-kecil" placeholder="Opsional">
-                    </div>
-                    <div class="col-xl-2 col-md-4 mb-3">
-                        <label class="fw-bold text-dark small text-uppercase mb-1">Keterangan</label>
-                        <div class="d-flex">
-                            <input type="text" name="items[${window.itemIdx}][keterangan]" class="form-control input-keterangan me-2" placeholder="Spesifikasi">
-                            <button type="button" class="btn btn-outline-danger shadow-sm px-3" onclick="window.removeItem(this)" title="Hapus Item" style="height: 42px;">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        container.appendChild(newRow);
-        window.itemIdx++;
-    };
+            removeItem(idx) {
+                if (this.items.length > 1) this.items.splice(idx, 1);
+            },
 
-    window.removeItem = function(btn) {
-        let rows = document.querySelectorAll('.item-row');
-        if (rows.length > 1) {
-            btn.closest('.item-row').remove();
-        }
-    };
+            resetItem(idx) {
+                this.items[idx] = {
+                    bahan_id: '', nama_barang: '', jumlah_minta: this.items[idx].jumlah_minta,
+                    kategori: '', tipe_barang: '', satuan: '', tipe_gudang: '',
+                    berat_kecil: '1.0', satuan_kecil: '', keterangan: '',
+                };
+            },
 
-    $(document).ready(function() {
-        if (!$.fn.DataTable.isDataTable('#table-modal-master-bahan')) {
-            $('#table-modal-master-bahan').DataTable();
-        }
+            openPicker(idx) {
+                this.activePickerIndex = idx;
+                this.pickerOpen = true;
+                this.pickerSearch = '';
+            },
 
-        $(document).off('click', '.btn-buka-modal-master').on('click', '.btn-buka-modal-master', function() {
-            currentRowTarget = $(this).closest('.item-row');
-            bootstrap.Collapse.getOrCreateInstance('#materialPickerCanvas', {
-                toggle: false
-            }).show();
-            $('#table-modal-master-bahan').DataTable().columns.adjust();
-            document.querySelector('#materialPickerCanvas')?.scrollIntoView({
-                behavior: 'smooth',
-                block: 'nearest'
-            });
-        });
+            pickBahan(bahan) {
+                if (this.activePickerIndex === null) return;
+                const item = this.items[this.activePickerIndex];
+                item.bahan_id = bahan.id;
+                item.nama_barang = bahan.nama;
+                if (bahan.kategori) { item.kategori = bahan.kategori; item.tipe_barang = bahan.kategori; }
+                if (bahan.satuan) item.satuan = bahan.satuan;
+                if (bahan.tipe_gudang) item.tipe_gudang = bahan.tipe_gudang;
+                if (bahan.berat_kecil) item.berat_kecil = bahan.berat_kecil;
+                if (bahan.satuan_kecil) item.satuan_kecil = bahan.satuan_kecil;
+                if (bahan.keterangan_bahan) item.keterangan = bahan.keterangan_bahan;
+                this.pickerOpen = false;
+            },
 
-        $(document).off('click', '.btn-pilih-master-item').on('click', '.btn-pilih-master-item', function() {
-            if (currentRowTarget) {
-                let btn = $(this);
+            async submit(event) {
+                this.submitting = true;
+                try {
+                    const form = event.target;
+                    const payload = new FormData(form);
+                    payload.set('no_request', this.documentNumber);
+                    this.items.forEach((item, idx) => {
+                        Object.entries(item).forEach(([key, value]) => {
+                            payload.set(`items[${idx}][${key}]`, value ?? '');
+                        });
+                    });
 
-                currentRowTarget.find('.input-bahan-id').val(btn.data('id'));
-                currentRowTarget.find('.input-nama-barang').val(btn.data('nama')).prop('readonly',
-                    true);
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                        body: payload,
+                    });
+                    const data = await response.json().catch(() => ({}));
 
-                if (btn.data('kategori')) {
-                    currentRowTarget.find('.input-kategori').val(btn.data('kategori')).trigger(
-                        'change');
-                    currentRowTarget.find('.input-tipe-barang').val(btn.data('kategori'));
-                }
-                if (btn.data('satuan')) currentRowTarget.find('.input-satuan').val(btn.data('satuan'));
-                if (btn.data('tipegudang')) currentRowTarget.find('.input-tipe-gudang').val(btn.data(
-                    'tipegudang')).trigger('change');
-                if (btn.data('beratkecil')) currentRowTarget.find('.input-berat-kecil').val(btn.data(
-                    'beratkecil'));
-                if (btn.data('satuankecil')) currentRowTarget.find('.input-satuan-kecil').val(btn.data(
-                    'satuankecil'));
-                if (btn.data('keterangan')) currentRowTarget.find('.input-keterangan').val(btn.data(
-                    'keterangan'));
-
-                currentRowTarget.find('.btn-reset-master').show();
-                bootstrap.Collapse.getOrCreateInstance('#materialPickerCanvas', {
-                    toggle: false
-                }).hide();
-            }
-        });
-
-        $(document).off('click', '.btn-reset-master').on('click', '.btn-reset-master', function() {
-            let row = $(this).closest('.item-row');
-            row.find('.input-bahan-id').val('');
-            row.find('.input-nama-barang').val('').prop('readonly', false);
-            row.find('.input-kategori').val('').trigger('change');
-            row.find('.input-tipe-barang').val('');
-            row.find('.input-satuan').val('');
-            row.find('.input-tipe-gudang').val('').trigger('change');
-            row.find('.input-berat-kecil').val('1.0');
-            row.find('.input-satuan-kecil').val('');
-            row.find('.input-keterangan').val('');
-            $(this).hide();
-        });
-
-        $('#formStoreRequest').submit(function(e) {
-            e.preventDefault();
-            let btn = $('#btnSubmitRequest');
-            btn.prop('disabled', true).html(
-                '<i class="fa-solid fa-spinner fa-spin me-1"></i> Mengirim...');
-
-            $.ajax({
-                url: $(this).attr('action'),
-                type: 'POST',
-                data: $(this).serialize(),
-                success: function(res) {
-                    $('#createModal').modal('hide');
-                    if ($.fn.DataTable.isDataTable('#table-request')) {
-                        $('#table-request').DataTable().draw();
+                    if (!response.ok) {
+                        window.AppAlert.ajaxError(data);
+                        return;
                     }
-                    AppAlert.auto(res.message);
-                },
-                error: function(err) {
-                    AppAlert.auto(err.responseJSON?.message || 'Gagal menyimpan request.');
-                },
-                complete: function() {
-                    btn.prop('disabled', false).html(
-                        '<i class="fa-solid fa-paper-plane me-2"></i> Kirim Request');
+
+                    window.AppAlert.auto(data.message || 'Request berhasil disimpan.');
+                    window.dispatchEvent(new CustomEvent('wms:table-refresh'));
+                    this.$root.closest('dialog')?.close();
+                } catch (error) {
+                    window.AppAlert.error('Gagal menyimpan request.');
+                } finally {
+                    this.submitting = false;
                 }
-            });
-        });
-    });
+            },
+        };
+    }
 </script>

@@ -2,853 +2,615 @@
 
 @section('content')
     <div class="content-page">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-lg-12">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
-                        <div>
-                            <h4 class="mb-1 fw-bold text-dark">Daftar Transaksi Pembelian</h4>
-                            <p class="mb-0 text-muted">Kelola seluruh riwayat dan pengajuan Purchase Order (PO)</p>
-                        </div>
-                        @can('create', App\Models\Pembelian::class)
-                            <button type="button" class="btn btn-primary add-list shadow-sm" id="btnTambahPembelian">
-                                <i class="fa-solid fa-plus me-2"></i>Tambah Pembelian
-                            </button>
-                        @endcan
-                    </div>
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h3 class="text-2xl font-bold">Daftar Transaksi Pembelian</h3>
+                <p class="text-base-content/60">Kelola seluruh riwayat dan pengajuan Purchase Order (PO)</p>
+            </div>
+            @can('create', App\Models\Pembelian::class)
+                <button type="button" class="btn btn-primary" onclick="Alpine.$data(pembelianDialog).openCreate()">
+                    <i class="fa-solid fa-plus"></i> Tambah Pembelian
+                </button>
+            @endcan
+        </div>
+
+        @if (session('success'))
+            <div role="alert" class="alert alert-success mb-4 shadow-sm">
+                <i class="fa-solid fa-circle-check"></i>
+                <span>{{ session('success') }}</span>
+            </div>
+        @endif
+
+        <div class="card border border-base-300 bg-base-100 shadow-sm"
+            x-data="wmsDataTable({
+                url: '{{ route('pembelian.index') }}',
+                reportUrl: '{{ route('pembelian.report.pdf') }}',
+                extraParams: { bulan: '{{ date('m') }}', tahun: '{{ date('Y') }}' },
+                columns: [
+                    { data: 'no_po' }, { data: 'tanggal' }, { data: 'nama' },
+                    { data: 'grand_total' }, { data: 'status' }, { data: 'aksi', orderable: false, searchable: false },
+                ],
+            })">
+            <div class="grid grid-cols-1 gap-3 border-b border-base-300 p-4 md:grid-cols-4">
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold text-xs uppercase">Filter Bulan</span></label>
+                    <select class="select select-bordered select-sm" x-model="extraParams.bulan">
+                        <option value="0">Semua Bulan</option>
+                        @for ($m = 1; $m <= 12; $m++)
+                            <option value="{{ sprintf('%02d', $m) }}">{{ date('F', mktime(0, 0, 0, $m, 1)) }}</option>
+                        @endfor
+                    </select>
                 </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold text-xs uppercase">Filter Tahun</span></label>
+                    <input type="number" class="input input-bordered input-sm" x-model="extraParams.tahun">
+                </div>
+                <div class="form-control md:col-span-2">
+                    <label class="label"><span class="label-text font-semibold text-xs uppercase">Cari</span></label>
+                    <label class="input input-bordered input-sm flex items-center gap-2">
+                        <i class="fa-solid fa-magnifying-glass text-base-content/40"></i>
+                        <input type="search" class="grow" placeholder="Cari PO / supplier..." x-model="search">
+                    </label>
+                </div>
+                <div>
+                    <a :href="buildReportUrl()" target="_blank" rel="noopener" class="btn btn-error btn-sm">
+                        <i class="fa-solid fa-file-pdf"></i> PDF
+                    </a>
+                </div>
+            </div>
 
-                @if (session('success'))
-                    <div class="col-lg-12">
-                        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-                            <i class="fa-solid fa-circle-check me-2"></i>{{ session('success') }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <div class="overflow-x-auto">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th class="w-8"></th>
+                            <th class="cursor-pointer select-none" @click="sortBy(0)">No PO</th>
+                            <th class="cursor-pointer select-none" @click="sortBy(1)">Tanggal</th>
+                            <th class="cursor-pointer select-none" @click="sortBy(2)">Supplier</th>
+                            <th class="cursor-pointer select-none text-end" @click="sortBy(3)">Grand Total</th>
+                            <th class="cursor-pointer select-none text-center" @click="sortBy(4)">Status</th>
+                            <th class="text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-if="loading">
+                            <tr>
+                                <td colspan="7" class="py-6 text-center text-base-content/50">
+                                    <span class="loading loading-spinner loading-sm"></span> Memuat data...
+                                </td>
+                            </tr>
+                        </template>
+                        <template x-if="!loading && rows.length === 0">
+                            <tr>
+                                <td colspan="7" class="py-6 text-center text-base-content/50">Data tidak ditemukan</td>
+                            </tr>
+                        </template>
+                    </tbody>
+                    <template x-for="row in rows" :key="row.no_po">
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <button type="button" class="btn btn-outline btn-primary btn-xs btn-circle" @click="toggleExpand(row.no_po)">
+                                        <i class="fa-solid" :class="expanded[row.no_po] ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+                                    </button>
+                                </td>
+                                <td class="font-bold text-primary" x-text="row.no_po"></td>
+                                <td x-text="row.tanggal"></td>
+                                <td x-text="row.nama"></td>
+                                <td class="text-end font-bold" x-text="'Rp ' + Number(row.grand_total || 0).toLocaleString('id-ID')"></td>
+                                <td class="text-center">
+                                    <span class="badge" :class="row.status == 2 ? 'badge-error' : 'badge-success'" x-text="row.status == 2 ? 'Closed' : 'Open'"></span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <a :href="`{{ url('pembelian') }}/${row.no_po}/cetak`" target="_blank" class="btn btn-outline btn-info btn-sm" title="Cetak PO">
+                                            <i class="fa-solid fa-print"></i>
+                                        </a>
+                                        <template x-if="row.kunci == 0">
+                                            <span class="inline-flex gap-1">
+                                                <button type="button" class="btn btn-outline btn-warning btn-sm" title="Edit PO"
+                                                    @click="Alpine.$data(pembelianDialog).openEdit(row.no_po)">
+                                                    <i class="fa-solid fa-pen-to-square"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline btn-error btn-sm" title="Hapus PO"
+                                                    @click="Alpine.$data(pembelianDialog).deletePo(row.no_po)">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+                                            </span>
+                                        </template>
+                                        <span class="badge badge-ghost" x-show="row.kunci != 0"><i class="fa-solid fa-lock"></i> Locked</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr x-show="expanded[row.no_po]" x-cloak>
+                                <td></td>
+                                <td colspan="6" class="bg-base-200/40">
+                                    <div class="my-2 rounded-lg border border-base-300 bg-base-100 p-4">
+                                        <h6 class="mb-2 font-bold"><i class="fa-solid fa-boxes-packing"></i> Detail Item yang Dibeli (No PO: <span x-text="row.no_po"></span>)</h6>
+                                        <div class="overflow-x-auto">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Nama Barang / Bahan</th>
+                                                        <th class="text-center">Jumlah Beli</th>
+                                                        <th class="text-end">Harga Satuan</th>
+                                                        <th class="text-end">Subtotal</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <template x-if="!row.details || row.details.length === 0">
+                                                        <tr>
+                                                            <td colspan="4" class="text-center text-base-content/50">Tidak ada detail item.</td>
+                                                        </tr>
+                                                    </template>
+                                                    <template x-for="item in row.details" :key="item.id">
+                                                        <tr>
+                                                            <td x-text="item.bahan ? item.bahan.nama : ('Bahan #' + item.bahan_id)"></td>
+                                                            <td class="text-center font-bold" x-text="item.jumlah"></td>
+                                                            <td class="text-end" x-text="'Rp ' + Number(item.harga || 0).toLocaleString('id-ID')"></td>
+                                                            <td class="text-end font-bold text-primary" x-text="'Rp ' + Number(item.include || (item.jumlah * item.harga) || 0).toLocaleString('id-ID')"></td>
+                                                        </tr>
+                                                    </template>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </template>
+                </table>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 p-4 text-sm">
+                <span class="text-base-content/60">
+                    Menampilkan <span x-text="rangeStart"></span>–<span x-text="rangeEnd"></span> dari
+                    <span x-text="recordsFiltered"></span> data
+                </span>
+                <div class="join">
+                    <button type="button" class="join-item btn btn-sm" :disabled="currentPage === 0" @click="goToPage(currentPage - 1)">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <button type="button" class="join-item btn btn-sm btn-disabled" x-text="`${currentPage + 1} / ${pageCount}`"></button>
+                    <button type="button" class="join-item btn btn-sm" :disabled="currentPage >= pageCount - 1" @click="goToPage(currentPage + 1)">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <dialog id="pembelianDialog" class="modal" x-data="pembelianForm({ documentNumber: '{{ $documentNumber }}' })">
+        <div class="modal-box max-w-6xl p-0 overflow-hidden">
+            <div class="flex items-center gap-3 bg-primary px-6 py-4 text-primary-content">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <h3 class="text-lg font-bold" x-text="editMode ? `Edit Transaksi Pembelian (${editNoPo})` : 'Buat Transaksi Pembelian Baru'"></h3>
+            </div>
+            <form @submit.prevent="submit()" class="flex flex-col">
+                <div class="max-h-[75vh] overflow-y-auto p-6">
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Nomor PO</span></label>
+                            <input type="text" class="input input-bordered bg-base-200" :value="form.no_po" readonly>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Tanggal</span></label>
+                            <input type="date" x-model="form.tanggal" class="input input-bordered" required>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Supplier</span></label>
+                            <div class="join w-full">
+                                <input type="text" :value="form.supplier_nama" class="input input-bordered join-item flex-1 bg-base-200" placeholder="Pilih Supplier..." readonly required>
+                                <button type="button" class="join-item btn btn-outline" @click="openSupplierPicker()">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">No. SO / Order</span></label>
+                            <input type="text" x-model="form.no_order" class="input input-bordered">
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Untuk Perhatian (ATTN)</span></label>
+                            <input type="text" x-model="form.untuk_perhatian" class="input input-bordered">
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Term Pembayaran</span></label>
+                            <input type="text" x-model="form.term" class="input input-bordered">
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Pilihan PPN (11%)</span></label>
+                            <select x-model="form.is_ppn" class="select select-bordered">
+                                <option value="0">Non-PPN</option>
+                                <option value="1">Gunakan PPN (11%)</option>
+                            </select>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Diskon (Rp)</span></label>
+                            <input type="number" step="any" min="0" x-model="form.diskon" class="input input-bordered">
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Ongkir / Handling (Rp)</span></label>
+                            <input type="number" step="any" min="0" x-model="form.ongkir" class="input input-bordered">
+                        </div>
+                        <div class="form-control md:col-span-4">
+                            <label class="label"><span class="label-text font-semibold">Catatan / Notes</span></label>
+                            <textarea x-model="form.notes" class="textarea textarea-bordered" rows="2"></textarea>
                         </div>
                     </div>
-                @endif
 
-                <div class="col-lg-12">
-                    <div class="card shadow-sm border-0 mb-4">
-                        <div class="card-body">
-                            <div class="row mb-4">
-                                <div class="col-md-4">
-                                    <label for="filter_bulan" class="fw-bold">Filter Bulan</label>
-                                    <select id="filter_bulan" class="form-control">
-                                        <option value="0">Semua Bulan</option>
-                                        @for ($m = 1; $m <= 12; $m++)
-                                            <option value="{{ sprintf('%02d', $m) }}"
-                                                {{ date('m') == $m ? 'selected' : '' }}>
-                                                {{ date('F', mktime(0, 0, 0, $m, 1)) }}
-                                            </option>
-                                        @endfor
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="filter_tahun" class="fw-bold">Filter Tahun</label>
-                                    <input type="number" id="filter_tahun" class="form-control"
-                                        value="{{ date('Y') }}">
-                                </div>
-                                <div class="col-md-4 d-flex align-items-end">
-                                    <button id="btn_filter" class="btn btn-info w-100 shadow-sm">
-                                        <i class="fa-solid fa-filter me-1"></i> Terapkan Filter
-                                    </button>
-                                </div>
+                    <div x-show="supplierPickerOpen" x-cloak class="mt-4 rounded-lg border border-base-300 bg-base-200/40 p-4">
+                        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <h6 class="font-bold"><i class="fa-solid fa-truck-field text-primary"></i> Pilih Supplier</h6>
+                                <p class="text-sm text-base-content/50">Cari berdasarkan nama, telepon, atau alamat supplier.</p>
                             </div>
-
-                            <div class="table-responsive">
-                                <table class="table table-hover table-striped mb-0" id="table-pembelian" width="100%"
-                                    cellspacing="0" data-report-url="{{ route('pembelian.report.pdf') }}"
-                                    data-filter-columns="1:no_po,2:tanggal,3:nama,4:grand_total,5:status">
-                                    <thead class="bg-light text-uppercase font-size-12">
+                            <button type="button" class="btn btn-sm btn-outline" @click="supplierPickerOpen = false">
+                                <i class="fa-solid fa-xmark"></i> Tutup
+                            </button>
+                        </div>
+                        <label class="input input-bordered input-sm mb-3 flex w-full max-w-xs items-center gap-2">
+                            <i class="fa-solid fa-magnifying-glass text-base-content/40"></i>
+                            <input type="search" class="grow" placeholder="Cari supplier..." x-model="supplierSearchTerm" @input.debounce.350ms="fetchSuppliers()">
+                        </label>
+                        <div class="max-h-72 overflow-y-auto overflow-x-auto">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Nama Supplier</th>
+                                        <th>Telepon / HP</th>
+                                        <th>Alamat</th>
+                                        <th class="w-24 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="item in supplierResults" :key="item.id">
                                         <tr>
-                                            <th width="5%" class="text-center py-3"></th>
-                                            <th width="18%" class="py-3 ps-2">No PO</th>
-                                            <th width="13%" class="py-3">Tanggal</th>
-                                            <th class="py-3">Supplier</th>
-                                            <th width="18%" class="py-3 text-end">Grand Total</th>
-                                            <th width="10%" class="text-center py-3">Status</th>
-                                            <th width="18%" class="text-center py-3 pe-4">Aksi</th>
+                                            <td x-text="item.nama"></td>
+                                            <td x-text="item.telepon || '-'"></td>
+                                            <td x-text="item.alamat || '-'"></td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-success btn-xs" @click="pickSupplier(item)">
+                                                    <i class="fa-solid fa-check"></i> Pilih
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-semibold">Gudang Tujuan <span class="text-error">*</span></span></label>
+                            <select x-model="form.gudang_id" class="select select-bordered" required>
+                                <option value="">-- Pilih Gudang --</option>
+                                @foreach ($gudangs as $gudang)
+                                    <option value="{{ $gudang->id }}">{{ $gudang->kode }} - {{ $gudang->nama }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <div x-show="requestPickerOpen" x-cloak class="mb-4 rounded-lg border border-base-300 bg-base-200/40 p-4">
+                        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <h6 class="font-bold"><i class="fa-solid fa-boxes-stacked text-primary"></i> Pilih Item Permintaan (Request ACC)</h6>
+                                <p class="text-sm text-base-content/50">Cari berdasarkan kode request atau nama barang, lalu pilih item yang akan dibeli.</p>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline" @click="requestPickerOpen = false">
+                                <i class="fa-solid fa-xmark"></i> Tutup
+                            </button>
+                        </div>
+                        <label class="input input-bordered input-sm mb-3 flex w-full max-w-xs items-center gap-2">
+                            <i class="fa-solid fa-magnifying-glass text-base-content/40"></i>
+                            <input type="search" class="grow" placeholder="Cari permintaan..." x-model="requestSearchTerm" @input.debounce.350ms="fetchRequests()">
+                        </label>
+                        <div class="max-h-72 overflow-y-auto overflow-x-auto">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Kode Request</th>
+                                        <th>Nama Barang / Bahan</th>
+                                        <th>Target ACC</th>
+                                        <th>Realisasi</th>
+                                        <th>Referensi Harga</th>
+                                        <th>Sisa Kuota</th>
+                                        <th class="w-24 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="item in requestResults" :key="item.id_permintaan + '-' + item.id_bahan">
+                                        <tr>
+                                            <td class="font-bold text-primary" x-text="item.no_request"></td>
+                                            <td x-text="item.bahan"></td>
+                                            <td x-text="item.jumlah_order"></td>
+                                            <td x-text="item.realisasi"></td>
+                                            <td>
+                                                <span x-text="'Rp ' + Number(item.harga_referensi || 0).toLocaleString('id-ID')"></span>
+                                                <small class="block text-base-content/50">Rata-rata 5 LPB terakhir</small>
+                                            </td>
+                                            <td x-text="item.jumlah_order - item.realisasi"></td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-success btn-xs" @click="addItemFromRequest(item)">
+                                                    <i class="fa-solid fa-check"></i> Pilih
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 lg:grid-cols-12">
+                        <div class="lg:col-span-8">
+                            <div class="mb-3 flex items-center justify-between">
+                                <h6 class="font-bold"><i class="fa-solid fa-list"></i> Detail Item Pembelian</h6>
+                                <button type="button" class="btn btn-info btn-sm" @click="openRequestPicker()">
+                                    <i class="fa-solid fa-list-check"></i> Cari dari Permintaan (Request)
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Item / Bahan</th>
+                                            <th class="w-32">Jumlah Beli</th>
+                                            <th class="w-40">Harga Satuan (Rp)</th>
+                                            <th class="w-40 text-end">Subtotal (Rp)</th>
+                                            <th class="w-12 text-center">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
+                                        <template x-if="items.length === 0">
+                                            <tr>
+                                                <td colspan="5" class="py-4 text-center text-base-content/50">Belum ada item dipilih.</td>
+                                            </tr>
+                                        </template>
+                                        <template x-for="(item, idx) in items" :key="idx">
+                                            <tr>
+                                                <td>
+                                                    <strong x-text="item.nama"></strong>
+                                                    <small x-show="item.max" class="block text-base-content/50" x-text="'Maksimal Beli: ' + item.max + ' unit'"></small>
+                                                </td>
+                                                <td>
+                                                    <input type="number" step="any" min="0.01" :max="item.max || null" x-model.number="item.jumlah" class="input input-bordered input-sm w-full" required>
+                                                </td>
+                                                <td>
+                                                    <input type="number" step="any" min="0" x-model.number="item.harga" class="input input-bordered input-sm w-full" required>
+                                                </td>
+                                                <td class="text-end font-bold" x-text="'Rp ' + Number((item.jumlah || 0) * (item.harga || 0)).toLocaleString('id-ID')"></td>
+                                                <td class="text-center">
+                                                    <button type="button" class="btn btn-error btn-xs" @click="items.splice(idx, 1)">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </template>
                                     </tbody>
                                 </table>
                             </div>
                         </div>
+
+                        <div class="lg:col-span-4">
+                            <div class="card h-full border border-base-300 bg-base-200/40">
+                                <div class="card-body p-4">
+                                    <h6 class="mb-3 border-b border-base-300 pb-2 font-bold"><i class="fa-solid fa-calculator"></i> Ringkasan Totals</h6>
+                                    <div class="flex justify-between py-1"><span class="text-base-content/60">Total Exclude (DPP):</span><span class="font-bold" x-text="'Rp ' + totalExclude.toLocaleString('id-ID')"></span></div>
+                                    <div class="flex justify-between py-1"><span class="text-base-content/60">PPN (11%):</span><span class="font-bold text-info" x-text="'Rp ' + totalPpn.toLocaleString('id-ID')"></span></div>
+                                    <div class="flex justify-between py-1"><span class="text-base-content/60">Total Include PPN:</span><span class="font-bold" x-text="'Rp ' + totalInclude.toLocaleString('id-ID')"></span></div>
+                                    <div class="flex justify-between py-1"><span class="text-base-content/60">Diskon:</span><span class="font-bold text-error" x-text="'- Rp ' + Number(form.diskon || 0).toLocaleString('id-ID')"></span></div>
+                                    <div class="flex justify-between py-1"><span class="text-base-content/60">Ongkir / Handling:</span><span class="font-bold text-success" x-text="'+ Rp ' + Number(form.ongkir || 0).toLocaleString('id-ID')"></span></div>
+                                    <div class="divider my-2"></div>
+                                    <div class="flex items-center justify-between rounded-lg bg-primary p-3 text-primary-content">
+                                        <span class="font-bold">Grand Total:</span>
+                                        <span class="text-lg font-bold" x-text="'Rp ' + grandTotal.toLocaleString('id-ID')"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="modalTambahPembelian" tabindex="-1" role="dialog" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-create" role="document">
-            <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-primary text-white py-3">
-                    <h5 class="modal-title fw-bold text-white" id="modalPembelianTitle"><i
-                            class="fa-solid fa-cart-shopping me-2"></i>Buat Transaksi Pembelian Baru</h5>
-                    <button type="button" class="btn-close btn-close-white " data-bs-dismiss="modal"
-                        aria-label="Close"></button>
+                <div class="flex justify-end gap-2 border-t border-base-300 bg-base-100 px-6 py-4">
+                    <button type="button" class="btn btn-ghost" @click="$el.closest('dialog').close()">Batal</button>
+                    <button type="submit" class="btn btn-primary" :disabled="submitting">
+                        <span x-show="submitting" class="loading loading-spinner loading-sm"></span>
+                        <i class="fa-solid fa-floppy-disk" x-show="!submitting"></i>
+                        <span x-text="editMode ? 'Update Transaksi' : 'Simpan Transaksi'"></span>
+                    </button>
                 </div>
-                <form id="formPembelian">
-                    @csrf
-                    <input type="hidden" name="_method" id="form_method" value="POST">
-                    <input type="hidden" id="edit_no_po" value="">
-
-                    <div class="modal-body p-4">
-                        <div class="row">
-                            <div class="col-md-3 mb-3">
-                                <label class="fw-bold">Nomor PO</label>
-                                <input type="text" name="no_po" id="input_no_po" class="form-control bg-white"
-                                    value="{{ $documentNumber }}" readonly>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="fw-bold">Tanggal</label>
-                                <input type="date" name="tanggal" id="input_tanggal" class="form-control"
-                                    value="{{ date('Y-m-d') }}" required>
-                            </div>
-
-                            <div class="col-md-3 mb-3">
-                                <label class="fw-bold">Supplier</label>
-                                <div class="input-group">
-                                    <input type="hidden" name="supplier_id" id="input_supplier_id" required>
-                                    <input type="text" id="input_supplier_nama" class="form-control bg-white"
-                                        placeholder="Pilih Supplier..." readonly required>
-                                    <div class="d-flex">
-                                        <button type="button" class="btn btn-info" id="btnBukaModalSupplier">
-                                            <i class="fa-solid fa-magnifying-glass"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-3 mb-3">
-                                <label class="fw-bold">No. SO / Order</label>
-                                <input type="text" name="no_order" id="input_no_order" class="form-control"
-                                    value="-">
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="fw-bold">Untuk Perhatian (ATTN)</label>
-                                <input type="text" name="untuk_perhatian" id="input_untuk_perhatian"
-                                    class="form-control" value="-">
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="fw-bold">Term Pembayaran</label>
-                                <input type="text" name="term" id="input_term" class="form-control"
-                                    value="-">
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="fw-bold">Pilihan PPN (11%)</label>
-                                <select name="is_ppn" id="input_is_ppn" class="form-control">
-                                    <option value="0">Non-PPN</option>
-                                    <option value="1">Gunakan PPN (11%)</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="fw-bold">Diskon (Rp)</label>
-                                <input type="number" step="any" name="diskon" id="input_diskon"
-                                    class="form-control" value="0" min="0">
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="fw-bold">Ongkir / Handling (Rp)</label>
-                                <input type="number" step="any" name="ongkir" id="input_ongkir"
-                                    class="form-control" value="0" min="0">
-                            </div>
-                            <div class="col-md-12 mb-3 mb-0">
-                                <label class="fw-bold">Catatan / Notes</label>
-                                <textarea name="notes" id="input_notes" class="form-control" rows="2">-</textarea>
-                            </div>
-                        </div>
-
-                        <div class="collapse mb-4" id="modalCariSupplier">
-                            <div class="create-section supplier-picker-panel">
-                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                                    <div>
-                                        <h6 class="fw-bold mb-1">
-                                            <i class="fa-solid fa-truck-field text-primary me-2"></i>
-                                            Pilih Supplier
-                                        </h6>
-                                        <small class="text-muted">Cari berdasarkan nama, telepon, atau alamat
-                                            supplier.</small>
-                                    </div>
-                                    <button type="button" class="btn btn-sm btn-light border" data-bs-toggle="collapse"
-                                        data-bs-target="#modalCariSupplier">
-                                        <i class="fa-solid fa-xmark me-1"></i>Tutup
-                                    </button>
-                                </div>
-                                <div class="table-responsive">
-                                    <table class="table table-striped table-bordered align-middle mb-0"
-                                        id="table-modal-supplier" width="100%">
-                                        <thead>
-                                            <tr>
-                                                <th>Nama Supplier</th>
-                                                <th>Telepon / HP</th>
-                                                <th>Alamat</th>
-                                                <th width="90" class="text-center">Aksi</th>
-                                            </tr>
-                                        </thead>
-                                    </table>
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="fw-bold">Gudang Tujuan <span class="text-danger">*</span></label>
-                                <select name="gudang_id" id="input_gudang_id" class="form-select" required>
-                                    <option value="">-- Pilih Gudang --</option>
-                                    @foreach ($gudangs as $gudang)
-                                        <option value="{{ $gudang->id }}">{{ $gudang->kode }} - {{ $gudang->nama }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-
-                        <hr class="my-4">
-
-                        <div class="collapse mb-4" id="modalCariPermintaan">
-                            <div class="create-section request-picker-panel">
-                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                                    <div>
-                                        <h6 class="fw-bold mb-1">
-                                            <i class="fa-solid fa-boxes-stacked text-primary me-2"></i>
-                                            Pilih Item Permintaan (Request ACC)
-                                        </h6>
-                                        <small class="text-muted">Cari berdasarkan kode request atau nama barang, lalu
-                                            pilih item yang akan dibeli.</small>
-                                    </div>
-                                    <button type="button" class="btn btn-sm btn-light border" data-bs-toggle="collapse"
-                                        data-bs-target="#modalCariPermintaan">
-                                        <i class="fa-solid fa-xmark me-1"></i>Tutup
-                                    </button>
-                                </div>
-                                <div class="table-responsive">
-                                    <table class="table table-striped table-bordered align-middle mb-0"
-                                        id="table-modal-request" width="100%">
-                                        <thead>
-                                            <tr>
-                                                <th>Kode Request</th>
-                                                <th>Nama Barang / Bahan</th>
-                                                <th>Target ACC</th>
-                                                <th>Realisasi</th>
-                                                <th>Referensi Harga</th>
-                                                <th>Sisa Kuota</th>
-                                                <th width="90" class="text-center">Aksi</th>
-                                            </tr>
-                                        </thead>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-lg-8 border-right">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h6 class="fw-bold text-dark mb-0"><i class="fa-solid fa-list me-2"></i>Detail Item
-                                        Pembelian</h6>
-                                    <button type="button" class="btn btn-info btn-sm shadow-sm"
-                                        id="btnBukaModalRequest">
-                                        <i class="fa-solid fa-list-check me-1"></i> Cari dari Permintaan (Request)
-                                    </button>
-                                </div>
-
-                                <div class="table-responsive">
-                                    <table class="table table-bordered table-hover" id="table-items">
-                                        <thead class="bg-light">
-                                            <tr>
-                                                <th>Item / Bahan</th>
-                                                <th width="140">Jumlah Beli</th>
-                                                <th width="180">Harga Satuan (Rp)</th>
-                                                <th width="180" class="text-end">Subtotal (Rp)</th>
-                                                <th width="60" class="text-center">Aksi</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="tbody-items">
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            <div class="col-lg-4">
-                                <div class="card bg-light border-0 p-3 shadow-sm h-100">
-                                    <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i
-                                            class="fa-solid fa-calculator me-2"></i>Ringkasan Totals</h6>
-
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted">Total Exclude (DPP):</span>
-                                        <span class="fw-bold text-dark" id="preview_exclude">Rp 0</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted">PPN (11%):</span>
-                                        <span class="fw-bold text-info" id="preview_ppn">Rp 0</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted">Total Include PPN:</span>
-                                        <span class="fw-bold text-dark" id="preview_include">Rp 0</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted">Diskon:</span>
-                                        <span class="fw-bold text-danger" id="preview_diskon">- Rp 0</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted">Ongkir / Handling:</span>
-                                        <span class="fw-bold text-success" id="preview_ongkir">+ Rp 0</span>
-                                    </div>
-
-                                    <hr class="my-3">
-
-                                    <div
-                                        class="p-3 bg-primary text-white rounded d-flex justify-content-between align-items-center">
-                                        <span class="fw-bold font-size-14">Grand Total:</span>
-                                        <span class="fw-bold font-size-18 text-white" id="preview_grand_total">Rp
-                                            0</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer bg-light">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                        <button type="submit" class="btn btn-primary px-4 shadow-sm" id="btnSimpanPembelian"><i
-                                class="fa-solid fa-floppy-disk me-2"></i>Simpan Transaksi</button>
-                    </div>
-                </form>
-            </div>
+            </form>
         </div>
-    </div>
+        <div class="modal-backdrop" @click="$el.closest('dialog').close()"></div>
+    </dialog>
 
-    @push('scripts')
-        <script>
-            function formatRupiah(number) {
-                return new Intl.NumberFormat('id-ID', {
-                    style: 'currency',
-                    currency: 'IDR',
-                    maximumFractionDigits: 2
-                }).format(number);
-            }
+    <script>
+        function pembelianForm(config) {
+            return {
+                editMode: false,
+                editNoPo: null,
+                submitting: false,
+                supplierPickerOpen: false,
+                supplierSearchTerm: '',
+                supplierResults: [],
+                requestPickerOpen: false,
+                requestSearchTerm: '',
+                requestResults: [],
+                form: {},
+                items: [],
 
-            function hitungTotals() {
-                let totalExclude = 0;
+                init() {
+                    this.form = this.defaultForm(config.documentNumber);
+                },
 
-                $('#tbody-items tr').each(function() {
-                    let qty = parseFloat($(this).find('.input-jumlah').val()) || 0;
-                    let harga = parseFloat($(this).find('.input-harga').val()) || 0;
-                    let subtotal = qty * harga;
+                defaultForm(noPo) {
+                    return {
+                        no_po: noPo, tanggal: new Date().toISOString().substring(0, 10),
+                        supplier_id: '', supplier_nama: '', gudang_id: '',
+                        no_order: '-', untuk_perhatian: '-', term: '-',
+                        is_ppn: '0', diskon: 0, ongkir: 0, notes: '-',
+                    };
+                },
 
-                    $(this).find('.subtotal-item').text(formatRupiah(subtotal));
-                    totalExclude += subtotal;
-                });
+                get totalExclude() {
+                    return this.items.reduce((sum, item) => sum + (Number(item.jumlah) || 0) * (Number(item.harga) || 0), 0);
+                },
+                get totalPpn() {
+                    return this.form.is_ppn == '1' ? this.totalExclude * 0.11 : 0;
+                },
+                get totalInclude() {
+                    return this.totalExclude + this.totalPpn;
+                },
+                get grandTotal() {
+                    const total = (this.totalInclude - (Number(this.form.diskon) || 0)) + (Number(this.form.ongkir) || 0);
+                    return Math.max(0, total);
+                },
 
-                let isPpn = $('#input_is_ppn').val() == '1';
-                let totalPpn = isPpn ? (totalExclude * 0.11) : 0;
-                let totalInclude = totalExclude + totalPpn;
+                openCreate() {
+                    this.editMode = false;
+                    this.editNoPo = null;
+                    this.form = this.defaultForm(config.documentNumber);
+                    this.items = [];
+                    this.$el.showModal();
+                },
 
-                let diskon = parseFloat($('#input_diskon').val()) || 0;
-                let ongkir = parseFloat($('#input_ongkir').val()) || 0;
+                async openEdit(noPo) {
+                    try {
+                        const response = await fetch(`{{ url('pembelian') }}/${noPo}`, {
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                        });
+                        const payload = await response.json().catch(() => ({}));
+                        if (!response.ok) { window.AppAlert.ajaxError(payload); return; }
+                        const data = payload.data;
+                        if (data.kunci != 0) { window.AppAlert.auto('Data tidak dapat diubah karena sudah dikunci.'); return; }
 
-                let grandTotal = (totalInclude - diskon) + ongkir;
-                if (grandTotal < 0) grandTotal = 0;
-
-                $('#preview_exclude').text(formatRupiah(totalExclude));
-                $('#preview_ppn').text(formatRupiah(totalPpn));
-                $('#preview_include').text(formatRupiah(totalInclude));
-                $('#preview_diskon').text('- ' + formatRupiah(diskon));
-                $('#preview_ongkir').text('+ ' + formatRupiah(ongkir));
-                $('#preview_grand_total').text(formatRupiah(grandTotal));
-            }
-
-            function formatChildRow(d) {
-                let detailsHtml = '';
-                if (d.details && d.details.length > 0) {
-                    d.details.forEach(function(item) {
-                        let namaBahan = item.bahan ? item.bahan.nama : 'Bahan #' + item.bahan_id;
-                        let subtotal = item.include || (item.jumlah * item.harga);
-                        detailsHtml += `
-                            <tr>
-                                <td>${namaBahan}</td>
-                                <td class="text-center fw-bold">${item.jumlah}</td>
-                                <td class="text-end">${formatRupiah(item.harga)}</td>
-                                <td class="text-end fw-bold text-primary">${formatRupiah(subtotal)}</td>
-                            </tr>
-                        `;
-                    });
-                } else {
-                    detailsHtml = '<tr><td colspan="4" class="text-center text-muted">Tidak ada detail item.</td></tr>';
-                }
-
-                return `
-                    <div class="p-3 bg-light rounded border m-2">
-                        <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-boxes-packing me-2"></i>Detail Item yang Dibeli (No PO: ${d.no_po})</h6>
-                        <table class="table table-sm table-bordered bg-white mb-0">
-                            <thead class="bg-primary text-white">
-                                <tr>
-                                    <th>Nama Barang / Bahan</th>
-                                    <th width="15%" class="text-center">Jumlah Beli</th>
-                                    <th width="20%" class="text-end">Harga Satuan</th>
-                                    <th width="20%" class="text-end">Subtotal</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${detailsHtml}
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-            }
-
-            $(document).ready(function() {
-                let itemIndex = 0;
-
-                let table = $('#table-pembelian').DataTable({
-                    processing: true,
-                    serverSide: true,
-                    ajax: {
-                        url: "{{ route('pembelian.index') }}",
-                        data: function(d) {
-                            d.bulan = $('#filter_bulan').val();
-                            d.tahun = $('#filter_tahun').val();
-                        }
-                    },
-                    columns: [{
-                            className: 'dt-control text-center align-middle',
-                            orderable: false,
-                            data: null,
-                            defaultContent: '<button type="button" class="btn btn-sm btn-outline-primary btn-expand"><i class="fa-solid fa-chevron-right"></i></button>'
-                        },
-                        {
-                            data: 'no_po',
-                            name: 'no_po',
-                            className: 'align-middle ps-2 fw-bold text-primary'
-                        },
-                        {
-                            data: 'tanggal',
-                            name: 'tanggal',
-                            className: 'align-middle'
-                        },
-                        {
-                            data: 'nama',
-                            name: 'supplier.nama',
-                            className: 'align-middle'
-                        },
-                        {
-                            data: 'grand_total',
-                            name: 'grand_total',
-                            className: 'align-middle text-end fw-bold',
-                            render: function(data) {
-                                return formatRupiah(data);
+                        this.editMode = true;
+                        this.editNoPo = data.no_po;
+                        this.form = {
+                            no_po: data.no_po, tanggal: data.tanggal, supplier_id: data.supplier_id,
+                            supplier_nama: data.supplier ? data.supplier.nama : '-', gudang_id: data.gudang_id,
+                            no_order: data.no_order, untuk_perhatian: data.untuk_perhatian, term: data.term,
+                            is_ppn: data.ppn > 0 ? '1' : '0', diskon: data.diskon, ongkir: data.ongkir, notes: data.notes,
+                        };
+                        this.items = (data.details || []).map((detail) => {
+                            let max = detail.jumlah;
+                            if (detail.request_detail) {
+                                max = (detail.request_detail.jumlah_acc - detail.request_detail.realisasi) + Number(detail.jumlah);
                             }
-                        },
-                        {
-                            data: 'status',
-                            name: 'status',
-                            className: 'text-center align-middle',
-                            render: function(data) {
-                                return data == 2 ?
-                                    '<span class="badge bg-danger px-3 py-1">Closed</span>' :
-                                    '<span class="badge bg-success px-3 py-1">Open</span>';
-                            }
-                        },
-                        {
-                            data: null,
-                            orderable: false,
-                            searchable: false,
-                            className: 'text-center align-middle pe-4',
-                            render: function(data) {
-                                let btnCetak = `
-                                    <a href="{{ url('pembelian') }}/${data.no_po}/cetak" target="_blank" class="btn btn-sm btn-info shadow-sm" title="Cetak PO">
-                                        <i class="fa-solid fa-print"></i>
-                                    </a>
-                                `;
-
-                                if (data.kunci != 0) {
-                                    return `${btnCetak} <span class="badge bg-secondary ms-1"><i class="fa-solid fa-lock"></i> Locked</span>`;
-                                }
-
-                                return `
-                                    ${btnCetak}
-                                    <button type="button" class="btn btn-sm btn-warning shadow-sm btn-edit-po ms-1" data-nopo="${data.no_po}" title="Edit PO">
-                                        <i class="fa-solid fa-pen-to-square text-white"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-danger shadow-sm btn-delete-po ms-1" data-nopo="${data.no_po}" title="Hapus PO">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                `;
-                            }
-                        }
-                    ]
-                });
-
-                $('#table-pembelian tbody').on('click', 'button.btn-expand', function() {
-                    let tr = $(this).closest('tr');
-                    let row = table.row(tr);
-                    let icon = $(this).find('i');
-
-                    if (row.child.isShown()) {
-                        row.child.hide();
-                        tr.removeClass('shown');
-                        icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
-                    } else {
-                        row.child(formatChildRow(row.data())).show();
-                        tr.addClass('shown');
-                        icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+                            return {
+                                request_detail_id: detail.request_detail_id || '', bahan_id: detail.bahan_id,
+                                nama: detail.bahan ? detail.bahan.nama : `Bahan #${detail.bahan_id}`,
+                                jumlah: Number(detail.jumlah), harga: Number(detail.harga),
+                                max: detail.request_detail_id ? max : null,
+                            };
+                        });
+                        this.$el.showModal();
+                    } catch (error) {
+                        window.AppAlert.error('Gagal mengambil data pembelian.');
                     }
-                });
+                },
 
-                $('#btn_filter').click(function() {
-                    table.draw();
-                });
-
-                $('#btnTambahPembelian').click(function() {
-                    $('#formPembelian')[0].reset();
-                    $('#form_method').val('POST');
-                    $('#edit_no_po').val('');
-                    $('#input_supplier_id').val('');
-                    $('#input_supplier_nama').val('');
-                    $('#tbody-items').empty();
-                    $('#modalPembelianTitle').html(
-                        '<i class="fa-solid fa-cart-shopping me-2"></i>Buat Transaksi Pembelian Baru');
-                    $('#btnSimpanPembelian').html(
-                        '<i class="fa-solid fa-floppy-disk me-2"></i>Simpan Transaksi');
-                    itemIndex = 0;
-                    hitungTotals();
-                    $('#modalTambahPembelian').modal('show');
-                });
-
-                if (new URLSearchParams(window.location.search).get('create') === '1') {
-                    setTimeout(() => $('#btnTambahPembelian').trigger('click'), 100);
-                }
-
-                let tableSupplier = $('#table-modal-supplier').DataTable({
-                    processing: true,
-                    serverSide: true,
-                    ajax: "{{ route('supplier.dataTable') }}",
-                    columns: [{
-                            data: 'nama',
-                            name: 'nama'
-                        },
-                        {
-                            data: 'telepon',
-                            name: 'telepon',
-                            defaultContent: '-'
-                        },
-                        {
-                            data: 'alamat',
-                            name: 'alamat',
-                            defaultContent: '-'
-                        },
-                        {
-                            data: 'aksi',
-                            name: 'aksi',
-                            orderable: false,
-                            searchable: false,
-                            className: 'text-center'
-                        }
-                    ]
-                });
-
-                $('#btnBukaModalSupplier').click(function() {
-                    bootstrap.Collapse.getOrCreateInstance('#modalCariSupplier', {
-                        toggle: false
-                    }).show();
-                    tableSupplier.ajax.reload(function() {
-                        tableSupplier.columns.adjust();
-                    }, false);
-                    document.querySelector('#modalCariSupplier')?.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'nearest'
-                    });
-                });
-
-                $(document).on('click', '.btn-pilih-supplier', function() {
-                    let id = $(this).data('id');
-                    let nama = $(this).data('nama');
-
-                    $('#input_supplier_id').val(id);
-                    $('#input_supplier_nama').val(nama);
-                    bootstrap.Collapse.getOrCreateInstance('#modalCariSupplier', {
-                        toggle: false
-                    }).hide();
-                });
-
-                let tableRequest = $('#table-modal-request').DataTable({
-                    processing: true,
-                    serverSide: true,
-                    ajax: "{{ route('requestdetail.index') }}",
-                    columns: [{
-                            data: 'no_request',
-                            name: 'request.no_request',
-                            className: 'fw-bold text-primary',
-                            orderable: false
-                        },
-                        {
-                            data: 'bahan',
-                            name: 'nama_barang'
-                        },
-                        {
-                            data: 'jumlah_order',
-                            name: 'jumlah_acc'
-                        },
-                        {
-                            data: 'realisasi',
-                            name: 'realisasi'
-                        },
-                        {
-                            data: 'harga_referensi',
-                            name: 'harga_referensi',
-                            orderable: false,
-                            searchable: false,
-                            render: data =>
-                                `${formatRupiah(data)}<small class="d-block text-muted">Rata-rata 5 LPB terakhir</small>`
-                        },
-                        {
-                            data: null,
-                            render: function(data) {
-                                return data.jumlah_order - data.realisasi;
-                            }
-                        },
-                        {
-                            data: null,
-                            orderable: false,
-                            searchable: false,
-                            className: 'text-center',
-                            render: function(data) {
-                                let sisa = data.jumlah_order - data.realisasi;
-                                return `<button type="button" class="btn btn-sm btn-success btn-pilih-req" 
-                                    data-id="${data.id_permintaan}" 
-                                    data-bahan="${data.id_bahan}" 
-                                    data-nama="${data.bahan}" 
-                                    data-harga="${data.harga_referensi || 0}"
-                                    data-max="${sisa}">
-                                    <i class="fa-solid fa-check me-1"></i> Pilih
-                                </button>`;
-                            }
-                        }
-                    ]
-                });
-
-                $('#btnBukaModalRequest').click(function() {
-                    bootstrap.Collapse.getOrCreateInstance('#modalCariPermintaan', {
-                        toggle: false
-                    }).show();
-                    tableRequest.ajax.reload(function() {
-                        tableRequest.columns.adjust();
-                    }, false);
-                    document.querySelector('#modalCariPermintaan')?.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'nearest'
-                    });
-                });
-
-                $(document).on('click', '.btn-pilih-req', function() {
-                    let reqId = $(this).data('id');
-                    let bahanId = $(this).data('bahan');
-                    let nama = $(this).data('nama');
-                    let harga = $(this).data('harga') || 0;
-                    let max = $(this).data('max');
-
-                    let rowHtml = `
-                        <tr id="row-item-${itemIndex}">
-                            <td class="align-middle">
-                                <input type="hidden" name="details[${itemIndex}][request_detail_id]" value="${reqId}">
-                                <input type="hidden" name="details[${itemIndex}][bahan_id]" value="${bahanId}">
-                                <strong class="text-dark">${nama}</strong>
-                                <br><small class="text-muted">Maksimal Beli: ${max} unit</small>
-                            </td>
-                            <td class="align-middle">
-                                <input type="number" step="any" name="details[${itemIndex}][jumlah]" class="form-control input-jumlah" value="${max}" max="${max}" min="0.01" required>
-                            </td>
-                            <td class="align-middle">
-                                <input type="number" step="any" name="details[${itemIndex}][harga]" class="form-control input-harga" value="${harga}" min="0" required>
-                            </td>
-                            <td class="align-middle text-end fw-bold subtotal-item">
-                                ${formatRupiah(max * harga)}
-                            </td>
-                            <td class="text-center align-middle">
-                                <button type="button" class="btn btn-danger btn-sm btn-hapus-row" data-bs-target="#row-item-${itemIndex}">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-
-                    $('#tbody-items').append(rowHtml);
-                    itemIndex++;
-                    hitungTotals();
-                });
-
-                $(document).on('click', '.btn-hapus-row', function() {
-                    let target = $(this).attr('data-bs-target');
-                    $(target).remove();
-                    hitungTotals();
-                });
-
-                $(document).on('input change',
-                    '.input-jumlah, .input-harga, #input_is_ppn, #input_diskon, #input_ongkir',
-                    function() {
-                        hitungTotals();
-                    });
-
-                $(document).on('click', '.btn-edit-po', function() {
-                    let noPo = $(this).data('nopo');
-
-                    $.ajax({
-                        url: "{{ url('pembelian') }}/" + noPo,
-                        type: "GET",
-                        success: function(res) {
-                            let data = res.data;
-                            if (data.kunci != 0) {
-                                AppAlert.auto('Data tidak dapat diubah karena sudah dikunci.');
-                                return;
-                            }
-
-                            $('#form_method').val('PUT');
-                            $('#edit_no_po').val(data.no_po);
-                            $('#input_no_po').val(data.no_po);
-                            $('#input_tanggal').val(data.tanggal);
-                            $('#input_supplier_id').val(data.supplier_id);
-                            $('#input_gudang_id').val(data.gudang_id);
-                            $('#input_supplier_nama').val(data.supplier ? data.supplier.nama : '-');
-                            $('#input_no_order').val(data.no_order);
-                            $('#input_untuk_perhatian').val(data.untuk_perhatian);
-                            $('#input_term').val(data.term);
-                            $('#input_is_ppn').val(data.ppn > 0 ? '1' : '0');
-                            $('#input_diskon').val(data.diskon);
-                            $('#input_ongkir').val(data.ongkir);
-                            $('#input_notes').val(data.notes);
-
-                            $('#tbody-items').empty();
-                            itemIndex = 0;
-
-                            if (data.details && data.details.length > 0) {
-                                data.details.forEach(function(detail) {
-                                    let namaBahan = detail.bahan ? detail.bahan.nama :
-                                        'Bahan #' + detail.bahan_id;
-                                    let reqId = detail.request_detail_id || '';
-                                    let maxAllowed = detail.jumlah;
-
-                                    if (detail.request_detail) {
-                                        let sisaKuota = detail.request_detail.jumlah_acc -
-                                            detail.request_detail.realisasi;
-                                        maxAllowed = sisaKuota + detail.jumlah;
-                                    }
-
-                                    let rowHtml = `
-                                        <tr id="row-item-${itemIndex}">
-                                            <td class="align-middle">
-                                                <input type="hidden" name="details[${itemIndex}][request_detail_id]" value="${reqId}">
-                                                <input type="hidden" name="details[${itemIndex}][bahan_id]" value="${detail.bahan_id}">
-                                                <strong class="text-dark">${namaBahan}</strong>
-                                                ${reqId ? `<br><small class="text-muted">Maksimal Beli: ${maxAllowed} unit</small>` : ''}
-                                            </td>
-                                            <td class="align-middle">
-                                                <input type="number" step="any" name="details[${itemIndex}][jumlah]" class="form-control input-jumlah" value="${detail.jumlah}" ${reqId ? `max="${maxAllowed}"` : ''} min="0.01" required>
-                                            </td>
-                                            <td class="align-middle">
-                                                <input type="number" step="any" name="details[${itemIndex}][harga]" class="form-control input-harga" value="${detail.harga}" min="0" required>
-                                            </td>
-                                            <td class="align-middle text-end fw-bold subtotal-item">
-                                                ${formatRupiah(detail.jumlah * detail.harga)}
-                                            </td>
-                                            <td class="text-center align-middle">
-                                                <button type="button" class="btn btn-danger btn-sm btn-hapus-row" data-bs-target="#row-item-${itemIndex}">
-                                                    <i class="fa-solid fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    `;
-                                    $('#tbody-items').append(rowHtml);
-                                    itemIndex++;
-                                });
-                            }
-
-                            $('#modalPembelianTitle').html(
-                                '<i class="fa-solid fa-pen-to-square me-2"></i>Edit Transaksi Pembelian (' +
-                                data.no_po + ')');
-                            $('#btnSimpanPembelian').html(
-                                '<i class="fa-solid fa-floppy-disk me-2"></i>Update Transaksi');
-                            hitungTotals();
-                            $('#modalTambahPembelian').modal('show');
-                        },
-                        error: function(err) {
-                            AppAlert.auto(err.responseJSON?.message ||
-                                'Gagal mengambil data pembelian.');
-                        }
-                    });
-                });
-
-                $(document).on('click', '.btn-delete-po', function() {
-                    let noPo = $(this).data('nopo');
-                    AppAlert.confirm('Hapus transaksi PO (' + noPo + ')?').then(function(result) {
-                        if (result.isConfirmed) {
-                            $.ajax({
-                                url: "{{ url('pembelian') }}/" + noPo,
-                                type: "DELETE",
-                                data: {
-                                    _token: "{{ csrf_token() }}"
-                                },
-                                success: function(res) {
-                                    table.draw();
-                                    AppAlert.auto(res.message);
-                                },
-                                error: function(err) {
-                                    AppAlert.auto(err.responseJSON?.message ||
-                                        'Gagal menghapus data pembelian.');
-                                }
-                            });
-                        }
-                    });
-                });
-
-                $('#formPembelian').submit(function(e) {
-                    e.preventDefault();
-
-                    if (!$('#input_supplier_id').val()) {
-                        AppAlert.auto('Harap pilih supplier terlebih dahulu.');
-                        return;
+                async deletePo(noPo) {
+                    const result = await window.AppAlert.confirm(`Hapus transaksi PO (${noPo})?`);
+                    if (!result.isConfirmed) return;
+                    try {
+                        const response = await fetch(`{{ url('pembelian') }}/${noPo}`, {
+                            method: 'POST',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ _method: 'DELETE' }),
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok) { window.AppAlert.ajaxError(data); return; }
+                        window.AppAlert.auto(data.message);
+                        window.dispatchEvent(new CustomEvent('wms:table-refresh'));
+                    } catch (error) {
+                        window.AppAlert.error('Gagal menghapus data pembelian.');
                     }
+                },
 
-                    if ($('#tbody-items tr').length === 0) {
-                        AppAlert.auto('Harap pilih minimal 1 item detail dari permintaan.');
-                        return;
-                    }
+                openSupplierPicker() {
+                    this.supplierPickerOpen = true;
+                    this.supplierSearchTerm = '';
+                    this.fetchSuppliers();
+                },
 
-                    let isEdit = $('#form_method').val() === 'PUT';
-                    let editNoPo = $('#edit_no_po').val();
-                    let targetUrl = isEdit ? "{{ url('pembelian') }}/" + editNoPo :
-                        "{{ route('pembelian.store') }}";
+                async fetchSuppliers() {
+                    const params = new URLSearchParams({ draw: '1', start: '0', length: '20', 'search[value]': this.supplierSearchTerm });
+                    const response = await fetch(`{{ route('supplier.dataTable') }}?${params}`, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
+                    const data = await response.json().catch(() => ({ data: [] }));
+                    this.supplierResults = data.data || [];
+                },
 
-                    let btnSubmit = $('#btnSimpanPembelian');
-                    btnSubmit.prop('disabled', true).html(
-                        '<i class="fa-solid fa-spinner fa-spin me-2"></i>Menyimpan...');
+                pickSupplier(item) {
+                    this.form.supplier_id = item.id;
+                    this.form.supplier_nama = item.nama;
+                    this.supplierPickerOpen = false;
+                },
 
-                    $.ajax({
-                        url: targetUrl,
-                        type: "POST",
-                        data: $(this).serialize(),
-                        success: function(res) {
-                            $('#modalTambahPembelian').modal('hide');
-                            $('#formPembelian')[0].reset();
-                            $('#input_supplier_id').val('');
-                            $('#input_supplier_nama').val('');
-                            $('#tbody-items').empty();
-                            if (!isEdit && res.next_document_number) {
-                                $('#input_no_po').val(res.next_document_number);
-                            }
-                            hitungTotals();
-                            table.draw();
-                            AppAlert.auto(res.message);
-                        },
-                        error: function(err) {
-                            let msg = err.responseJSON?.message ||
-                                'Terjadi kesalahan saat menyimpan data.';
-                            AppAlert.auto(msg);
-                        },
-                        complete: function() {
-                            btnSubmit.prop('disabled', false).html(isEdit ?
-                                '<i class="fa-solid fa-floppy-disk me-2"></i>Update Transaksi' :
-                                '<i class="fa-solid fa-floppy-disk me-2"></i>Simpan Transaksi');
-                        }
+                openRequestPicker() {
+                    this.requestPickerOpen = true;
+                    this.requestSearchTerm = '';
+                    this.fetchRequests();
+                },
+
+                async fetchRequests() {
+                    const params = new URLSearchParams({ draw: '1', start: '0', length: '20', 'search[value]': this.requestSearchTerm });
+                    const response = await fetch(`{{ route('requestdetail.index') }}?${params}`, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
+                    const data = await response.json().catch(() => ({ data: [] }));
+                    this.requestResults = data.data || [];
+                },
+
+                addItemFromRequest(item) {
+                    const sisa = item.jumlah_order - item.realisasi;
+                    this.items.push({
+                        request_detail_id: item.id_permintaan, bahan_id: item.id_bahan, nama: item.bahan,
+                        jumlah: sisa, harga: Number(item.harga_referensi || 0), max: sisa,
                     });
-                });
-            });
-        </script>
-    @endpush
+                },
+
+                async submit() {
+                    if (!this.form.supplier_id) { window.AppAlert.auto('Harap pilih supplier terlebih dahulu.'); return; }
+                    if (this.items.length === 0) { window.AppAlert.auto('Harap pilih minimal 1 item detail dari permintaan.'); return; }
+
+                    this.submitting = true;
+                    try {
+                        const url = this.editMode ? `{{ url('pembelian') }}/${this.editNoPo}` : '{{ route('pembelian.store') }}';
+                        const payload = {
+                            ...this.form,
+                            details: this.items.map((item) => ({
+                                bahan_id: item.bahan_id, jumlah: item.jumlah, harga: item.harga,
+                                request_detail_id: item.request_detail_id || null,
+                            })),
+                            _method: this.editMode ? 'PUT' : 'POST',
+                        };
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload),
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok) { window.AppAlert.ajaxError(data); return; }
+
+                        window.AppAlert.auto(data.message);
+                        window.dispatchEvent(new CustomEvent('wms:table-refresh'));
+                        if (!this.editMode && data.next_document_number) {
+                            this.form = this.defaultForm(data.next_document_number);
+                            this.items = [];
+                        }
+                        this.$el.closest('dialog').close();
+                    } catch (error) {
+                        window.AppAlert.error('Terjadi kesalahan saat menyimpan data.');
+                    } finally {
+                        this.submitting = false;
+                    }
+                },
+            };
+        }
+    </script>
+
+    <div id="modal-container"></div>
 @endsection
