@@ -27,6 +27,7 @@ class InvoiceLpb extends Model
         'dpp_ppn',
         'tarif_ppn',
         'ppn',
+        'no_faktur_pajak',
         'dasar_pph',
         'tarif_pph',
         'diskon',

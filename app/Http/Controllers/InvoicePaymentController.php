@@ -20,8 +20,33 @@ class InvoicePaymentController extends Controller
         private PaymentAllocationService $paymentAllocation,
         private DocumentNumberService $numbers
     ) {}
+
+    public function availableAdvances(int $supplierId)
+    {
+        $this->authorize('viewAny', InvoicePayment::class);
+
+        $advances = InvoicePayment::with('invoice')
+            ->where('status', InvoicePayment::POSTED)
+            ->where('jenis_selisih', 'UANG_MUKA_SUPPLIER')
+            ->whereHas('invoice', fn($query) => $query->where('kode_supplier', $supplierId))
+            ->get()
+            ->map(fn(InvoicePayment $payment) => [
+                'id'                 => $payment->id,
+                'payment_number'     => $payment->payment_number,
+                'tanggal_pembayaran' => optional($payment->tanggal_pembayaran)->format('Y-m-d'),
+                'no_invoice_asal'    => $payment->invoice->no_invoice ?? '-',
+                'sisa'               => $payment->sisaUangMuka(),
+            ])
+            ->filter(fn($row) => $row['sisa'] > 0.01)
+            ->values();
+
+        return response()->json(['success' => true, 'data' => $advances]);
+    }
+
     public function store(StoreInvoicePaymentRequest $request)
     {
+        $this->authorize('create', InvoicePayment::class);
+
         $validated = $request->validated();
         $user = Auth::user();
 
@@ -54,15 +79,54 @@ class InvoicePaymentController extends Controller
                     "Akun yang dipilih harus berkategori {$required[0]} dengan posisi normal {$required[1]}."
                 );
             }
-            $allocation = $this->paymentAllocation->calculate(
-                (float) $invoice->sisa_tagihan,
-                (float) $validated['jumlah_pembayaran'],
-                (float) $validated['potongan_pph23'],
-                $difference,
-                $differenceType
+
+            $advanceSourceId = $validated['uang_muka_sumber_payment_id'] ?? null;
+            $advanceUsed = $advanceSourceId ? round((float) $validated['uang_muka_dipakai'], 2) : 0.0;
+            if ($advanceSourceId) {
+                $advanceSource = InvoicePayment::lockForUpdate()->with('invoice')->findOrFail($advanceSourceId);
+                abort_if(
+                    $advanceSource->status !== InvoicePayment::POSTED
+                        || $advanceSource->jenis_selisih !== 'UANG_MUKA_SUPPLIER'
+                        || !$advanceSource->invoice
+                        || (int) $advanceSource->invoice->kode_supplier !== (int) $invoice->kode_supplier,
+                    422,
+                    'Sumber uang muka tidak valid untuk invoice/supplier ini.'
+                );
+                abort_if(
+                    $advanceUsed > $advanceSource->sisaUangMuka() + 0.01,
+                    422,
+                    'Nominal uang muka yang dipakai melebihi sisa uang muka supplier yang tersedia.'
+                );
+            }
+
+            $remainingAfterAdvance = max(0, round((float) $invoice->sisa_tagihan - $advanceUsed, 2));
+            abort_if(
+                (float) $invoice->sisa_tagihan - $advanceUsed < -0.01,
+                422,
+                'Uang muka yang dipakai melebihi sisa tagihan invoice.'
             );
-            $pengurangHutang = $allocation['ap_reduction'];
-            $advance = $allocation['advance'];
+
+            $hasCashActivity = (float) $validated['jumlah_pembayaran'] > 0
+                || (float) $validated['potongan_pph23'] > 0
+                || $difference > 0;
+
+            if ($hasCashActivity) {
+                $allocation = $this->paymentAllocation->calculate(
+                    $remainingAfterAdvance,
+                    (float) $validated['jumlah_pembayaran'],
+                    (float) $validated['potongan_pph23'],
+                    $difference,
+                    $differenceType
+                );
+                $pengurangHutangCash = $allocation['ap_reduction'];
+                $advance = $allocation['advance'];
+            } else {
+                abort_if($advanceUsed <= 0, 422, 'Nominal pembayaran tidak boleh nol.');
+                $pengurangHutangCash = 0.0;
+                $advance = 0.0;
+            }
+
+            $pengurangHutang = round($pengurangHutangCash + $advanceUsed, 2);
             abort_if(
                 $differenceType === 'UANG_MUKA_SUPPLIER' && abs($difference - $advance) > 0.01,
                 422,
@@ -72,7 +136,7 @@ class InvoicePaymentController extends Controller
             $payment = InvoicePayment::create([
                 'payment_number'                   => $validated['payment_number'],
                 'invoice_lpb_id'                   => $invoice->id,
-                'tanggal_pembayaran'               => $validated['tanggal_pembayaran'],
+                'tanggal_pembayaran'                => $validated['tanggal_pembayaran'],
                 'metode_pembayaran'                => $validated['metode_pembayaran'],
                 'coa_kas_bank_id'                  => $validated['coa_kas_bank_id'],
                 'jumlah_pembayaran'                => $validated['jumlah_pembayaran'],
@@ -83,9 +147,11 @@ class InvoicePaymentController extends Controller
                 'jenis_selisih'                    => $differenceType,
                 'coa_selisih_id'                   => $validated['coa_selisih_id'] ?? null,
                 'kelebihan_pembayaran'             => $advance,
-                'total_transaksi_pengurang_hutang' => $pengurangHutang,
-                'keterangan'                       => $validated['keterangan'] ?? null,
-                'finance_user_id'                  => $user->id,
+                'uang_muka_sumber_payment_id'       => $advanceSourceId,
+                'uang_muka_dipakai'                => $advanceUsed,
+                'total_transaksi_pengurang_hutang'  => $pengurangHutang,
+                'keterangan'                        => $validated['keterangan'] ?? null,
+                'finance_user_id'                   => $user->id,
             ]);
 
             $totalBayarAkumulasi = $invoice->payments()->sum('total_transaksi_pengurang_hutang');
@@ -120,6 +186,13 @@ class InvoicePaymentController extends Controller
         $invoice = $payment->invoice;
 
         $this->authorize('voidPayment', $invoice);
+
+        abort_if($payment->status === InvoicePayment::VOID, 422, 'Pembayaran ini sudah dibatalkan sebelumnya.');
+        abort_if(
+            $payment->pemakaianUangMuka()->exists(),
+            422,
+            'Uang muka dari pembayaran ini sudah dipakai pada pembayaran lain; batalkan pembayaran yang memakai uang muka tersebut terlebih dahulu.'
+        );
 
         DB::transaction(function () use ($payment, $invoice) {
             $this->accounting->reverseAutomaticJournal(

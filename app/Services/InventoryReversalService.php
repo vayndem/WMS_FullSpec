@@ -6,8 +6,10 @@ use App\Models\DocumentReversal;
 use App\Models\Bahan;
 use App\Models\InventoryLayer;
 use App\Models\Lpb;
+use App\Models\LpbDetail;
 use App\Models\Npk;
 use App\Models\PembelianDetail;
+use App\Models\ReturPembelian;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -69,6 +71,32 @@ class InventoryReversalService
             $journal = $this->accounting->reverseAutomaticJournal('LPB', $lpb->id, "Reversal LPB {$lpb->id_lpb}: {$reason}");
             $lpb->update(['cancelled_by' => Auth::id(), 'cancelled_at' => now(), 'cancellation_reason' => $reason, 'status' => Lpb::REVERSED]);
             return $this->record('LPB', $lpb->id, $reason, $journal->id);
+        });
+    }
+
+    public function reverseReturPembelian(ReturPembelian $retur, string $reason): DocumentReversal
+    {
+        $this->periods->assertOpen(now(), 'Reversal retur pembelian');
+        return DB::transaction(function () use ($retur, $reason) {
+            $retur = ReturPembelian::with('details')->lockForUpdate()->findOrFail($retur->id);
+            $this->assertNotReversed('RETUR_PEMBELIAN', $retur->id);
+            if ($retur->status !== ReturPembelian::POSTED) throw new RuntimeException('Hanya retur pembelian posted yang dapat dibalik.');
+            $lpb = Lpb::lockForUpdate()->findOrFail($retur->lpb_id);
+
+            foreach ($retur->details as $detail) {
+                $lpbDetail = LpbDetail::lockForUpdate()->findOrFail($detail->lpb_detail_id);
+                $layer = InventoryLayer::where('source_type', 'LPB_DETAIL')->where('source_id', $lpbDetail->id)->lockForUpdate()->firstOrFail();
+                $layer->update(['remaining_quantity' => (float) $layer->remaining_quantity + (float) $detail->jumlah_retur]);
+                $lpbDetail->update([
+                    'jumlah_retur' => max(0, (float) $lpbDetail->jumlah_retur - (float) $detail->jumlah_retur),
+                    'jumlah_tersisa' => (float) $lpbDetail->jumlah_tersisa + (float) $detail->jumlah_retur,
+                ]);
+                $this->stock->masuk((int) $lpb->gudang_id, (int) $lpbDetail->id_bahan, (float) $detail->jumlah_retur, (float) $detail->harga, 'REVERSAL_RETUR_PEMBELIAN', 'RETUR_PEMBELIAN', $retur->id, $reason);
+            }
+
+            $journal = $this->accounting->reverseAutomaticJournal('RETUR_PEMBELIAN', $retur->id, "Reversal retur pembelian {$retur->no_retur}: {$reason}");
+            $retur->update(['status' => ReturPembelian::REVERSED]);
+            return $this->record('RETUR_PEMBELIAN', $retur->id, $reason, $journal->id);
         });
     }
 

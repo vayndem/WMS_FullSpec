@@ -286,7 +286,8 @@
                     if (data.can_pay) {
                         btnAddPayment = `
                             <button type="button" class="btn btn-sm btn-success fw-bold btn-add-payment"
-                                data-id="${data.id}" data-remaining="${Number(data.sisa_tagihan || 0)}">
+                                data-id="${data.id}" data-remaining="${Number(data.sisa_tagihan || 0)}"
+                                data-supplier="${data.kode_supplier}">
                                 <i class="fa-solid fa-plus me-1"></i>Tambah Pembayaran
                             </button>
                         `;
@@ -314,6 +315,7 @@
                                                 <div class="col-md-3"><small class="text-muted d-block">Grand Total</small><span class="fw-bold text-primary h6">Rp ${Number(data.grand_total).toLocaleString('id-ID')}</span></div>
                                                 <div class="col-md-3"><small class="text-muted d-block">Sisa Tagihan</small><span class="fw-bold text-danger h6">Rp ${Number(data.sisa_tagihan).toLocaleString('id-ID')}</span></div>
                                             </div>
+                                            ${data.no_faktur_pajak ? `<div class="mt-2"><small class="text-muted d-block">No. Faktur Pajak</small><span class="fw-bold">${data.no_faktur_pajak}</span></div>` : ''}
                                         </div>
 
                                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -355,6 +357,7 @@
                 $(document).on('click', '.btn-add-payment', function() {
                     let invoiceId = $(this).data('id');
                     let remainingBalance = Number($(this).data('remaining') || 0);
+                    let supplierId = $(this).data('supplier');
                     if ($('#addPaymentModal').length) {
                         document.querySelector('#addPaymentModal')?.scrollIntoView({
                             behavior: 'smooth',
@@ -363,11 +366,20 @@
                         return;
                     }
 
-                    $.ajax({
-                        url: "/chart-of-accounts/kas-bank",
-                        type: "GET",
-                        dataType: "JSON",
-                        success: function(res) {
+                    $.when(
+                        $.ajax({
+                            url: "/chart-of-accounts/kas-bank",
+                            type: "GET",
+                            dataType: "JSON"
+                        }),
+                        $.ajax({
+                            url: "/invoice-payments/available-advances/" + supplierId,
+                            type: "GET",
+                            dataType: "JSON"
+                        })
+                    ).done(function(coaResponse, advanceResponse) {
+                            let res = coaResponse[0];
+                            let advances = (advanceResponse[0] && advanceResponse[0].data) || [];
                             let coaOptions =
                                 '<option value="">-- Pilih Akun Kas / Bank --</option>';
                             if (res.data && res.data.length > 0) {
@@ -381,6 +393,11 @@
                             (res.postable || []).forEach(function(coa) {
                                 differenceCoaOptions +=
                                     `<option value="${coa.id}">${coa.kode_akun} - ${coa.nama_akun}</option>`;
+                            });
+                            let advanceOptions = '<option value="">Tidak memakai uang muka</option>';
+                            advances.forEach(function(advance) {
+                                advanceOptions +=
+                                    `<option value="${advance.id}" data-sisa="${advance.sisa}">${advance.payment_number} (asal ${advance.no_invoice_asal}) — sisa Rp ${Number(advance.sisa).toLocaleString('id-ID')}</option>`;
                             });
 
                             let modalPaymentHtml = `
@@ -457,6 +474,14 @@
                                                                 <label class="fw-bold text-dark small text-uppercase">Akun Selisih / Uang Muka</label>
                                                                 <select class="form-select" name="coa_selisih_id" data-app-picker data-placeholder="Cari akun selisih...">${differenceCoaOptions}</select>
                                                             </div>
+                                                            <div class="col-xl-3 col-md-6">
+                                                                <label class="fw-bold text-dark small text-uppercase">Pakai Uang Muka Supplier</label>
+                                                                <select class="form-select" name="uang_muka_sumber_payment_id" id="input_uang_muka_sumber" data-app-picker data-placeholder="Tidak memakai uang muka...">${advanceOptions}</select>
+                                                            </div>
+                                                            <div class="col-xl-3 col-md-6">
+                                                                <label class="fw-bold text-dark small text-uppercase">Nominal Uang Muka Dipakai</label>
+                                                                <input type="number" step="any" min="0" class="form-control" name="uang_muka_dipakai" id="input_uang_muka_dipakai" value="0" disabled>
+                                                            </div>
                                                         <div class="col-xl-3 col-md-6">
                                                             <label class="fw-bold text-dark small text-uppercase">Keterangan</label>
                                                             <input class="form-control" name="keterangan" placeholder="Catatan tambahan...">
@@ -506,6 +531,16 @@
                             const readAmount = name => Number.parseFloat(
                                 paymentForm.find(`[name="${name}"]`).val()
                             ) || 0;
+                            paymentForm.find('#input_uang_muka_sumber').on('change', function() {
+                                const sisa = Number.parseFloat($(this).find(':selected').data('sisa')) || 0;
+                                const amountInput = paymentForm.find('#input_uang_muka_dipakai');
+                                if ($(this).val()) {
+                                    amountInput.prop('disabled', false).attr('max', sisa).val(sisa);
+                                } else {
+                                    amountInput.prop('disabled', true).val(0);
+                                }
+                                amountInput.trigger('change');
+                            });
                             const refreshPaymentDraft = () => {
                                 const remaining = Number.parseFloat(paymentPanel.attr('data-remaining')) || 0;
                                 const payment = readAmount('jumlah_pembayaran');
@@ -514,16 +549,19 @@
                                 const transfer = readAmount('biaya_transfer_bank');
                                 const difference = readAmount('selisih_bayar');
                                 const type = paymentForm.find('[name="jenis_selisih"]').val();
+                                const advanceUsed = paymentForm.find('#input_uang_muka_sumber').val() ? readAmount('uang_muka_dipakai') : 0;
                                 const cashAndTax = payment + pph;
+                                const remainingAfterAdvance = Math.max(0, remaining - advanceUsed);
 
-                                let reduction = cashAndTax;
-                                if (type === 'PENDAPATAN_SELISIH') reduction += difference;
-                                if (type === 'BEBAN_SELISIH') reduction -= difference;
-                                if (type === 'UANG_MUKA_SUPPLIER') reduction = Math.min(remaining, cashAndTax);
+                                let cashReduction = cashAndTax;
+                                if (type === 'PENDAPATAN_SELISIH') cashReduction += difference;
+                                if (type === 'BEBAN_SELISIH') cashReduction -= difference;
+                                if (type === 'UANG_MUKA_SUPPLIER') cashReduction = Math.min(remainingAfterAdvance, cashAndTax);
+                                const reduction = Math.max(0, cashReduction) + advanceUsed;
 
                                 const cashOut = payment + stamp + transfer;
                                 const extraCost = stamp + transfer;
-                                const estimatedRemaining = Math.max(0, remaining - Math.max(0, reduction));
+                                const estimatedRemaining = Math.max(0, remaining - reduction);
                                 const invalid = reduction <= 0 || reduction > remaining + 0.01;
 
                                 paymentForm.find('#draft-cash-out').text(formatRupiah(cashOut));
@@ -546,11 +584,10 @@
                             $('#addPaymentModal').on('hidden.bs.collapse', function() {
                                 $(this).remove();
                             });
-                        },
-                        error: function() {
-                            AppAlert.auto("Gagal mengambil data akun Kas/Bank COA.");
-                        }
-                    });
+                        })
+                        .fail(function() {
+                            AppAlert.auto("Gagal mengambil data akun Kas/Bank COA atau uang muka supplier.");
+                        });
                 });
 
                 $('input[name="invoice_payment_status"]').on('change', function() {
@@ -572,16 +609,20 @@
                     const transfer = paymentNumber('biaya_transfer_bank');
                     const difference = paymentNumber('selisih_bayar');
                     const type = $('#form-store-payment [name="jenis_selisih"]').val();
+                    const advanceUsed = $('#form-store-payment [name="uang_muka_sumber_payment_id"]').val() ?
+                        paymentNumber('uang_muka_dipakai') : 0;
                     const cashAndTax = payment + pph;
+                    const remainingAfterAdvance = Math.max(0, remaining - advanceUsed);
 
-                    let reduction = cashAndTax;
-                    if (type === 'PENDAPATAN_SELISIH') reduction += difference;
-                    if (type === 'BEBAN_SELISIH') reduction -= difference;
-                    if (type === 'UANG_MUKA_SUPPLIER') reduction = Math.min(remaining, cashAndTax);
+                    let cashReduction = cashAndTax;
+                    if (type === 'PENDAPATAN_SELISIH') cashReduction += difference;
+                    if (type === 'BEBAN_SELISIH') cashReduction -= difference;
+                    if (type === 'UANG_MUKA_SUPPLIER') cashReduction = Math.min(remainingAfterAdvance, cashAndTax);
+                    const reduction = Math.max(0, cashReduction) + advanceUsed;
 
                     const cashOut = payment + stamp + transfer;
                     const extraCost = stamp + transfer;
-                    const estimatedRemaining = Math.max(0, remaining - Math.max(0, reduction));
+                    const estimatedRemaining = Math.max(0, remaining - reduction);
                     const invalid = reduction <= 0 || reduction > remaining + 0.01;
 
                     $('#draft-cash-out').text(formatRupiah(cashOut));

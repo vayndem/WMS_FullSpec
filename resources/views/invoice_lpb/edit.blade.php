@@ -77,6 +77,15 @@
                                     <span class="fw-bold text-muted" id="edit_text_ppn">Rp
                                         {{ number_format($invoice->ppn, 0, ',', '.') }}</span>
                                 </div>
+                                <div class="mb-3 mb-2 {{ $invoice->ppn > 0 ? '' : 'd-none' }}" id="edit_wrap_no_faktur_pajak">
+                                    <label class="fw-bold text-dark small text-uppercase">No. Faktur Pajak (NSFP)
+                                        <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm" name="no_faktur_pajak"
+                                        id="edit_input_no_faktur_pajak" value="{{ $invoice->no_faktur_pajak }}"
+                                        placeholder="010.001-23.12345678" pattern="\d{3}\.\d{3}-\d{2}\.\d{8}"
+                                        {{ $invoice->ppn > 0 ? 'required' : '' }}>
+                                    <div class="form-text">Format: 010.001-23.12345678 — wajib diisi bila PPN dipakai, syarat kredit PPN Masukan.</div>
+                                </div>
                                 <div class="mb-3 mb-2 row align-items-center">
                                     <label class="col-sm-4 col-form-label fw-bold py-0">Diskon:</label>
                                     <div class="col-sm-8">
@@ -133,13 +142,24 @@
             $('#edit_text_grand_total').text('Rp ' + grandTotal.toLocaleString('id-ID'));
         }
 
+        function toggleEditFakturPajak() {
+            const isPpn = $('#edit_is_ppn').is(':checked');
+            $('#edit_wrap_no_faktur_pajak').toggleClass('d-none', !isPpn);
+            $('#edit_input_no_faktur_pajak').prop('required', isPpn);
+        }
+
         $('#edit_is_ppn, #edit_input_diskon, #edit_input_ongkir').on('input change',
             function() {
                 calculateEditTotals();
+                toggleEditFakturPajak();
             });
 
         $('#form-update-invoice').on('submit', function(e) {
             e.preventDefault();
+            if ($('#edit_is_ppn').is(':checked') && !/^\d{3}\.\d{3}-\d{2}\.\d{8}$/.test($('#edit_input_no_faktur_pajak').val().trim())) {
+                AppAlert.warning('Nomor Faktur Pajak wajib diisi dengan format yang benar saat PPN dipakai.');
+                return;
+            }
             let btn = $('#btn-update-invoice');
             btn.prop('disabled', true).html(
                 '<i class="fa-solid fa-spinner fa-spin me-1"></i> Memperbarui...');

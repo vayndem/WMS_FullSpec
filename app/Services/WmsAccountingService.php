@@ -12,6 +12,7 @@ use App\Models\Npk;
 use App\Models\NpkStockAllocation;
 use App\Models\InventoryLayer;
 use App\Models\ChartOfAccount;
+use App\Models\ReturPembelian;
 use App\Models\ServiceCategory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +44,26 @@ class WmsAccountingService
         }
 
         return $this->post("LPB-{$lpb->id_lpb}", $lpb->tanggal, 'LPB', $lpb->id, "Penerimaan barang {$lpb->id_lpb}", $lines);
+    }
+
+    public function postReturPembelian(ReturPembelian $retur): Jurnal
+    {
+        $this->periods->assertOpen($retur->tanggal, 'Retur pembelian');
+        $retur->loadMissing('details.lpbDetail.kategori', 'lpb');
+        if ($retur->details->isEmpty()) {
+            throw new RuntimeException('Retur pembelian harus memiliki minimal satu baris.');
+        }
+
+        $lines = [];
+        foreach ($retur->details->groupBy(fn($detail) => $detail->lpbDetail->id_kategori) as $details) {
+            $category = $details->first()->lpbDetail->kategori;
+            $this->assertCategoryMapping($category);
+            $amount = $details->sum('total_harga');
+            $this->line($lines, $category->coa_clearing_lpb_id, $amount, 0, "Pengurangan GRNI {$category->katnama} (retur)");
+            $this->line($lines, $category->coa_persediaan_id, 0, $amount, "Pengurangan persediaan {$category->katnama} (retur)");
+        }
+
+        return $this->post("RTV-{$retur->no_retur}", $retur->tanggal, 'RETUR_PEMBELIAN', $retur->id, "Retur pembelian {$retur->no_retur} atas LPB {$retur->lpb->id_lpb}", $lines);
     }
 
     public function postNpk(Npk $npk): Jurnal
@@ -180,9 +201,15 @@ class WmsAccountingService
     public function postPayment(InvoicePayment $payment): Jurnal
     {
         $this->periods->assertOpen($payment->tanggal_pembayaran, 'Pembayaran supplier');
-        $payment->loadMissing('invoice');
+        $payment->loadMissing('invoice', 'sumberUangMuka');
         $invoice = $payment->invoice;
         ChartOfAccount::assertUsable($payment->coa_kas_bank_id, [['ASET', 'DEBIT']], 'kas/bank pembayaran', true);
+        if ((float) $payment->uang_muka_dipakai > 0) {
+            if (!$payment->sumberUangMuka) {
+                throw new RuntimeException('Sumber uang muka supplier tidak ditemukan.');
+            }
+            ChartOfAccount::assertUsable($payment->sumberUangMuka->coa_selisih_id, [['ASET', 'DEBIT']], 'uang muka supplier');
+        }
         if ($payment->jenis_selisih) {
             $differencePairs = match ($payment->jenis_selisih) {
                 'PENDAPATAN_SELISIH' => [['PENDAPATAN', 'KREDIT']],
@@ -206,6 +233,15 @@ class WmsAccountingService
             $this->line($lines, $payment->coa_selisih_id, (float) $payment->kelebihan_pembayaran, 0, 'Uang muka supplier');
         }
         $this->line($lines, AccountingSetting::accountId(AccountingSetting::BIAYA_BANK), (float) $payment->biaya_transfer_bank, 0, 'Biaya transfer bank');
+        if ((float) $payment->uang_muka_dipakai > 0) {
+            $this->line(
+                $lines,
+                $payment->sumberUangMuka->coa_selisih_id,
+                0,
+                (float) $payment->uang_muka_dipakai,
+                "Pemakaian uang muka supplier ({$payment->sumberUangMuka->payment_number})"
+            );
+        }
 
         return $this->post("PAY-{$invoice->no_invoice}-{$payment->id}", $payment->tanggal_pembayaran, 'PELUNASAN_HUTANG', $payment->id, "Pembayaran invoice {$invoice->no_invoice}", $lines);
     }
@@ -217,7 +253,7 @@ class WmsAccountingService
 
     public function reverseAutomaticJournal(string $source, int $referenceId, string $reason): Jurnal
     {
-        if (!in_array($source, ['LPB', 'NPK', 'INVOICE_SUPPLIER', 'PELUNASAN_HUTANG'], true)) {
+        if (!in_array($source, ['LPB', 'NPK', 'INVOICE_SUPPLIER', 'PELUNASAN_HUTANG', 'RETUR_PEMBELIAN'], true)) {
             throw new RuntimeException('Jurnal otomatis harus dibatalkan melalui workflow dokumen sumber.');
         }
         $this->periods->assertOpen(now(), 'Pembatalan dokumen sumber');

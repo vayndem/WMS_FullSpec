@@ -67,7 +67,7 @@ class AuthController extends Controller
                 $this->productionDashboardData($user)
             ));
         } else if ($user->isAccounting()) {
-            return view('accouting.dashboard', compact('user'));
+            return view('accounting.dashboard', compact('user'));
         } else {
             return view('dashboard', compact('user'));
         }

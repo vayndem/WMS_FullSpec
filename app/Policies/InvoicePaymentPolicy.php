@@ -19,7 +19,7 @@ class InvoicePaymentPolicy
 
     public function create(User $user): bool
     {
-        return $user->isPurchasing();
+        return $user->isFinance();
     }
 
     public function update(User $user, InvoicePayment $payment): bool

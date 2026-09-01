@@ -13,8 +13,11 @@ use App\Models\InventoryReservation;
 use App\Models\Gudang;
 use App\Models\TransferGudang;
 use App\Models\Npk;
+use App\Models\ReturPembelian;
 use App\Models\StokGudang;
+use App\Models\Supplier;
 use App\Models\User;
+use App\Services\DocumentNumberService;
 use App\Services\InventoryReversalService;
 use App\Services\LandedCostService;
 use App\Services\RekonsiliasiGudangService;
@@ -175,5 +178,197 @@ class WmsControlFrameworkTest extends TestCase
 
         $this->assertSame($activeBefore - 1, $invoice->payments()->count());
         $this->assertSame(InvoicePayment::VOID, $payment->fresh()->status);
+    }
+
+    public function test_supplier_advance_can_be_generated_then_consumed_by_a_later_payment(): void
+    {
+        $finance = User::factory()->create(['type' => User::ROLE_FINANCE]);
+        $supplier = Supplier::create([
+            'nama' => 'Supplier Uang Muka Test',
+            'alamat' => 'Jl. Test No. 1',
+            'telp' => '0800000000',
+            'pembayaran' => 'Transfer',
+        ]);
+        $invoiceA = InvoiceLpb::create([
+            'no_invoice' => 'ADV-TEST-INV-A',
+            'kode_supplier' => $supplier->id,
+            'tanggal' => today(),
+            'grand_total' => 1000000,
+            'sisa_tagihan' => 1000000,
+            'status' => InvoiceLpb::UNPAID,
+        ]);
+        $invoiceB = InvoiceLpb::create([
+            'no_invoice' => 'ADV-TEST-INV-B',
+            'kode_supplier' => $supplier->id,
+            'tanggal' => today(),
+            'grand_total' => 500000,
+            'sisa_tagihan' => 500000,
+            'status' => InvoiceLpb::UNPAID,
+        ]);
+        $kasUtama = ChartOfAccount::where('kode_akun', '1101')->firstOrFail();
+        $uangMukaAccount = ChartOfAccount::where('kode_akun', '1401')->firstOrFail();
+        $numbers = app(DocumentNumberService::class);
+
+        $responseA = $this->actingAs($finance)->postJson(route('invoice-payments.store'), [
+            'payment_number' => $numbers->financial('PY'),
+            'invoice_lpb_id' => $invoiceA->id,
+            'tanggal_pembayaran' => today()->toDateString(),
+            'metode_pembayaran' => 'Transfer BCA',
+            'coa_kas_bank_id' => $kasUtama->id,
+            'jumlah_pembayaran' => 1200000,
+            'selisih_bayar' => 200000,
+            'jenis_selisih' => 'UANG_MUKA_SUPPLIER',
+            'coa_selisih_id' => $uangMukaAccount->id,
+        ]);
+        $responseA->assertCreated();
+        $paymentA = InvoicePayment::findOrFail($responseA->json('data.id'));
+        $this->assertSame(200000.0, (float) $paymentA->kelebihan_pembayaran);
+        $this->assertSame(InvoiceLpb::PAID, $invoiceA->fresh()->status);
+        $this->assertSame(200000.0, $paymentA->sisaUangMuka());
+
+        $advances = $this->actingAs($finance)
+            ->getJson(route('invoice-payments.available-advances', $supplier->id))
+            ->assertOk()
+            ->json('data');
+        $this->assertCount(1, $advances);
+        $this->assertSame($paymentA->id, $advances[0]['id']);
+        $this->assertSame(200000.0, (float) $advances[0]['sisa']);
+
+        $responseB = $this->actingAs($finance)->postJson(route('invoice-payments.store'), [
+            'payment_number' => $numbers->financial('PY'),
+            'invoice_lpb_id' => $invoiceB->id,
+            'tanggal_pembayaran' => today()->toDateString(),
+            'metode_pembayaran' => 'Transfer BCA',
+            'coa_kas_bank_id' => $kasUtama->id,
+            'jumlah_pembayaran' => 300000,
+            'uang_muka_sumber_payment_id' => $paymentA->id,
+            'uang_muka_dipakai' => 200000,
+        ]);
+        $responseB->assertCreated();
+        $paymentB = InvoicePayment::findOrFail($responseB->json('data.id'));
+        $this->assertSame(500000.0, (float) $paymentB->total_transaksi_pengurang_hutang);
+        $this->assertSame(InvoiceLpb::PAID, $invoiceB->fresh()->status);
+        $this->assertSame(0.0, $paymentA->sisaUangMuka());
+
+        $journalB = $paymentB->fresh()->load('invoice');
+        $jurnal = \App\Models\Jurnal::with('details')->where('sumber_transaksi', 'PELUNASAN_HUTANG')->where('reff_id', $paymentB->id)->firstOrFail();
+        $this->assertEqualsWithDelta((float) $jurnal->total_debit, (float) $jurnal->total_kredit, 0.01);
+        $this->assertTrue($jurnal->details->contains(fn ($line) => (int) $line->coa_id === $uangMukaAccount->id && (float) $line->kredit === 200000.0));
+
+        $this->actingAs($finance)->deleteJson(route('invoice-payments.destroy', $paymentA->id))
+            ->assertStatus(422);
+
+        $this->actingAs($finance)->deleteJson(route('invoice-payments.destroy', $paymentB->id))
+            ->assertOk();
+        $this->assertSame(InvoicePayment::VOID, $paymentB->fresh()->status);
+
+        $this->actingAs($finance)->deleteJson(route('invoice-payments.destroy', $paymentA->id))
+            ->assertOk();
+        $this->assertSame(InvoicePayment::VOID, $paymentA->fresh()->status);
+    }
+
+    public function test_supplier_advance_cannot_be_used_across_different_suppliers(): void
+    {
+        $finance = User::factory()->create(['type' => User::ROLE_FINANCE]);
+        $supplierOne = Supplier::create(['nama' => 'Supplier Satu', 'alamat' => 'Jl. Satu', 'telp' => '0800000001', 'pembayaran' => 'Transfer']);
+        $supplierTwo = Supplier::create(['nama' => 'Supplier Dua', 'alamat' => 'Jl. Dua', 'telp' => '0800000002', 'pembayaran' => 'Transfer']);
+        $invoiceOne = InvoiceLpb::create(['no_invoice' => 'ADV-TEST-X1', 'kode_supplier' => $supplierOne->id, 'tanggal' => today(), 'grand_total' => 1000000, 'sisa_tagihan' => 1000000, 'status' => InvoiceLpb::UNPAID]);
+        $invoiceTwo = InvoiceLpb::create(['no_invoice' => 'ADV-TEST-X2', 'kode_supplier' => $supplierTwo->id, 'tanggal' => today(), 'grand_total' => 500000, 'sisa_tagihan' => 500000, 'status' => InvoiceLpb::UNPAID]);
+        $kasUtama = ChartOfAccount::where('kode_akun', '1101')->firstOrFail();
+        $uangMukaAccount = ChartOfAccount::where('kode_akun', '1401')->firstOrFail();
+        $numbers = app(DocumentNumberService::class);
+
+        $responseOne = $this->actingAs($finance)->postJson(route('invoice-payments.store'), [
+            'payment_number' => $numbers->financial('PY'),
+            'invoice_lpb_id' => $invoiceOne->id,
+            'tanggal_pembayaran' => today()->toDateString(),
+            'metode_pembayaran' => 'Transfer BCA',
+            'coa_kas_bank_id' => $kasUtama->id,
+            'jumlah_pembayaran' => 1200000,
+            'selisih_bayar' => 200000,
+            'jenis_selisih' => 'UANG_MUKA_SUPPLIER',
+            'coa_selisih_id' => $uangMukaAccount->id,
+        ])->assertCreated();
+        $paymentOne = InvoicePayment::findOrFail($responseOne->json('data.id'));
+
+        $this->actingAs($finance)->postJson(route('invoice-payments.store'), [
+            'payment_number' => $numbers->financial('PY'),
+            'invoice_lpb_id' => $invoiceTwo->id,
+            'tanggal_pembayaran' => today()->toDateString(),
+            'metode_pembayaran' => 'Transfer BCA',
+            'coa_kas_bank_id' => $kasUtama->id,
+            'jumlah_pembayaran' => 300000,
+            'uang_muka_sumber_payment_id' => $paymentOne->id,
+            'uang_muka_dipakai' => 200000,
+        ])->assertStatus(422);
+    }
+
+    public function test_purchase_return_index_and_create_views_render(): void
+    {
+        $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
+
+        $this->actingAs($warehouse)->get(route('retur-pembelian.index'))->assertOk()->assertSee('Retur Pembelian');
+        $this->actingAs($warehouse)->get(route('retur-pembelian.create'))->assertOk()->assertSee('Buat Retur Pembelian Baru');
+    }
+
+    public function test_purchase_return_reduces_stock_and_grni_then_can_be_reversed(): void
+    {
+        $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
+        $lpb = Lpb::where('document_type', 'GOODS')->whereDoesntHave('invoiceReceipts')->where('status', Lpb::POSTED)->firstOrFail();
+        $detail = $lpb->details()->where('jumlah_tersisa', '>', 0)->firstOrFail();
+        $layer = InventoryLayer::where('source_type', 'LPB_DETAIL')->where('source_id', $detail->id)->firstOrFail();
+        $balance = StokGudang::where('gudang_id', $lpb->gudang_id)->where('bahan_id', $detail->id_bahan)->firstOrFail();
+        $kategori = $detail->kategori;
+
+        $stockBefore = (float) $balance->stok_tersedia;
+        $layerBefore = (float) $layer->remaining_quantity;
+        $onhandBefore = (float) $detail->bahan->stok_onhand;
+        $returQty = min(1.0, $layerBefore);
+        $this->assertGreaterThan(0, $returQty);
+
+        $numbers = app(DocumentNumberService::class);
+        $response = $this->actingAs($warehouse)->postJson(route('retur-pembelian.store'), [
+            'no_retur' => $numbers->external('RTV'),
+            'lpb_id' => $lpb->id,
+            'tanggal' => today()->toDateString(),
+            'alasan' => 'Barang rusak saat pemeriksaan gudang (integration test).',
+            'details' => [
+                ['lpb_detail_id' => $detail->id, 'jumlah_retur' => $returQty],
+            ],
+        ]);
+        $response->assertCreated();
+        $retur = ReturPembelian::findOrFail($response->json('data.id'));
+
+        $this->assertSame($stockBefore - $returQty, (float) $balance->fresh()->stok_tersedia);
+        $this->assertSame($layerBefore - $returQty, (float) $layer->fresh()->remaining_quantity);
+        $this->assertSame($onhandBefore - $returQty, (float) $detail->bahan->fresh()->stok_onhand);
+
+        $jurnal = \App\Models\Jurnal::with('details')->where('sumber_transaksi', 'RETUR_PEMBELIAN')->where('reff_id', $retur->id)->firstOrFail();
+        $this->assertEqualsWithDelta((float) $jurnal->total_debit, (float) $jurnal->total_kredit, 0.01);
+        $expectedAmount = round($returQty * (float) $detail->harga, 2);
+        $this->assertTrue($jurnal->details->contains(
+            fn($line) => (int) $line->coa_id === (int) $kategori->coa_clearing_lpb_id && abs((float) $line->debit - $expectedAmount) < 0.01
+        ));
+        $this->assertTrue($jurnal->details->contains(
+            fn($line) => (int) $line->coa_id === (int) $kategori->coa_persediaan_id && abs((float) $line->kredit - $expectedAmount) < 0.01
+        ));
+
+        $overResponse = $this->actingAs($warehouse)->postJson(route('retur-pembelian.store'), [
+            'no_retur' => $numbers->external('RTV'),
+            'lpb_id' => $lpb->id,
+            'tanggal' => today()->toDateString(),
+            'alasan' => 'Percobaan retur melebihi stok tersedia.',
+            'details' => [
+                ['lpb_detail_id' => $detail->id, 'jumlah_retur' => $layerBefore + 1000],
+            ],
+        ]);
+        $overResponse->assertStatus(422);
+
+        app(InventoryReversalService::class)->reverseReturPembelian($retur, 'Koreksi integration test retur pembelian');
+
+        $this->assertSame(ReturPembelian::REVERSED, $retur->fresh()->status);
+        $this->assertSame($stockBefore, (float) $balance->fresh()->stok_tersedia);
+        $this->assertSame($layerBefore, (float) $layer->fresh()->remaining_quantity);
+        $this->assertDatabaseHas('document_reversals', ['document_type' => 'RETUR_PEMBELIAN', 'document_id' => $retur->id]);
     }
 }

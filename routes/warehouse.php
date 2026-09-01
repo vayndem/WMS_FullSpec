@@ -9,6 +9,7 @@ use App\Http\Controllers\PembagianGudangController;
 use App\Http\Controllers\PemeriksaanConsiderController;
 use App\Http\Controllers\PengaturanBahanGudangController;
 use App\Http\Controllers\RekonsiliasiGudangController;
+use App\Http\Controllers\ReturPembelianController;
 use App\Http\Controllers\StockOpnameController;
 use App\Http\Controllers\StokGudangController;
 use App\Http\Controllers\TransferGudangController;
@@ -39,6 +40,9 @@ Route::middleware('auth')->group(function () {
     Route::put('lpb/{lpb}/details/{detail}', [LpbController::class, 'updateDetail'])->name('lpb.details.update');
     Route::delete('lpb/{lpb}/details/{detail}', [LpbController::class, 'destroyDetail'])->name('lpb.details.destroy');
     Route::resource('lpb', LpbController::class)->except(['edit']);
+
+    Route::get('retur-pembelian/lpb-detail/{id_lpb}', [ReturPembelianController::class, 'getLpbDetail'])->name('retur-pembelian.get-lpb-detail');
+    Route::resource('retur-pembelian', ReturPembelianController::class)->only(['index', 'create', 'store', 'show']);
 
     Route::get('npk-report/pdf', [NpkController::class, 'reportPdf'])->name('npk.report.pdf');
     Route::resource('npk', NpkController::class);
@@ -71,5 +75,6 @@ Route::middleware('auth')->group(function () {
         Route::post('landed-costs/{landedCost}/post', [InventoryFinancialControlController::class, 'postLandedCost'])->name('landed-costs.post');
         Route::post('lpb/{lpb}/reverse', [InventoryFinancialControlController::class, 'reverseLpb'])->name('lpb.reverse');
         Route::post('npk/{npk}/reverse', [InventoryFinancialControlController::class, 'reverseNpk'])->name('npk.reverse');
+        Route::post('retur-pembelian/{returPembelian}/reverse', [InventoryFinancialControlController::class, 'reverseReturPembelian'])->name('retur-pembelian.reverse');
     });
 });

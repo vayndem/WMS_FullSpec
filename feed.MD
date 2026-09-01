@@ -259,7 +259,7 @@ Dashboard aktif:
 - `purchasing.dashboard`
 - `finance.payment-dashboard`
 - `gudang.dashboard`
-- `accouting.dashboard`
+- `accounting.dashboard`
 - `produksi.dashboard`
 
 Dashboard produksi menampilkan:
@@ -379,9 +379,8 @@ Daftar yang masih relevan:
 4. integration test inventory control sudah mencakup rekonsiliasi, matching, transfer transit, reservation/picking, landed cost, dan reversal; workflow procurement penuh masih dapat diperluas
 5. belum ada token management UI/API untuk Sanctum
 6. beberapa file lama masih punya encoding teks yang jelek
-7. naming `accouting` masih typo historis pada sebagian view/path
-8. CI GitHub Actions sudah tersedia untuk build, fresh migration+seed, dan test
-9. belum ada model manufacturing/WIP khusus untuk produksi
+7. CI GitHub Actions sudah tersedia untuk build, fresh migration+seed, dan test
+8. belum ada model manufacturing/WIP khusus untuk produksi
 
 ## 15. WMS control standard (12 Agustus 2026)
 

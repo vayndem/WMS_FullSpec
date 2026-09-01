@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\InvoiceLpb;
 use App\Models\Lpb;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class StoreInvoiceLpbRequest extends FormRequest
@@ -35,6 +36,11 @@ class StoreInvoiceLpbRequest extends FormRequest
             'tanggal'                 => 'required|date',
             'tgl_deadline_pembayaran' => 'nullable|date',
             'is_ppn'                  => 'required|boolean',
+            'no_faktur_pajak'         => [
+                Rule::requiredIf(fn () => $this->boolean('is_ppn')),
+                'nullable', 'string', 'max:30',
+                'regex:/^\d{3}\.\d{3}-\d{2}\.\d{8}$/',
+            ],
             'diskon'                  => 'nullable|numeric|min:0',
             'ongkir'                  => 'nullable|numeric|min:0',
             'note'                    => 'nullable|string',

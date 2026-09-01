@@ -238,10 +238,10 @@
                     </li>
                 @endif
 
-                @if (Auth::user()->can('viewAny', App\Models\Lpb::class) || Auth::user()->can('viewAny', App\Models\ServiceBap::class))
-                    <li class="{{ request()->routeIs('lpb.*', 'service-baps.*') ? 'active' : '' }}">
+                @if (Auth::user()->can('viewAny', App\Models\Lpb::class) || Auth::user()->can('viewAny', App\Models\ServiceBap::class) || Auth::user()->can('viewAny', App\Models\ReturPembelian::class))
+                    <li class="{{ request()->routeIs('lpb.*', 'service-baps.*', 'retur-pembelian.*') ? 'active' : '' }}">
                         <a href="#penerimaan" class="collapsed svg-icon" data-bs-toggle="collapse"
-                            aria-expanded="{{ request()->routeIs('lpb.*', 'service-baps.*') ? 'true' : 'false' }}">
+                            aria-expanded="{{ request()->routeIs('lpb.*', 'service-baps.*', 'retur-pembelian.*') ? 'true' : 'false' }}">
                             <i>
                                 <svg class="svg-icon" id="mm-penerimaan" width="20"
                                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -255,7 +255,7 @@
                             <i class="fa-solid fa-chevron-down mm-arrow-right arrow-hover"></i>
                         </a>
                         <ul id="penerimaan"
-                            class="submenu collapse {{ request()->routeIs('lpb.*', 'service-baps.*') ? 'show' : '' }}"
+                            class="submenu collapse {{ request()->routeIs('lpb.*', 'service-baps.*', 'retur-pembelian.*') ? 'show' : '' }}"
                             data-bs-parent="#mm-sidebar-toggle">
                             @can('viewAny', App\Models\Lpb::class)
                                 <li class="{{ request()->routeIs('lpb.*') ? 'active' : '' }}">
@@ -268,6 +268,13 @@
                                 <li class="{{ request()->routeIs('service-baps.*') ? 'active' : '' }}">
                                     <a href="{{ route('service-baps.index') }}" class="svg-icon">
                                         <i class="fa-solid fa-clipboard-check"></i><span>BAP Jasa</span>
+                                    </a>
+                                </li>
+                            @endcan
+                            @can('viewAny', App\Models\ReturPembelian::class)
+                                <li class="{{ request()->routeIs('retur-pembelian.*') ? 'active' : '' }}">
+                                    <a href="{{ route('retur-pembelian.index') }}" class="svg-icon">
+                                        <i class="fa-solid fa-rotate-left"></i><span>Retur Pembelian</span>
                                     </a>
                                 </li>
                             @endcan

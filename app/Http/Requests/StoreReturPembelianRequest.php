@@ -1,0 +1,27 @@
+<?php
+
+namespace App\Http\Requests;
+
+use App\Models\ReturPembelian;
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreReturPembelianRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return $this->user()?->can('create', ReturPembelian::class) ?? false;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'no_retur'                    => ['required', 'string', 'max:100', 'unique:retur_pembelians,no_retur'],
+            'lpb_id'                       => ['required', 'integer', 'exists:lpbs,id'],
+            'tanggal'                      => ['required', 'date'],
+            'alasan'                       => ['required', 'string', 'max:1000'],
+            'details'                      => ['required', 'array', 'min:1'],
+            'details.*.lpb_detail_id'      => ['required', 'integer', 'distinct', 'exists:lpb_details,id'],
+            'details.*.jumlah_retur'       => ['required', 'numeric', 'min:0.000001'],
+        ];
+    }
+}

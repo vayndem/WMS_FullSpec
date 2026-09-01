@@ -10,6 +10,7 @@ use App\Models\InvoiceLpb;
 use App\Models\LandedCost;
 use App\Models\Lpb;
 use App\Models\Npk;
+use App\Models\ReturPembelian;
 use App\Services\DocumentNumberService;
 use App\Services\InventoryReversalService;
 use App\Services\LandedCostService;
@@ -65,5 +66,12 @@ class InventoryFinancialControlController extends Controller
         $service->reverseNpk($npk, $request->validated('reason'));
 
         return back()->with('success', 'NPK, FIFO, stok, dan jurnal berhasil dibalik.');
+    }
+
+    public function reverseReturPembelian(ReverseInventoryDocumentRequest $request, ReturPembelian $returPembelian, InventoryReversalService $service): RedirectResponse
+    {
+        $service->reverseReturPembelian($returPembelian, $request->validated('reason'));
+
+        return back()->with('success', 'Retur pembelian, stok, dan jurnal berhasil dibalik.');
     }
 }

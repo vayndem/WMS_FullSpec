@@ -139,6 +139,14 @@
                                     </div>
                                     <span class="fw-bold text-muted" id="text_ppn">Rp 0</span>
                                 </div>
+                                <div class="mb-3 mb-2 d-none" id="wrap_no_faktur_pajak">
+                                    <label class="fw-bold text-dark small text-uppercase">No. Faktur Pajak (NSFP)
+                                        <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm" name="no_faktur_pajak"
+                                        id="input_no_faktur_pajak" placeholder="010.001-23.12345678"
+                                        pattern="\d{3}\.\d{3}-\d{2}\.\d{8}">
+                                    <div class="form-text">Format: 010.001-23.12345678 — wajib diisi bila PPN dipakai, syarat kredit PPN Masukan.</div>
+                                </div>
                                 <div class="mb-3 mb-2 row align-items-center">
                                     <label class="col-sm-4 col-form-label fw-bold py-0">Diskon:</label>
                                     <div class="col-sm-8">
@@ -347,9 +355,17 @@
             });
         });
 
+        function toggleFakturPajak() {
+            const isPpn = $('#is_ppn').is(':checked');
+            $('#wrap_no_faktur_pajak').toggleClass('d-none', !isPpn);
+            $('#input_no_faktur_pajak').prop('required', isPpn);
+        }
+
         $('#is_ppn, #input_diskon, #input_ongkir').on('input change', function() {
             calculateTotals();
+            toggleFakturPajak();
         });
+        toggleFakturPajak();
 
         $('#form-store-invoice').on('submit', function(e) {
             e.preventDefault();
@@ -359,6 +375,10 @@
             }
             if (!$('#modal_select_id_lpb').val()?.length) {
                 AppAlert.warning('Pilih minimal satu LPB atau BAP dari supplier tersebut.');
+                return;
+            }
+            if ($('#is_ppn').is(':checked') && !/^\d{3}\.\d{3}-\d{2}\.\d{8}$/.test($('#input_no_faktur_pajak').val().trim())) {
+                AppAlert.warning('Nomor Faktur Pajak wajib diisi dengan format yang benar saat PPN dipakai.');
                 return;
             }
             let btn = $('#btn-submit-invoice');
