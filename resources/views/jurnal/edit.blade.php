@@ -16,7 +16,7 @@
                     </div>
                     <div class="form-control">
                         <label class="label"><span class="label-text font-semibold">Tanggal Jurnal <span class="text-error">*</span></span></label>
-                        <input type="date" class="input input-bordered" name="tanggal" value="{{ $jurnal->tanggal }}" required>
+                        <input type="date" class="input input-bordered" name="tanggal" value="{{ $jurnal->tanggal->format('Y-m-d') }}" required>
                     </div>
                     <div class="form-control">
                         <label class="label"><span class="label-text font-semibold">Sumber Transaksi</span></label>
@@ -37,8 +37,8 @@
                                         <option value="{{ $coa->id }}" @selected($detail->coa_id == $coa->id)>{{ $coa->kode_akun }} — {{ $coa->nama_akun }}</option>
                                     @endforeach
                                 </select>
-                                <input class="input input-bordered text-end md:col-span-3" type="number" min="0" step="0.01" name="details[{{ $i }}][debit]" value="{{ $detail->debit }}">
-                                <input class="input input-bordered text-end md:col-span-3" type="number" min="0" step="0.01" name="details[{{ $i }}][kredit]" value="{{ $detail->kredit }}">
+                                <input class="input input-bordered text-end md:col-span-3" type="number" min="0" step="0.01" name="details[{{ $i }}][debit]" value="{{ $detail->debit }}" data-money-input>
+                                <input class="input input-bordered text-end md:col-span-3" type="number" min="0" step="0.01" name="details[{{ $i }}][kredit]" value="{{ $detail->kredit }}" data-money-input>
                             </div>
                         @endforeach
                     </div>

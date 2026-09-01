@@ -23,7 +23,7 @@
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Tanggal Transaksi <span
                                 class="text-error">*</span></span></label>
-                    <input type="date" name="tanggal" class="input input-bordered" value="{{ $npk->tanggal }}"
+                    <input type="date" name="tanggal" class="input input-bordered" value="{{ $npk->tanggal->format('Y-m-d') }}"
                         required>
                 </div>
                 <div class="form-control">

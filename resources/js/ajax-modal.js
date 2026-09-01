@@ -47,10 +47,11 @@ export async function submitAjaxForm(event, options = {}) {
     submitBtn?.setAttribute('disabled', 'disabled');
 
     try {
+        const method = form.querySelector('input[name="_method"]')?.value.toUpperCase() || 'POST';
         const response = await fetch(form.action, {
-            method: 'POST',
+            method,
             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-            body: new FormData(form),
+            body: new URLSearchParams(new FormData(form)),
         });
         const data = await response.json().catch(() => ({}));
 
@@ -59,7 +60,8 @@ export async function submitAjaxForm(event, options = {}) {
             return false;
         }
 
-        if (data.message) window.AppAlert?.auto(data.message);
+        if (data.message) window.AppAlert?.auto(data);
+        form.dispatchEvent(new Event('wms:saved'));
         window.dispatchEvent(new CustomEvent('wms:table-refresh'));
         form.closest('dialog')?.close();
         options.onSuccess?.(data);

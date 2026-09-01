@@ -106,6 +106,12 @@
             items: config.items,
             submitting: false,
 
+            init() {
+                this.$watch('warehouseId', () => {
+                    this.items.forEach((item) => { item.checked = false; });
+                });
+            },
+
             get visibleItems() {
                 return this.items.filter((item) => String(item.warehouse_id) === String(this.warehouseId));
             },
@@ -120,7 +126,7 @@
                 this.submitting = true;
                 try {
                     const form = event.target;
-                    const payload = new FormData(form);
+                    const payload = new URLSearchParams(new FormData(form));
                     checkedItems.forEach((item, idx) => {
                         payload.set(`items[${idx}][bahan_id]`, item.bahan_id);
                         payload.set(`items[${idx}][physical_quantity]`, item.physical_quantity);
@@ -128,8 +134,9 @@
                         payload.set(`items[${idx}][notes]`, item.notes || '');
                     });
 
+                    const method = form.querySelector('input[name="_method"]')?.value.toUpperCase() || 'POST';
                     const response = await fetch(form.action, {
-                        method: 'POST',
+                        method,
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest',
                             'Accept': 'application/json'

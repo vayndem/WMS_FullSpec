@@ -29,8 +29,13 @@ function escapeHtml(value) {
     return node.innerHTML;
 }
 
-function classifyAlert(message) {
-    const normalized = normalizeMessage(message).toLowerCase();
+function classifyAlert(payload) {
+    if (payload && typeof payload === 'object') {
+        if (payload.success === true) return 'success';
+        if (payload.success === false) return 'error';
+        return classifyAlert(payload.message);
+    }
+    const normalized = normalizeMessage(payload).toLowerCase();
     if (/(berhasil|tersimpan|diperbarui|selesai)/.test(normalized)) return 'success';
     if (/(pilih|harus|harap|belum|tidak valid|dikunci)/.test(normalized)) return 'warning';
     if (/(gagal|error|kesalahan|terjadi masalah)/.test(normalized)) return 'error';
@@ -76,8 +81,9 @@ const AppAlert = {
             confirmButtonText: 'Periksa kembali',
         });
     },
-    auto(message) {
-        return this[classifyAlert(message)](message);
+    auto(payload) {
+        const message = payload && typeof payload === 'object' ? payload.message : payload;
+        return this[classifyAlert(payload)](message);
     },
     confirm(message, options) {
         return swalDefaults.fire(Object.assign({

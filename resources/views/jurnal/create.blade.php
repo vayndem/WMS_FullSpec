@@ -41,8 +41,8 @@
                                         <option value="{{ $coa->id }}">{{ $coa->kode_akun }} — {{ $coa->nama_akun }}</option>
                                     @endforeach
                                 </select>
-                                <input class="input input-bordered text-end md:col-span-3" type="number" min="0" step="0.01" name="details[{{ $i }}][debit]" value="{{ $i === 0 ? '' : 0 }}" placeholder="Debit">
-                                <input class="input input-bordered text-end md:col-span-3" type="number" min="0" step="0.01" name="details[{{ $i }}][kredit]" value="{{ $i === 1 ? '' : 0 }}" placeholder="Kredit">
+                                <input class="input input-bordered text-end md:col-span-3" type="number" min="0" step="0.01" name="details[{{ $i }}][debit]" value="{{ $i === 0 ? '' : 0 }}" data-money-input placeholder="Debit">
+                                <input class="input input-bordered text-end md:col-span-3" type="number" min="0" step="0.01" name="details[{{ $i }}][kredit]" value="{{ $i === 1 ? '' : 0 }}" data-money-input placeholder="Kredit">
                             </div>
                         @endforeach
                     </div>

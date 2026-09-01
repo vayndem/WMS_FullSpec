@@ -148,11 +148,11 @@
                         </div>
                         <div class="mb-2 flex items-center gap-3">
                             <label class="w-24 font-semibold">Diskon:</label>
-                            <input type="number" step="any" min="0" x-model.number="form.diskon" class="input input-bordered input-sm flex-1 text-end">
+                            <input type="number" step="any" min="0" x-model.number="form.diskon" data-money-input class="input input-bordered input-sm flex-1 text-end">
                         </div>
                         <div class="mb-2 flex items-center gap-3">
                             <label class="w-24 font-semibold">Ongkir:</label>
-                            <input type="number" step="any" min="0" x-model.number="form.ongkir" class="input input-bordered input-sm flex-1 text-end">
+                            <input type="number" step="any" min="0" x-model.number="form.ongkir" data-money-input class="input input-bordered input-sm flex-1 text-end">
                         </div>
                         <div role="alert" class="alert alert-info mb-2 text-sm">PPh 23 dicatat saat pembayaran, bukan saat invoice diterima.</div>
                         <div class="divider my-1"></div>
@@ -286,7 +286,7 @@
                     });
                     const data = await response.json().catch(() => ({}));
                     if (!response.ok) { window.AppAlert.ajaxError(data); return; }
-                    window.AppAlert.auto(data.message);
+                    window.AppAlert.auto(data);
                     this.$root.querySelector('form').dispatchEvent(new Event('wms:saved'));
                     window.dispatchEvent(new CustomEvent('wms:table-refresh'));
                     this.$root.closest('dialog').close();

@@ -131,10 +131,13 @@
                     async runAction(id, action, isDelete = false) {
                         try {
                             const url = isDelete ? `{{ url('stock-opname') }}/${id}` : `{{ url('stock-opname') }}/${id}/${action}`;
-                            const response = await fetch(url, {
+                            const response = await fetch(url, isDelete ? {
+                                method: 'DELETE',
+                                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                            } : {
                                 method: 'POST',
                                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                                body: JSON.stringify(isDelete ? { _method: 'DELETE' } : {}),
+                                body: JSON.stringify({}),
                             });
                             const data = await response.json().catch(() => ({}));
                             if (!response.ok) { window.AppAlert.error(data.message || 'Proses gagal.'); return; }

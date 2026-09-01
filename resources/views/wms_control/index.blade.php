@@ -361,7 +361,7 @@
                         @csrf
                         <input type="date" name="date" value="{{ today()->toDateString() }}" class="input input-bordered md:col-span-1" required>
                         <input name="description" class="input input-bordered md:col-span-2" placeholder="Ongkir / bea / handling" required>
-                        <input type="number" step="0.01" name="total_amount" class="input input-bordered" placeholder="Nominal" required>
+                        <input type="number" step="0.01" name="total_amount" data-money-input class="input input-bordered" placeholder="Nominal" required>
                         <select name="allocation_basis" class="select select-bordered">
                             <option value="VALUE">Berdasar nilai</option>
                             <option value="QUANTITY">Berdasar qty</option>

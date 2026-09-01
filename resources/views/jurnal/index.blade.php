@@ -122,7 +122,7 @@
                                             <i class="fa-solid fa-pen-to-square"></i>
                                         </button>
                                         <button type="button" x-show="row.can_delete" class="btn btn-outline btn-error btn-sm"
-                                            @click="AppAlert.confirm('Hapus jurnal draft ini beserta detailnya?').then(r => { if (r.isConfirmed) fetch(`{{ url('jurnal') }}/${row.id}`, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ _method: 'DELETE' }) }).then(r => r.json()).then(d => { AppAlert.auto(d.message); fetchData(); }).catch(() => AppAlert.error('Gagal menghapus data.')) })">
+                                            @click="AppAlert.confirm('Hapus jurnal draft ini beserta detailnya?').then(r => { if (r.isConfirmed) fetch(`{{ url('jurnal') }}/${row.id}`, { method: 'DELETE', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } }).then(r => r.json()).then(d => { AppAlert.auto(d); fetchData(); }).catch(() => AppAlert.error('Gagal menghapus data.')) })">
                                             <i class="fa-solid fa-trash"></i>
                                         </button>
                                     </div>

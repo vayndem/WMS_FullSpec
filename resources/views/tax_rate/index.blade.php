@@ -34,9 +34,9 @@
                     try {
                         const url = this.editingId ? `{{ url('tax-rate') }}/${this.editingId}` : '{{ route('tax-rate.store') }}';
                         const response = await fetch(url, {
-                            method: 'POST',
+                            method: this.editingId ? 'PUT' : 'POST',
                             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ ...this.form, is_active: this.form.is_active ? 1 : 0, _method: this.editingId ? 'PUT' : 'POST' }),
+                            body: JSON.stringify({ ...this.form, is_active: this.form.is_active ? 1 : 0 }),
                         });
                         const data = await response.json().catch(() => ({}));
                         if (!response.ok) { window.AppAlert.ajaxError(data); return; }

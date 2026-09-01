@@ -28,7 +28,7 @@
                 @if (Auth::user()->can('viewAny', App\Models\Supplier::class) || Auth::user()->can('viewAny', App\Models\Asset::class))
                     <li
                         class="{{ request()->routeIs('supplier.*') || request()->routeIs('bahan.*') || request()->routeIs('reconciliation.*') ? 'active' : '' }}">
-                        <a href="#master" class="collapsed svg-icon" data-bs-toggle="collapse"
+                        <a href="#master" class="svg-icon"
                             aria-expanded="{{ request()->routeIs('supplier.*') || request()->routeIs('bahan.*') || request()->routeIs('reconciliation.*') ? 'true' : 'false' }}">
                             <i>
                                 <svg class="svg-icon" id="mm-master-1" width="20" xmlns="http://www.w3.org/2000/svg"
@@ -42,8 +42,7 @@
                             <i class="fa-solid fa-chevron-down mm-arrow-right arrow-hover"></i>
                         </a>
                         <ul id="master"
-                            class="submenu collapse {{ request()->routeIs('supplier.*') || request()->routeIs('bahan.*') || request()->routeIs('reconciliation.*') ? 'show' : '' }}"
-                            data-bs-parent="#mm-sidebar-toggle">
+                            class="submenu {{ request()->routeIs('supplier.*') || request()->routeIs('bahan.*') || request()->routeIs('reconciliation.*') ? 'show' : '' }}">
                             @can('viewAny', App\Models\Supplier::class)
                                 <li class="{{ request()->routeIs('supplier.*') ? 'active' : '' }}">
                                     <a href="{{ route('supplier.index') }}" class="svg-icon">
@@ -89,7 +88,7 @@
                         Auth::user()->can('viewAny', App\Models\Jurnal::class))
                     <li
                         class="{{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('chart-of-accounts.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') ? 'active' : '' }}">
-                        <a href="#akuntansi" class="collapsed svg-icon" data-bs-toggle="collapse"
+                        <a href="#akuntansi" class="svg-icon"
                             aria-expanded="{{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('chart-of-accounts.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') ? 'true' : 'false' }}">
                             <i>
                                 <svg class="svg-icon" id="mm-akuntansi-1" width="20"
@@ -104,8 +103,7 @@
                             <i class="fa-solid fa-chevron-down mm-arrow-right arrow-hover"></i>
                         </a>
                         <ul id="akuntansi"
-                            class="submenu collapse {{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('chart-of-accounts.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') ? 'show' : '' }}"
-                            data-bs-parent="#mm-sidebar-toggle">
+                            class="submenu {{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('chart-of-accounts.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') ? 'show' : '' }}">
 
                             @can('viewAny', App\Models\TipePembebanan::class)
                                 <li class="{{ request()->routeIs('tipe-pembebanan.*') ? 'active' : '' }}">
@@ -178,7 +176,7 @@
                     </li>
                 @endif
 
-                @can('viewAny', App\Models\Request::class)
+                @can('viewAny', App\Models\MaterialRequest::class)
                     <li class="{{ request()->routeIs('request.*') ? 'active' : '' }}">
                         <a href="{{ route('request.index') }}" class="svg-icon">
                             <i>
@@ -196,7 +194,7 @@
                 @if (Auth::user()->can('viewAny', App\Models\Pembelian::class) ||
                         Auth::user()->can('viewAny', App\Models\ServicePurchase::class))
                     <li class="{{ request()->routeIs('pembelian.*', 'service-purchases.*') ? 'active' : '' }}">
-                        <a href="#transaksi" class="collapsed svg-icon" data-bs-toggle="collapse"
+                        <a href="#transaksi" class="svg-icon"
                             aria-expanded="{{ request()->routeIs('pembelian.*', 'service-purchases.*') ? 'true' : 'false' }}">
                             <i>
                                 <svg class="svg-icon" id="mm-transaksi-1" width="20"
@@ -211,8 +209,7 @@
                             <i class="fa-solid fa-chevron-down mm-arrow-right arrow-hover"></i>
                         </a>
                         <ul id="transaksi"
-                            class="submenu collapse {{ request()->routeIs('pembelian.*', 'service-purchases.*') ? 'show' : '' }}"
-                            data-bs-parent="#mm-sidebar-toggle">
+                            class="submenu {{ request()->routeIs('pembelian.*', 'service-purchases.*') ? 'show' : '' }}">
                             @can('viewAny', App\Models\Pembelian::class)
                                 <li class="{{ request()->routeIs('pembelian.*') ? 'active' : '' }}">
                                     <a href="{{ route('pembelian.index') }}" class="svg-icon">
@@ -240,7 +237,7 @@
 
                 @if (Auth::user()->can('viewAny', App\Models\Lpb::class) || Auth::user()->can('viewAny', App\Models\ServiceBap::class) || Auth::user()->can('viewAny', App\Models\ReturPembelian::class))
                     <li class="{{ request()->routeIs('lpb.*', 'service-baps.*', 'retur-pembelian.*') ? 'active' : '' }}">
-                        <a href="#penerimaan" class="collapsed svg-icon" data-bs-toggle="collapse"
+                        <a href="#penerimaan" class="svg-icon"
                             aria-expanded="{{ request()->routeIs('lpb.*', 'service-baps.*', 'retur-pembelian.*') ? 'true' : 'false' }}">
                             <i>
                                 <svg class="svg-icon" id="mm-penerimaan" width="20"
@@ -255,8 +252,7 @@
                             <i class="fa-solid fa-chevron-down mm-arrow-right arrow-hover"></i>
                         </a>
                         <ul id="penerimaan"
-                            class="submenu collapse {{ request()->routeIs('lpb.*', 'service-baps.*', 'retur-pembelian.*') ? 'show' : '' }}"
-                            data-bs-parent="#mm-sidebar-toggle">
+                            class="submenu {{ request()->routeIs('lpb.*', 'service-baps.*', 'retur-pembelian.*') ? 'show' : '' }}">
                             @can('viewAny', App\Models\Lpb::class)
                                 <li class="{{ request()->routeIs('lpb.*') ? 'active' : '' }}">
                                     <a href="{{ route('lpb.index') }}" class="svg-icon">
@@ -308,10 +304,10 @@
                     || auth()->user()->isPurchasing() || auth()->user()->isAccounting()
                 ))
                     <li class="{{ request()->routeIs('gudangs.*','stok-gudangs.*','pembagian-gudangs.*','pengaturan-bahan-gudangs.*','transfer-gudangs.*','pemeriksaan-considers.*','mutasi-stoks.*','rekonsiliasi-gudangs.*','wms-control.*') ? 'active' : '' }}">
-                        <a href="#multi-gudang" class="collapsed svg-icon" data-bs-toggle="collapse">
+                        <a href="#multi-gudang" class="svg-icon">
                             <i class="fa-solid fa-warehouse"></i><span class="ms-2">Multi Gudang</span>
                         </a>
-                        <ul id="multi-gudang" class="submenu collapse {{ request()->routeIs('gudangs.*','stok-gudangs.*','pembagian-gudangs.*','pengaturan-bahan-gudangs.*','transfer-gudangs.*','pemeriksaan-considers.*','mutasi-stoks.*','rekonsiliasi-gudangs.*','wms-control.*') ? 'show' : '' }}" data-bs-parent="#mm-sidebar-toggle">
+                        <ul id="multi-gudang" class="submenu {{ request()->routeIs('gudangs.*','stok-gudangs.*','pembagian-gudangs.*','pengaturan-bahan-gudangs.*','transfer-gudangs.*','pemeriksaan-considers.*','mutasi-stoks.*','rekonsiliasi-gudangs.*','wms-control.*') ? 'show' : '' }}">
                             @can('viewAny', App\Models\Gudang::class)
                                 <li><a href="{{ route('gudangs.index') }}"><span>Master Gudang</span></a></li>
                             @endcan
@@ -348,7 +344,7 @@
                     </li>
                 @endcan
 
-                @can('viewAny', App\Models\Invoicelpb::class)
+                @can('viewAny', App\Models\InvoiceLpb::class)
                     <li class="{{ request()->routeIs('invoice-lpb.*') ? 'active' : '' }}">
                         <a href="{{ route('invoice-lpb.index') }}" class="svg-icon">
                             <i>

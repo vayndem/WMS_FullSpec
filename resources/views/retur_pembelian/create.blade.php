@@ -129,7 +129,7 @@
                     });
                     const data = await response.json().catch(() => ({}));
                     if (!response.ok) { window.AppAlert.ajaxError(data); return; }
-                    window.AppAlert.auto(data.message);
+                    window.AppAlert.auto(data);
                     window.dispatchEvent(new CustomEvent('wms:table-refresh'));
                     this.$root.closest('dialog').close();
                 } catch (error) {

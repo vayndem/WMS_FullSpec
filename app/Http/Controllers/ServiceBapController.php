@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreServiceBapRequest;
 use App\Http\Requests\CancelServiceBapRequest;
+use App\Models\Lpb;
 use App\Models\ServiceBap;
 use App\Models\ServicePurchase;
 use App\Models\ServicePoDetail;

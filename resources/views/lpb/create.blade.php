@@ -188,7 +188,7 @@
 
                     if (!response.ok) { window.AppAlert.ajaxError(res); return; }
 
-                    window.AppAlert.auto(res.message);
+                    window.AppAlert.auto(res);
                     form.dispatchEvent(new Event('wms:saved'));
                     window.dispatchEvent(new CustomEvent('wms:table-refresh'));
                     this.$root.closest('dialog').close();

@@ -7,7 +7,7 @@
                 <h3 class="text-2xl font-bold">Daftar Request</h3>
                 <p class="text-base-content/60">Kelola seluruh pengajuan request barang perusahaan</p>
             </div>
-            @can('create', App\Models\Request::class)
+            @can('create', App\Models\MaterialRequest::class)
                 <button type="button" class="btn btn-primary" onclick="openAjaxModal('{{ route('request.create') }}')">
                     <i class="fa-solid fa-plus"></i> Buat Request Baru
                 </button>

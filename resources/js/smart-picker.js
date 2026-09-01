@@ -51,6 +51,10 @@ class SmartPicker {
 
         this.select.insertAdjacentElement('afterend', this.wrapper);
         this.select.classList.add('hidden');
+        if (this.select.required) {
+            this.select.required = false;
+            this.wrapper.querySelector('.app-smart-picker__button').setAttribute('aria-required', 'true');
+        }
         this.button = this.wrapper.querySelector('.app-smart-picker__button');
         this.menu = this.wrapper.querySelector('.app-smart-picker__menu');
         this.value = this.wrapper.querySelector('.app-smart-picker__value');

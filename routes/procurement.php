@@ -22,7 +22,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('request', MaterialRequestController::class);
     Route::get('request/{request}/approve', [MaterialRequestController::class, 'approveForm'])->name('request.approveForm');
     Route::post('request/{request}/approve', [MaterialRequestController::class, 'processApprove'])->name('request.processApprove');
-    Route::resource('requestdetail', RequestDetailController::class);
+    Route::resource('requestdetail', RequestDetailController::class)->except(['create', 'edit']);
 
     Route::get('pembeliandetail/{no_po}', [PembelianDetailController::class, 'index'])->name('pembeliandetail.index');
     Route::post('pembeliandetail/{no_po}', [PembelianDetailController::class, 'store'])->name('pembeliandetail.store');
@@ -40,8 +40,8 @@ Route::middleware('auth')->group(function () {
     Route::patch('pembelian/{no_po}/close', [PembelianController::class, 'close'])->name('pembelian.close');
     Route::post('pembelian/{no_po}/cetak', [PembelianController::class, 'cetak'])->name('pembelian.cetak');
 
-    Route::resource('kredit', KreditController::class);
-    Route::resource('debit', DebitController::class);
+    Route::resource('kredit', KreditController::class)->except(['create', 'edit']);
+    Route::resource('debit', DebitController::class)->except(['create', 'edit']);
     Route::get('tipe-pembebanan-report/pdf', [TipePembebananController::class, 'reportPdf'])->name('tipe-pembebanan.report.pdf');
     Route::resource('tipe-pembebanan', TipePembebananController::class);
     Route::resource('kategori-bahan', KategoriBahanController::class);

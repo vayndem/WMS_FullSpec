@@ -4,6 +4,7 @@ import wmsDataTable from './data-table';
 import './alert';
 import './ajax-modal';
 import './smart-picker';
+import './number-format';
 import './form-autosave';
 import './app-shell';
 

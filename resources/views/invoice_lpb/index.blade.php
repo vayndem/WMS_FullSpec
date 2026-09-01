@@ -7,7 +7,7 @@
                 <h3 class="text-2xl font-bold">Daftar Invoice LPB</h3>
                 <p class="text-base-content/60">Kelola data tagihan dan pelunasan penerimaan barang</p>
             </div>
-            @can('create', App\Models\Invoicelpb::class)
+            @can('create', App\Models\InvoiceLpb::class)
                 <button type="button" class="btn btn-primary" onclick="openAjaxModal('{{ route('invoice-lpb.create') }}')">
                     <i class="fa-solid fa-plus"></i> Buat Invoice LPB
                 </button>
@@ -222,11 +222,11 @@
                                     </div>
                                     <div class="form-control">
                                         <label class="label"><span class="label-text font-semibold text-xs uppercase">Jumlah Pembayaran</span></label>
-                                        <input type="number" step="any" min="0" x-model.number="payment.jumlah_pembayaran" class="input input-bordered">
+                                        <input type="number" step="any" min="0" x-model.number="payment.jumlah_pembayaran" data-money-input class="input input-bordered">
                                     </div>
                                     <div class="form-control">
                                         <label class="label"><span class="label-text font-semibold text-xs uppercase">Potongan PPh 23</span></label>
-                                        <input type="number" step="any" min="0" x-model.number="payment.potongan_pph23" class="input input-bordered">
+                                        <input type="number" step="any" min="0" x-model.number="payment.potongan_pph23" data-money-input class="input input-bordered">
                                     </div>
                                     <div class="form-control">
                                         <label class="label"><span class="label-text font-semibold text-xs uppercase">Materai Tambahan</span></label>
@@ -237,11 +237,11 @@
                                     </div>
                                     <div class="form-control">
                                         <label class="label"><span class="label-text font-semibold text-xs uppercase">Biaya Transfer Bank</span></label>
-                                        <input type="number" step="any" min="0" x-model.number="payment.biaya_transfer_bank" class="input input-bordered">
+                                        <input type="number" step="any" min="0" x-model.number="payment.biaya_transfer_bank" data-money-input class="input input-bordered">
                                     </div>
                                     <div class="form-control">
                                         <label class="label"><span class="label-text font-semibold text-xs uppercase">Nominal Selisih / Kelebihan Bayar</span></label>
-                                        <input type="number" step="any" min="0" x-model.number="payment.selisih_bayar" class="input input-bordered">
+                                        <input type="number" step="any" min="0" x-model.number="payment.selisih_bayar" data-money-input class="input input-bordered">
                                     </div>
                                     <div class="form-control">
                                         <label class="label"><span class="label-text font-semibold text-xs uppercase">Jenis Selisih</span></label>
@@ -432,7 +432,7 @@
                         });
                         const data = await response.json().catch(() => ({}));
                         if (!response.ok) { window.AppAlert.ajaxError(data); return; }
-                        window.AppAlert.auto(data.message);
+                        window.AppAlert.auto(data);
                         if (data.next_document_number) this.paymentNumber = data.next_document_number;
                         this.paymentPanelOpen = false;
                         this.$refs.showDialog.close();
@@ -449,13 +449,12 @@
                     if (!result.isConfirmed) return;
                     try {
                         const response = await fetch(`{{ url('invoice-lpb') }}/${id}`, {
-                            method: 'POST',
-                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ _method: 'DELETE' }),
+                            method: 'DELETE',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                         });
                         const data = await response.json().catch(() => ({}));
                         if (!response.ok) { window.AppAlert.ajaxError(data); return; }
-                        window.AppAlert.auto(data.message);
+                        window.AppAlert.auto(data);
                         this.fetchData();
                     } catch (error) {
                         window.AppAlert.error('Gagal menghapus data.');

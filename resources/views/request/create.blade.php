@@ -226,6 +226,7 @@
                         Object.entries(item).forEach(([key, value]) => {
                             payload.set(`items[${idx}][${key}]`, value ?? '');
                         });
+                        payload.set(`items[${idx}][tipe_barang]`, item.kategori ?? '');
                     });
 
                     const response = await fetch(form.action, {
@@ -240,7 +241,7 @@
                         return;
                     }
 
-                    window.AppAlert.auto(data.message || 'Request berhasil disimpan.');
+                    window.AppAlert.auto(data.message ? data : 'Request berhasil disimpan.');
                     window.dispatchEvent(new CustomEvent('wms:table-refresh'));
                     this.$root.closest('dialog')?.close();
                 } catch (error) {

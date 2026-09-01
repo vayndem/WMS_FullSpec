@@ -8,7 +8,7 @@
                 <p class="text-base-content/60">Pantau permintaan, pemesanan, penerimaan, dan invoice supplier.</p>
             </div>
             <div class="flex flex-wrap gap-2">
-                @can('create', App\Models\Request::class)
+                @can('create', App\Models\MaterialRequest::class)
                     <a href="{{ route('request.index', ['create' => 1]) }}" class="btn btn-outline btn-primary">
                         <i class="fa-solid fa-file-circle-plus"></i> Buat Request
                     </a>

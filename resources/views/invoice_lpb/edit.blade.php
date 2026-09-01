@@ -15,14 +15,15 @@
             }
             this.submitting = true;
             try {
+                const method = form.querySelector('input[name="_method"]')?.value.toUpperCase() || 'POST';
                 const response = await fetch(form.action, {
-                    method: 'POST',
+                    method,
                     headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-                    body: new FormData(form),
+                    body: new URLSearchParams(new FormData(form)),
                 });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok) { window.AppAlert.ajaxError(data); return; }
-                window.AppAlert.auto(data.message);
+                window.AppAlert.auto(data);
                 window.dispatchEvent(new CustomEvent('wms:table-refresh'));
                 form.closest('dialog').close();
             } catch (error) {
@@ -64,11 +65,11 @@
                             </div>
                             <div class="form-control">
                                 <label class="label"><span class="label-text font-semibold">Tanggal Invoice <span class="text-error">*</span></span></label>
-                                <input type="date" class="input input-bordered" name="tanggal" value="{{ $invoice->tanggal }}" required>
+                                <input type="date" class="input input-bordered" name="tanggal" value="{{ $invoice->tanggal->format('Y-m-d') }}" required>
                             </div>
                             <div class="form-control">
                                 <label class="label"><span class="label-text font-semibold">Deadline Pembayaran</span></label>
-                                <input type="date" class="input input-bordered" name="tgl_deadline_pembayaran" value="{{ $invoice->tgl_deadline_pembayaran }}">
+                                <input type="date" class="input input-bordered" name="tgl_deadline_pembayaran" value="{{ optional($invoice->tgl_deadline_pembayaran)->format('Y-m-d') }}">
                             </div>
                         </div>
                     </div>
@@ -99,11 +100,11 @@
                         </div>
                         <div class="mb-2 flex items-center gap-3">
                             <label class="w-24 font-semibold">Diskon:</label>
-                            <input type="number" step="any" min="0" name="diskon" x-model.number="diskon" class="input input-bordered input-sm flex-1 text-end">
+                            <input type="number" step="any" min="0" name="diskon" x-model.number="diskon" data-money-input class="input input-bordered input-sm flex-1 text-end">
                         </div>
                         <div class="mb-2 flex items-center gap-3">
                             <label class="w-24 font-semibold">Ongkir:</label>
-                            <input type="number" step="any" min="0" name="ongkir" x-model.number="ongkir" class="input input-bordered input-sm flex-1 text-end">
+                            <input type="number" step="any" min="0" name="ongkir" x-model.number="ongkir" data-money-input class="input input-bordered input-sm flex-1 text-end">
                         </div>
                         <div role="alert" class="alert alert-info mb-2 text-sm">PPh 23 dicatat saat pembayaran.</div>
                         <div class="divider my-1"></div>

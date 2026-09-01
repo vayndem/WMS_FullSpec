@@ -227,11 +227,11 @@
                         </div>
                         <div class="form-control">
                             <label class="label"><span class="label-text font-semibold">Diskon (Rp)</span></label>
-                            <input type="number" step="any" min="0" x-model="form.diskon" class="input input-bordered">
+                            <input type="number" step="any" min="0" x-model="form.diskon" data-money-input class="input input-bordered">
                         </div>
                         <div class="form-control">
                             <label class="label"><span class="label-text font-semibold">Ongkir / Handling (Rp)</span></label>
-                            <input type="number" step="any" min="0" x-model="form.ongkir" class="input input-bordered">
+                            <input type="number" step="any" min="0" x-model="form.ongkir" data-money-input class="input input-bordered">
                         </div>
                         <div class="form-control md:col-span-4">
                             <label class="label"><span class="label-text font-semibold">Catatan / Notes</span></label>
@@ -381,7 +381,7 @@
                                                     <input type="number" step="any" min="0.01" :max="item.max || null" x-model.number="item.jumlah" class="input input-bordered input-sm w-full" required>
                                                 </td>
                                                 <td>
-                                                    <input type="number" step="any" min="0" x-model.number="item.harga" class="input input-bordered input-sm w-full" required>
+                                                    <input type="number" step="any" min="0" x-model.number="item.harga" data-money-input class="input input-bordered input-sm w-full" required>
                                                 </td>
                                                 <td class="text-end font-bold" x-text="'Rp ' + Number((item.jumlah || 0) * (item.harga || 0)).toLocaleString('id-ID')"></td>
                                                 <td class="text-center">
@@ -519,13 +519,12 @@
                     if (!result.isConfirmed) return;
                     try {
                         const response = await fetch(`{{ url('pembelian') }}/${noPo}`, {
-                            method: 'POST',
-                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ _method: 'DELETE' }),
+                            method: 'DELETE',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                         });
                         const data = await response.json().catch(() => ({}));
                         if (!response.ok) { window.AppAlert.ajaxError(data); return; }
-                        window.AppAlert.auto(data.message);
+                        window.AppAlert.auto(data);
                         window.dispatchEvent(new CustomEvent('wms:table-refresh'));
                     } catch (error) {
                         window.AppAlert.error('Gagal menghapus data pembelian.');
@@ -585,17 +584,16 @@
                                 bahan_id: item.bahan_id, jumlah: item.jumlah, harga: item.harga,
                                 request_detail_id: item.request_detail_id || null,
                             })),
-                            _method: this.editMode ? 'PUT' : 'POST',
                         };
                         const response = await fetch(url, {
-                            method: 'POST',
+                            method: this.editMode ? 'PUT' : 'POST',
                             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload),
                         });
                         const data = await response.json().catch(() => ({}));
                         if (!response.ok) { window.AppAlert.ajaxError(data); return; }
 
-                        window.AppAlert.auto(data.message);
+                        window.AppAlert.auto(data);
                         window.dispatchEvent(new CustomEvent('wms:table-refresh'));
                         if (!this.editMode && data.next_document_number) {
                             this.form = this.defaultForm(data.next_document_number);

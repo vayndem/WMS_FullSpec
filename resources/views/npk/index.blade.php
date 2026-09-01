@@ -20,7 +20,7 @@
                 reportUrl: '{{ route('npk.report.pdf') }}',
                 extraParams: { status: 'POSTED' },
                 columns: [
-                    { data: 'kode' }, { data: 'kode_datapesanan' }, { data: 'tanggal' }, { data: 'nama_barang' }, { data: 'jumlah_display' },
+                    { data: 'kode' }, { data: 'kode_datapesanan' }, { data: 'tanggal' }, { data: 'nama_barang', name: 'barang.nama' }, { data: 'jumlah_display', name: 'jumlah' },
                     @if ($financial) { data: 'harga_satuan' }, { data: 'total_nilai' }, @endif
                     { data: 'status' }, { data: 'operator' }, { data: 'aksi', orderable: false, searchable: false },
                 ],
@@ -99,7 +99,7 @@
                                             <i class="fa-solid fa-pen-to-square"></i>
                                         </button>
                                         <button type="button" x-show="row.can_delete" class="btn btn-outline btn-error btn-sm"
-                                            @click="AppAlert.confirm('Hapus draft pengeluaran barang ini?').then(r => { if (r.isConfirmed) fetch(`{{ url('npk') }}/${row.id}`, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ _method: 'DELETE' }) }).then(r => r.json()).then(d => { AppAlert.auto(d.message); fetchData(); }).catch(() => AppAlert.error('Gagal menghapus data.')) })">
+                                            @click="AppAlert.confirm('Hapus draft pengeluaran barang ini?').then(r => { if (r.isConfirmed) fetch(`{{ url('npk') }}/${row.id}`, { method: 'DELETE', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } }).then(r => r.json()).then(d => { AppAlert.auto(d); fetchData(); }).catch(() => AppAlert.error('Gagal menghapus data.')) })">
                                             <i class="fa-solid fa-trash"></i>
                                         </button>
                                         <span x-show="!row.can_update && !row.can_delete">-</span>

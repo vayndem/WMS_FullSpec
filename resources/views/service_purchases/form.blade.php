@@ -53,7 +53,7 @@
                             <input required name="items[{{ $i }}][description]" class="input input-bordered md:col-span-4" placeholder="Uraian jasa" value="{{ $row['description'] ?? '' }}">
                             <input required type="number" min=".01" step=".01" name="items[{{ $i }}][quantity]" class="input input-bordered md:col-span-1" value="{{ $row['quantity'] ?? 1 }}">
                             <input required name="items[{{ $i }}][unit]" class="input input-bordered md:col-span-1" value="{{ $row['unit'] ?? 'JOB' }}">
-                            <input required type="number" min=".01" step=".01" name="items[{{ $i }}][unit_price]" class="input input-bordered md:col-span-2" placeholder="Harga" value="{{ $row['unit_price'] ?? '' }}">
+                            <input required type="number" min=".01" step=".01" name="items[{{ $i }}][unit_price]" class="input input-bordered md:col-span-2" data-money-input placeholder="Harga" value="{{ $row['unit_price'] ?? '' }}">
                             <button type="button" class="btn btn-outline btn-error remove-row md:col-span-1">&times;</button>
                         </div>
                     @endforeach
