@@ -2,22 +2,22 @@
 
 namespace App\Services;
 
-use App\Models\Asset;
-use App\Models\AssetDepreciation;
-use App\Models\AssetDisposal;
+use App\Models\Aset;
+use App\Models\PenyusutanAset;
+use App\Models\PelepasanAset;
 use App\Models\Jurnal;
 use App\Models\ChartOfAccount;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
-class AssetAccountingService
+class AsetAccountingService
 {
     public function __construct(private AccountingPeriodService $periods, private DocumentNumberService $numbers) {}
 
-    public function postAcquisition(Asset $asset): Jurnal
+    public function postAcquisition(Aset $asset): Jurnal
     {
-        $this->periods->assertOpen($asset->acquisition_date, 'Perolehan asset');
+        $this->periods->assertOpen($asset->acquisition_date, 'Perolehan aset');
         $asset->loadMissing('category');
         $this->assertCategoryMapping($asset);
         $this->assertAcquisitionAccount($asset);
@@ -28,10 +28,10 @@ class AssetAccountingService
         }
 
         $lines = [[
-            'coa_id' => $asset->category->asset_coa_id,
+            'coa_id' => $asset->category->akun_aset_id,
             'debit' => $cost,
             'kredit' => 0,
-            'keterangan' => "Perolehan {$asset->asset_number}"
+            'keterangan' => "Perolehan {$asset->nomor_aset}"
         ]];
         if ($opening > 0) {
             $lines[] = [
@@ -49,21 +49,21 @@ class AssetAccountingService
         ];
 
         return $this->post(
-            "AST-{$asset->asset_number}",
+            "AST-{$asset->nomor_aset}",
             $asset->acquisition_date,
             'ASSET_ACQUISITION',
             $asset->id,
-            "Perolehan asset {$asset->name}",
+            "Perolehan aset {$asset->name}",
             $lines
         );
     }
 
-    public function depreciate(Asset $asset, array $data): AssetDepreciation
+    public function depreciate(Aset $asset, array $data): PenyusutanAset
     {
-        $this->periods->assertOpen($data['posting_date'], 'Penyusutan asset');
+        $this->periods->assertOpen($data['posting_date'], 'Penyusutan aset');
         return DB::transaction(function () use ($asset, $data) {
-            $asset = Asset::with('category')->lockForUpdate()->findOrFail($asset->id);
-            if ($asset->status !== 'ACTIVE') throw new RuntimeException('Hanya asset aktif yang dapat disusutkan.');
+            $asset = Aset::with('category')->lockForUpdate()->findOrFail($asset->id);
+            if ($asset->status !== 'ACTIVE') throw new RuntimeException('Hanya aset aktif yang dapat disusutkan.');
             $this->assertCategoryMapping($asset);
             $amount = round((float) $data['amount'], 2);
             $maximum = round((float) $asset->book_value - (float) $asset->residual_value, 2);
@@ -81,7 +81,7 @@ class AssetAccountingService
                 'posted_by' => Auth::id(),
             ]);
             $journal = $this->post(
-                "DEP-{$asset->asset_number}-{$depreciation->id}",
+                "DEP-{$asset->nomor_aset}-{$depreciation->id}",
                 $data['posting_date'],
                 'ASSET_DEPRECIATION',
                 $depreciation->id,
@@ -101,25 +101,25 @@ class AssetAccountingService
         });
     }
 
-    public function dispose(Asset $asset, array $data): AssetDisposal
+    public function dispose(Aset $asset, array $data): PelepasanAset
     {
-        $this->periods->assertOpen($data['disposal_date'], 'Pelepasan asset');
+        $this->periods->assertOpen($data['disposal_date'], 'Pelepasan aset');
         return DB::transaction(function () use ($asset, $data) {
-            $asset = Asset::with('category')->lockForUpdate()->findOrFail($asset->id);
-            if ($asset->status !== 'ACTIVE') throw new RuntimeException('Asset sudah tidak aktif.');
+            $asset = Aset::with('category')->lockForUpdate()->findOrFail($asset->id);
+            if ($asset->status !== 'ACTIVE') throw new RuntimeException('Aset sudah tidak aktif.');
             $this->assertCategoryMapping($asset);
             $proceeds = $data['disposal_type'] === 'SALE' ? round((float) $data['proceeds'], 2) : 0;
             if ($data['disposal_type'] === 'SALE' && empty($data['cash_bank_coa_id'])) {
-                throw new RuntimeException('Akun kas/bank wajib dipilih untuk penjualan asset.');
+                throw new RuntimeException('Akun kas/bank wajib dipilih untuk penjualan aset.');
             }
             if ($data['disposal_type'] === 'SALE') {
-                ChartOfAccount::assertUsable($data['cash_bank_coa_id'], [['ASET', 'DEBIT']], 'kas/bank penjualan asset', true);
+                ChartOfAccount::assertUsable($data['cash_bank_coa_id'], [['ASET', 'DEBIT']], 'kas/bank penjualan aset', true);
             }
             $book = (float) $asset->book_value;
             $gain = max($proceeds - $book, 0);
             $loss = max($book - $proceeds, 0);
-            $disposal = AssetDisposal::create([
-                'asset_id' => $asset->id,
+            $disposal = PelepasanAset::create([
+                'aset_id' => $asset->id,
                 'disposal_date' => $data['disposal_date'],
                 'disposal_type' => $data['disposal_type'],
                 'proceeds' => $proceeds,
@@ -131,22 +131,22 @@ class AssetAccountingService
                 'disposed_by' => Auth::id(),
             ]);
             $lines = [];
-            if ($proceeds > 0) $lines[] = ['coa_id' => $data['cash_bank_coa_id'], 'debit' => $proceeds, 'kredit' => 0, 'keterangan' => 'Hasil penjualan asset'];
+            if ($proceeds > 0) $lines[] = ['coa_id' => $data['cash_bank_coa_id'], 'debit' => $proceeds, 'kredit' => 0, 'keterangan' => 'Hasil penjualan aset'];
             if ((float) $asset->accumulated_depreciation > 0) $lines[] = [
                 'coa_id' => $asset->category->accumulated_depreciation_coa_id,
                 'debit' => (float) $asset->accumulated_depreciation,
                 'kredit' => 0,
                 'keterangan' => 'Hapus akumulasi penyusutan'
             ];
-            if ($loss > 0) $lines[] = ['coa_id' => $asset->category->disposal_loss_coa_id, 'debit' => $loss, 'kredit' => 0, 'keterangan' => 'Rugi pelepasan asset'];
-            $lines[] = ['coa_id' => $asset->category->asset_coa_id, 'debit' => 0, 'kredit' => (float) $asset->acquisition_cost, 'keterangan' => 'Hapus harga perolehan asset'];
-            if ($gain > 0) $lines[] = ['coa_id' => $asset->category->disposal_gain_coa_id, 'debit' => 0, 'kredit' => $gain, 'keterangan' => 'Keuntungan pelepasan asset'];
+            if ($loss > 0) $lines[] = ['coa_id' => $asset->category->disposal_loss_coa_id, 'debit' => $loss, 'kredit' => 0, 'keterangan' => 'Rugi pelepasan aset'];
+            $lines[] = ['coa_id' => $asset->category->akun_aset_id, 'debit' => 0, 'kredit' => (float) $asset->acquisition_cost, 'keterangan' => 'Hapus harga perolehan aset'];
+            if ($gain > 0) $lines[] = ['coa_id' => $asset->category->disposal_gain_coa_id, 'debit' => 0, 'kredit' => $gain, 'keterangan' => 'Keuntungan pelepasan aset'];
             $journal = $this->post(
-                "DSP-{$asset->asset_number}",
+                "DSP-{$asset->nomor_aset}",
                 $data['disposal_date'],
                 'ASSET_DISPOSAL',
                 $disposal->id,
-                "Pelepasan asset {$asset->name}",
+                "Pelepasan aset {$asset->name}",
                 $lines
             );
             $disposal->update(['journal_id' => $journal->id]);
@@ -181,27 +181,27 @@ class AssetAccountingService
         return $journal;
     }
 
-    private function assertCategoryMapping(Asset $asset): void
+    private function assertCategoryMapping(Aset $asset): void
     {
         if (!$asset->category) {
-            throw new RuntimeException('Kategori asset tidak tersedia.');
+            throw new RuntimeException('Kategori aset tidak tersedia.');
         }
-        ChartOfAccount::assertUsable($asset->category->asset_coa_id, [['ASET', 'DEBIT']], 'harga perolehan asset');
+        ChartOfAccount::assertUsable($asset->category->akun_aset_id, [['ASET', 'DEBIT']], 'harga perolehan aset');
         ChartOfAccount::assertUsable($asset->category->accumulated_depreciation_coa_id, [['ASET', 'KREDIT']], 'akumulasi penyusutan');
         ChartOfAccount::assertUsable($asset->category->depreciation_expense_coa_id, [['BEBAN', 'DEBIT']], 'beban penyusutan');
-        ChartOfAccount::assertUsable($asset->category->disposal_gain_coa_id, [['PENDAPATAN', 'KREDIT']], 'keuntungan pelepasan asset');
-        ChartOfAccount::assertUsable($asset->category->disposal_loss_coa_id, [['BEBAN', 'DEBIT']], 'kerugian pelepasan asset');
+        ChartOfAccount::assertUsable($asset->category->disposal_gain_coa_id, [['PENDAPATAN', 'KREDIT']], 'keuntungan pelepasan aset');
+        ChartOfAccount::assertUsable($asset->category->disposal_loss_coa_id, [['BEBAN', 'DEBIT']], 'kerugian pelepasan aset');
     }
 
-    private function assertAcquisitionAccount(Asset $asset): void
+    private function assertAcquisitionAccount(Aset $asset): void
     {
         [$allowed, $mustBeCash] = match ($asset->acquisition_type) {
             'CASH' => [[['ASET', 'DEBIT']], true],
             'CREDIT' => [[['LIABILITAS', 'KREDIT']], null],
             'GRANT', 'OPENING_BALANCE' => [[['EKUITAS', 'KREDIT']], null],
             'CORRECTION' => [[['EKUITAS', 'KREDIT'], ['PENDAPATAN', 'KREDIT']], null],
-            default => throw new RuntimeException('Jenis perolehan asset tidak dikenali.'),
+            default => throw new RuntimeException('Jenis perolehan aset tidak dikenali.'),
         };
-        ChartOfAccount::assertUsable($asset->acquisition_credit_coa_id, $allowed, 'lawan perolehan asset', $mustBeCash);
+        ChartOfAccount::assertUsable($asset->acquisition_credit_coa_id, $allowed, 'lawan perolehan aset', $mustBeCash);
     }
 }

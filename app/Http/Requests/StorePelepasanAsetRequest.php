@@ -6,11 +6,11 @@ use App\Models\ChartOfAccount;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class StoreAssetDisposalRequest extends FormRequest
+class StorePelepasanAsetRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('dispose', $this->route('asset'));
+        return $this->user()->can('dispose', $this->route('aset'));
     }
     public function rules(): array
     {

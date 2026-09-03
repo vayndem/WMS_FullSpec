@@ -1,6 +1,7 @@
 import './bootstrap';
 import Alpine from 'alpinejs';
 import wmsDataTable from './data-table';
+import './format';
 import './alert';
 import './ajax-modal';
 import './smart-picker';

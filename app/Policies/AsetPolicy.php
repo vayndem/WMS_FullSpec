@@ -3,9 +3,9 @@
 namespace App\Policies;
 
 use App\Models\User;
-use App\Models\Asset;
+use App\Models\Aset;
 
-class AssetPolicy
+class AsetPolicy
 {
     private function canViewAssets(User $user): bool
     {
@@ -27,7 +27,7 @@ class AssetPolicy
         return $this->canViewAssets($user);
     }
 
-    public function view(User $user, Asset $asset): bool
+    public function view(User $user, Aset $asset): bool
     {
         return $this->canViewAssets($user);
     }
@@ -42,17 +42,17 @@ class AssetPolicy
         return $this->canManageAssets($user);
     }
 
-    public function update(User $user, Asset $asset): bool
+    public function update(User $user, Aset $asset): bool
     {
         return $this->canManageAssets($user) && $asset->status === 'ACTIVE';
     }
 
-    public function depreciate(User $user, Asset $asset): bool
+    public function depreciate(User $user, Aset $asset): bool
     {
         return $this->update($user, $asset);
     }
 
-    public function dispose(User $user, Asset $asset): bool
+    public function dispose(User $user, Aset $asset): bool
     {
         return $this->update($user, $asset);
     }

@@ -3,15 +3,15 @@
 namespace App\Policies;
 
 use App\Models\User;
-use App\Models\AssetCategory;
+use App\Models\KategoriAset;
 
-class AssetCategoryPolicy
+class KategoriAsetPolicy
 {
     public function viewAny(User $user): bool
     {
         return true;
     }
-    public function view(User $user, AssetCategory $category): bool
+    public function view(User $user, KategoriAset $category): bool
     {
         return true;
     }
@@ -19,11 +19,11 @@ class AssetCategoryPolicy
     {
         return $user->isAccounting();
     }
-    public function update(User $user, AssetCategory $category): bool
+    public function update(User $user, KategoriAset $category): bool
     {
         return $user->isAccounting();
     }
-    public function delete(User $user, AssetCategory $category): bool
+    public function delete(User $user, KategoriAset $category): bool
     {
         return $user->isAccounting() && !$category->assets()->exists();
     }

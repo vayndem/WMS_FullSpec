@@ -11,7 +11,7 @@ use App\Models\KategoriBahan;
 use App\Models\Gudang;
 use App\Models\AccountingSetting;
 use App\Models\TaxRate;
-use App\Models\AssetCategory;
+use App\Models\KategoriAset;
 use App\Models\ServiceCategory;
 use App\Models\StokGudang;
 use App\Models\MutasiStok;
@@ -214,9 +214,9 @@ class DatabaseSeeder extends Seeder
             Bahan::updateOrCreate(['nama' => $bhn['nama']], $bhn);
         }
 
-        AssetCategory::updateOrCreate(['code' => 'EQUIPMENT'], [
+        KategoriAset::updateOrCreate(['code' => 'EQUIPMENT'], [
             'name' => 'Peralatan dan Inventaris',
-            'asset_coa_id' => ChartOfAccount::where('kode_akun', '1501')->value('id'),
+            'akun_aset_id' => ChartOfAccount::where('kode_akun', '1501')->value('id'),
             'accumulated_depreciation_coa_id' => ChartOfAccount::where('kode_akun', '1591')->value('id'),
             'depreciation_expense_coa_id' => ChartOfAccount::where('kode_akun', '5301')->value('id'),
             'disposal_gain_coa_id' => ChartOfAccount::where('kode_akun', '4203')->value('id'),
@@ -249,6 +249,7 @@ class DatabaseSeeder extends Seeder
             WmsDemoSeeder::class,
             WmsTransactionScenarioSeeder::class,
             AssetAndServiceDemoSeeder::class,
+            FinancialStatementDemoSeeder::class,
         ]);
 
         $accountingUser = User::where('type', User::ROLE_ACCOUNTING)->first();

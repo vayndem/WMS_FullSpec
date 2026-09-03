@@ -8,29 +8,29 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('asset_categories', function (Blueprint $table) {
+        Schema::create('wms_kategori_asets', function (Blueprint $table) {
             $table->id();
             $table->string('code', 30)->unique();
             $table->string('name', 150);
-            $table->unsignedBigInteger('asset_coa_id');
+            $table->unsignedBigInteger('akun_aset_id');
             $table->unsignedBigInteger('accumulated_depreciation_coa_id');
             $table->unsignedBigInteger('depreciation_expense_coa_id');
             $table->unsignedBigInteger('disposal_gain_coa_id');
             $table->unsignedBigInteger('disposal_loss_coa_id');
             $table->boolean('is_active')->default(true)
-                ->comment('0=kategori asset nonaktif, 1=kategori asset aktif');
+                ->comment('0=kategori aset nonaktif, 1=kategori aset aktif');
             $table->timestamps();
-            $table->foreign('asset_coa_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
+            $table->foreign('akun_aset_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
             $table->foreign('accumulated_depreciation_coa_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
             $table->foreign('depreciation_expense_coa_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
             $table->foreign('disposal_gain_coa_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
             $table->foreign('disposal_loss_coa_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
         });
 
-        Schema::create('assets', function (Blueprint $table) {
+        Schema::create('wms_asets', function (Blueprint $table) {
             $table->id();
-            $table->string('asset_number', 40)->unique();
-            $table->unsignedBigInteger('asset_category_id');
+            $table->string('nomor_aset', 40)->unique();
+            $table->unsignedBigInteger('kategori_aset_id');
             $table->string('name', 180);
             $table->string('serial_number', 120)->nullable();
             $table->string('location', 150)->nullable();
@@ -50,18 +50,18 @@ return new class extends Migration
             $table->decimal('accumulated_depreciation', 18, 2)->default(0);
             $table->decimal('book_value', 18, 2);
             $table->string('status', 30)->default('ACTIVE')
-                ->comment('Status asset: ACTIVE=aktif, SOLD=terjual, DISPOSED=dihapuskan');
+                ->comment('Status aset: ACTIVE=aktif, SOLD=terjual, DISPOSED=dihapuskan');
             $table->text('notes')->nullable();
             $table->unsignedBigInteger('created_by');
             $table->timestamps();
-            $table->foreign('asset_category_id')->references('id')->on('asset_categories')->restrictOnDelete();
+            $table->foreign('kategori_aset_id')->references('id')->on('wms_kategori_asets')->restrictOnDelete();
             $table->foreign('acquisition_credit_coa_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
-            $table->index(['status', 'asset_category_id']);
+            $table->index(['status', 'kategori_aset_id']);
         });
 
-        Schema::create('asset_depreciations', function (Blueprint $table) {
+        Schema::create('wms_penyusutan_asets', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('asset_id');
+            $table->unsignedBigInteger('aset_id');
             $table->date('posting_date');
             $table->string('period_label', 100);
             $table->decimal('suggested_amount', 18, 2)->default(0);
@@ -73,16 +73,16 @@ return new class extends Migration
                 ->comment('ID user lokal role Accounting yang memposting penyusutan');
             $table->unsignedBigInteger('journal_id')->nullable();
             $table->timestamps();
-            $table->foreign('asset_id')->references('id')->on('assets')->restrictOnDelete();
+            $table->foreign('aset_id')->references('id')->on('wms_asets')->restrictOnDelete();
             $table->foreign('journal_id')->references('id')->on('jurnals')->restrictOnDelete();
         });
 
-        Schema::create('asset_disposals', function (Blueprint $table) {
+        Schema::create('wms_pelepasan_asets', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('asset_id')->unique();
+            $table->unsignedBigInteger('aset_id')->unique();
             $table->date('disposal_date');
             $table->string('disposal_type', 20)
-                ->comment('Jenis pelepasan asset: SALE=penjualan, WRITE_OFF=penghapusan');
+                ->comment('Jenis pelepasan aset: SALE=penjualan, WRITE_OFF=penghapusan');
             $table->decimal('proceeds', 18, 2)->default(0);
             $table->unsignedBigInteger('cash_bank_coa_id')->nullable();
             $table->decimal('book_value_at_disposal', 18, 2);
@@ -92,7 +92,7 @@ return new class extends Migration
             $table->unsignedBigInteger('disposed_by');
             $table->unsignedBigInteger('journal_id')->nullable();
             $table->timestamps();
-            $table->foreign('asset_id')->references('id')->on('assets')->restrictOnDelete();
+            $table->foreign('aset_id')->references('id')->on('wms_asets')->restrictOnDelete();
             $table->foreign('cash_bank_coa_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
             $table->foreign('journal_id')->references('id')->on('jurnals')->restrictOnDelete();
         });
@@ -181,9 +181,9 @@ return new class extends Migration
         Schema::dropIfExists('service_po_details');
         Schema::dropIfExists('service_categories');
         Schema::table('pembelians', fn (Blueprint $table) => $table->dropColumn('document_type'));
-        Schema::dropIfExists('asset_disposals');
-        Schema::dropIfExists('asset_depreciations');
-        Schema::dropIfExists('assets');
-        Schema::dropIfExists('asset_categories');
+        Schema::dropIfExists('wms_pelepasan_asets');
+        Schema::dropIfExists('wms_penyusutan_asets');
+        Schema::dropIfExists('wms_asets');
+        Schema::dropIfExists('wms_kategori_asets');
     }
 };

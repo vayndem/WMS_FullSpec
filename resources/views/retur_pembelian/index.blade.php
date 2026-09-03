@@ -59,7 +59,7 @@
                                 <td x-text="row.tanggal"></td>
                                 <td x-text="row.id_lpb"></td>
                                 <td x-text="row.alasan"></td>
-                                <td class="text-end font-bold" x-text="'Rp ' + Number(row.total_nilai).toLocaleString('id-ID')"></td>
+                                <td class="text-end font-bold" x-text="formatRupiah(row.total_nilai)"></td>
                                 <td class="text-center">
                                     <span class="badge" :class="row.status === 'POSTED' ? 'badge-success' : 'badge-ghost'" x-text="row.status === 'POSTED' ? 'Aktif' : 'Dibalik'"></span>
                                 </td>

@@ -58,7 +58,7 @@
                                         <td class="text-center" x-text="idx + 1"></td>
                                         <td class="font-bold" x-text="item.nama_bahan"></td>
                                         <td class="text-center font-bold text-success" x-text="item.jumlah_tersedia_retur"></td>
-                                        <td class="text-end" x-text="'Rp ' + Number(item.harga || 0).toLocaleString('id-ID')"></td>
+                                        <td class="text-end" x-text="formatRupiah(item.harga || 0)"></td>
                                         <td class="text-center">
                                             <input type="number" step="any" min="0" :max="item.jumlah_tersedia_retur" x-model.number="item.jumlah_retur" class="input input-bordered input-sm text-end">
                                         </td>

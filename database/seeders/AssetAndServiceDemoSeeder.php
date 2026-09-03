@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use App\Models\Asset;
-use App\Models\AssetCategory;
+use App\Models\Aset;
+use App\Models\KategoriAset;
 use App\Models\ChartOfAccount;
 use App\Models\InvoiceLpb;
 use App\Models\InvoicePayment;
@@ -13,7 +13,7 @@ use App\Models\ServiceCategory;
 use App\Models\ServicePurchase;
 use App\Models\Lpb;
 use App\Models\Supplier;
-use App\Services\AssetAccountingService;
+use App\Services\AsetAccountingService;
 use App\Services\WmsAccountingService;
 use App\Services\DocumentNumberService;
 use Illuminate\Database\Seeder;
@@ -27,11 +27,11 @@ class AssetAndServiceDemoSeeder extends Seeder
         Auth::setUser(User::where('email', 'accounting@wms.local')->firstOrFail());
         DB::transaction(function () {
             $numbers = app(DocumentNumberService::class);
-            if (!Asset::where('name', '[DEMO] Laptop Accounting')->exists()) {
-                $category = AssetCategory::where('code', 'EQUIPMENT')->firstOrFail();
-                $asset = Asset::create([
-                    'asset_number' => $numbers->financial('AS', today()->subYears(1)),
-                    'asset_category_id' => $category->id,
+            if (!Aset::where('name', '[DEMO] Laptop Accounting')->exists()) {
+                $category = KategoriAset::where('code', 'EQUIPMENT')->firstOrFail();
+                $asset = Aset::create([
+                    'nomor_aset' => $numbers->financial('AS', today()->subYears(1)),
+                    'kategori_aset_id' => $category->id,
                     'name' => '[DEMO] Laptop Accounting',
                     'serial_number' => 'DEMO-SN-001',
                     'location' => 'Ruang Accounting',
@@ -50,8 +50,8 @@ class AssetAndServiceDemoSeeder extends Seeder
                     'status' => 'ACTIVE',
                     'created_by' => 33,
                 ]);
-                app(AssetAccountingService::class)->postAcquisition($asset);
-                app(AssetAccountingService::class)->depreciate($asset, [
+                app(AsetAccountingService::class)->postAcquisition($asset);
+                app(AsetAccountingService::class)->depreciate($asset, [
                     'posting_date' => today(),
                     'period_label' => 'Penyusutan manual demo',
                     'amount' => 250000,

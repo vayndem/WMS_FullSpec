@@ -158,7 +158,7 @@
                                                                     <span class="badge" :class="row.no_invoice ? 'badge-success' : 'badge-warning'" x-text="row.no_invoice ? 'Selesai 100%' : 'Sedang dikerjakan'"></span>
                                                                 </td>
                                                                 @if ($financial)
-                                                                    <td class="text-end font-semibold" x-text="'Rp ' + Number(item.amount || 0).toLocaleString('id-ID')"></td>
+                                                                    <td class="text-end font-semibold" x-text="formatRupiah(item.amount || 0)"></td>
                                                                 @endif
                                                             </tr>
                                                         </template>
@@ -178,7 +178,7 @@
                                                                 <td class="text-center" x-text="item.lot_number ?? '-'"></td>
                                                                 <td class="text-center font-bold text-success" x-text="item.jumlah_barang_diterima"></td>
                                                                 @if ($financial)
-                                                                    <td class="text-end" x-text="item.harga ? 'Rp ' + Number(item.harga).toLocaleString('id-ID') : '-'"></td>
+                                                                    <td class="text-end" x-text="item.harga ? formatRupiah(item.harga) : '-'"></td>
                                                                 @endif
                                                             </tr>
                                                         </template>

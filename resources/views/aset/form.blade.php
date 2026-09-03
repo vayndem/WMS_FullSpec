@@ -3,30 +3,30 @@
     @php($editing = isset($asset))
     <div class="content-page">
         <div class="mb-4">
-            <h3 class="text-2xl font-bold">{{ $editing ? 'Edit' : 'Tambah' }} Asset</h3>
+            <h3 class="text-2xl font-bold">{{ $editing ? 'Edit' : 'Tambah' }} Aset</h3>
             <p class="text-base-content/60">Penyimpanan membentuk jurnal perolehan secara otomatis.</p>
         </div>
-        <form method="post" action="{{ $editing ? route('assets.update', $asset) : route('assets.store') }}" class="card border border-base-300 bg-base-100 shadow-sm">
+        <form method="post" action="{{ $editing ? route('aset.update', $asset) : route('aset.store') }}" class="card border border-base-300 bg-base-100 shadow-sm">
             @csrf
             @if ($editing)
                 @method('PUT')
             @endif
             <div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-4">
                 <div class="form-control">
-                    <label class="label"><span class="label-text font-semibold">Nomor Asset</span></label>
-                    <input name="asset_number" class="input input-bordered bg-base-200" value="{{ $editing ? $asset->asset_number : $documentNumber }}" readonly>
+                    <label class="label"><span class="label-text font-semibold">Nomor Aset</span></label>
+                    <input name="nomor_aset" class="input input-bordered bg-base-200" value="{{ $editing ? $asset->nomor_aset : $documentNumber }}" readonly>
                     <span class="label-text-alt mt-1 text-base-content/50">Kode finansial internal dengan penanda AS.</span>
                 </div>
                 <div class="form-control md:col-span-2">
-                    <label class="label"><span class="label-text font-semibold">Nama Asset *</span></label>
+                    <label class="label"><span class="label-text font-semibold">Nama Aset *</span></label>
                     <input required name="name" class="input input-bordered" value="{{ old('name', $asset->name ?? '') }}">
                 </div>
                 <div class="form-control">
-                    <label class="label"><span class="label-text font-semibold">Kategori Asset *</span></label>
-                    <select required name="asset_category_id" class="select select-bordered" data-app-picker data-placeholder="Cari kode atau kategori asset...">
+                    <label class="label"><span class="label-text font-semibold">Kategori Aset *</span></label>
+                    <select required name="kategori_aset_id" class="select select-bordered" data-app-picker data-placeholder="Cari kode atau kategori aset...">
                         <option value="">Pilih kategori</option>
                         @foreach ($categories as $c)
-                            <option value="{{ $c->id }}" @selected(old('asset_category_id', $asset->asset_category_id ?? null) == $c->id)>{{ $c->code }} — {{ $c->name }}</option>
+                            <option value="{{ $c->id }}" @selected(old('kategori_aset_id', $asset->kategori_aset_id ?? null) == $c->id)>{{ $c->code }} — {{ $c->name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -94,7 +94,7 @@
                 </div>
             </div>
             <div class="flex justify-end gap-2 border-t border-base-300 p-4">
-                <a href="{{ route('assets.index') }}" class="btn btn-ghost border border-base-300">Batal</a>
+                <a href="{{ route('aset.index') }}" class="btn btn-ghost border border-base-300">Batal</a>
                 <button class="btn btn-primary">Simpan & Posting</button>
             </div>
         </form>

@@ -115,8 +115,8 @@
                                         <td class="text-center" x-text="idx + 1"></td>
                                         <td class="font-bold" x-text="item.nama_bahan"></td>
                                         <td class="text-center font-bold text-success" x-text="item.jumlah_barang_diterima"></td>
-                                        <td class="text-end" x-text="'Rp ' + Number(item.harga).toLocaleString('id-ID')"></td>
-                                        <td class="text-end font-bold" x-text="'Rp ' + Number(item.total_harga).toLocaleString('id-ID')"></td>
+                                        <td class="text-end" x-text="formatRupiah(item.harga)"></td>
+                                        <td class="text-end font-bold" x-text="formatRupiah(item.total_harga)"></td>
                                     </tr>
                                 </template>
                             </tbody>

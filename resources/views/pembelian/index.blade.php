@@ -97,7 +97,7 @@
                                 <td class="font-bold text-primary" x-text="row.no_po"></td>
                                 <td x-text="row.tanggal"></td>
                                 <td x-text="row.nama"></td>
-                                <td class="text-end font-bold" x-text="'Rp ' + Number(row.grand_total || 0).toLocaleString('id-ID')"></td>
+                                <td class="text-end font-bold" x-text="formatRupiah(row.grand_total || 0)"></td>
                                 <td class="text-center">
                                     <span class="badge" :class="row.status == 2 ? 'badge-error' : 'badge-success'" x-text="row.status == 2 ? 'Closed' : 'Open'"></span>
                                 </td>
@@ -147,8 +147,8 @@
                                                         <tr>
                                                             <td x-text="item.bahan ? item.bahan.nama : ('Bahan #' + item.bahan_id)"></td>
                                                             <td class="text-center font-bold" x-text="item.jumlah"></td>
-                                                            <td class="text-end" x-text="'Rp ' + Number(item.harga || 0).toLocaleString('id-ID')"></td>
-                                                            <td class="text-end font-bold text-primary" x-text="'Rp ' + Number(item.include || (item.jumlah * item.harga) || 0).toLocaleString('id-ID')"></td>
+                                                            <td class="text-end" x-text="formatRupiah(item.harga || 0)"></td>
+                                                            <td class="text-end font-bold text-primary" x-text="formatRupiah(item.include || (item.jumlah * item.harga) || 0)"></td>
                                                         </tr>
                                                     </template>
                                                 </tbody>
@@ -330,7 +330,7 @@
                                             <td x-text="item.jumlah_order"></td>
                                             <td x-text="item.realisasi"></td>
                                             <td>
-                                                <span x-text="'Rp ' + Number(item.harga_referensi || 0).toLocaleString('id-ID')"></span>
+                                                <span x-text="formatRupiah(item.harga_referensi || 0)"></span>
                                                 <small class="block text-base-content/50">Rata-rata 5 LPB terakhir</small>
                                             </td>
                                             <td x-text="item.jumlah_order - item.realisasi"></td>
@@ -383,7 +383,7 @@
                                                 <td>
                                                     <input type="number" step="any" min="0" x-model.number="item.harga" data-money-input class="input input-bordered input-sm w-full" required>
                                                 </td>
-                                                <td class="text-end font-bold" x-text="'Rp ' + Number((item.jumlah || 0) * (item.harga || 0)).toLocaleString('id-ID')"></td>
+                                                <td class="text-end font-bold" x-text="formatRupiah((item.jumlah || 0) * (item.harga || 0))"></td>
                                                 <td class="text-center">
                                                     <button type="button" class="btn btn-error btn-xs" @click="items.splice(idx, 1)">
                                                         <i class="fa-solid fa-trash"></i>

@@ -172,7 +172,7 @@
                             const response = await fetch(`{{ url('stock-opname') }}/${id}/detail-data`, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
                             const r = await response.json();
                             const esc = (value) => { const el = document.createElement('div'); el.textContent = value ?? ''; return el.innerHTML; };
-                            const money = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 2 }).format(n || 0);
+                            const money = (n) => formatRupiah(n || 0);
                             const rows = r.items.map((x, i) => {
                                 const tone = x.direction === 'PLUS' ? 'text-success' : (x.direction === 'MINUS' ? 'text-error' : 'text-base-content/50');
                                 return `<tr><td>${i + 1}</td><td class="font-semibold">${esc(x.name)}</td>

@@ -2,23 +2,23 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Asset;
-use App\Models\AssetCategory;
+use App\Models\Aset;
+use App\Models\KategoriAset;
 use App\Models\ChartOfAccount;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class StoreAssetRequest extends FormRequest
+class StoreAsetRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can($this->route('asset') ? 'update' : 'create', $this->route('asset') ?: Asset::class);
+        return $this->user()->can($this->route('aset') ? 'update' : 'create', $this->route('aset') ?: Aset::class);
     }
     public function rules(): array
     {
         return [
-            'asset_number' => ['required', 'string', 'max:30', 'regex:/^\d{2}-\d{2}-[A-Z]{2}-(?:I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)-\d{3}$/', Rule::unique('assets', 'asset_number')->ignore($this->route('asset'))],
-            'asset_category_id' => 'required|exists:asset_categories,id',
+            'nomor_aset' => ['required', 'string', 'max:30', 'regex:/^\d{2}-\d{2}-[A-Z]{2}-(?:I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)-\d{3}$/', Rule::unique('wms_asets', 'nomor_aset')->ignore($this->route('aset'))],
+            'kategori_aset_id' => 'required|exists:wms_kategori_asets,id',
             'name' => 'required|string|max:180',
             'serial_number' => 'nullable|string|max:120',
             'location' => 'nullable|string|max:150',
@@ -39,9 +39,9 @@ class StoreAssetRequest extends FormRequest
     public function after(): array
     {
         return [function ($validator) {
-            $category = AssetCategory::find($this->input('asset_category_id'));
+            $category = KategoriAset::find($this->input('kategori_aset_id'));
             if ($category && !$category->is_active) {
-                $validator->errors()->add('asset_category_id', 'Kategori asset sudah tidak aktif.');
+                $validator->errors()->add('kategori_aset_id', 'Kategori aset sudah tidak aktif.');
             }
 
             $source = ChartOfAccount::find($this->input('acquisition_credit_coa_id'));

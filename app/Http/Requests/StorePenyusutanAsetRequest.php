@@ -4,11 +4,11 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreAssetDepreciationRequest extends FormRequest
+class StorePenyusutanAsetRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('depreciate', $this->route('asset'));
+        return $this->user()->can('depreciate', $this->route('aset'));
     }
     public function rules(): array
     {

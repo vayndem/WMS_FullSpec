@@ -43,7 +43,7 @@ class ChartOfAccount extends Model
             ->orWhere('coa_beban_selisih_opname_id', $this->id)
             ->orWhere('coa_koreksi_opname_id', $this->id)
             ->exists()
-            || AssetCategory::where('asset_coa_id', $this->id)
+            || KategoriAset::where('akun_aset_id', $this->id)
                 ->orWhere('accumulated_depreciation_coa_id', $this->id)
                 ->orWhere('depreciation_expense_coa_id', $this->id)
                 ->orWhere('disposal_gain_coa_id', $this->id)
@@ -52,8 +52,8 @@ class ChartOfAccount extends Model
             || ServiceCategory::where('expense_coa_id', $this->id)
                 ->orWhere('grni_coa_id', $this->id)
                 ->exists()
-            || Asset::where('acquisition_credit_coa_id', $this->id)->exists()
-            || AssetDisposal::where('cash_bank_coa_id', $this->id)->exists();
+            || Aset::where('acquisition_credit_coa_id', $this->id)->exists()
+            || PelepasanAset::where('cash_bank_coa_id', $this->id)->exists();
     }
 
     public function isUsableFor(array $allowedPairs, ?bool $mustBeCashBank = null): bool

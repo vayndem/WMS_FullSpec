@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountingPeriodLockController;
 use App\Http\Controllers\AccountingReconciliationController;
 use App\Http\Controllers\ChartOfAccountController;
+use App\Http\Controllers\FinancialStatementController;
 use App\Http\Controllers\JurnalController;
 use App\Http\Controllers\JurnalDetailController;
 use App\Http\Controllers\TaxRateController;
@@ -27,4 +28,13 @@ Route::middleware('auth')->group(function () {
     Route::post('period-lock/{period_lock}/unlock', [AccountingPeriodLockController::class, 'unlock'])->name('period-lock.unlock');
     Route::resource('period-lock', AccountingPeriodLockController::class)->only(['index', 'store']);
     Route::resource('tax-rate', TaxRateController::class)->only(['index', 'store', 'update']);
+
+    Route::get('financial-statements/neraca-saldo', [FinancialStatementController::class, 'neracaSaldo'])->name('financial-statements.neraca-saldo');
+    Route::get('financial-statements/neraca-saldo/pdf', [FinancialStatementController::class, 'neracaSaldoPdf'])->name('financial-statements.neraca-saldo.pdf');
+    Route::get('financial-statements/buku-besar', [FinancialStatementController::class, 'bukuBesar'])->name('financial-statements.buku-besar');
+    Route::get('financial-statements/buku-besar/pdf', [FinancialStatementController::class, 'bukuBesarPdf'])->name('financial-statements.buku-besar.pdf');
+    Route::get('financial-statements/laba-rugi', [FinancialStatementController::class, 'labaRugi'])->name('financial-statements.laba-rugi');
+    Route::get('financial-statements/laba-rugi/pdf', [FinancialStatementController::class, 'labaRugiPdf'])->name('financial-statements.laba-rugi.pdf');
+    Route::get('financial-statements/neraca', [FinancialStatementController::class, 'neraca'])->name('financial-statements.neraca');
+    Route::get('financial-statements/neraca/pdf', [FinancialStatementController::class, 'neracaPdf'])->name('financial-statements.neraca.pdf');
 });

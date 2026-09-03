@@ -73,8 +73,8 @@
                                 <td x-text="row.tanggal"></td>
                                 <td x-text="row.supplier_nama"></td>
                                 <td x-text="row.tgl_deadline_pembayaran || '-'"></td>
-                                <td class="text-end font-bold" x-text="'Rp ' + Number(row.grand_total).toLocaleString('id-ID')"></td>
-                                <td class="text-end font-bold text-error" x-text="'Rp ' + Number(row.sisa_tagihan).toLocaleString('id-ID')"></td>
+                                <td class="text-end font-bold" x-text="formatRupiah(row.grand_total)"></td>
+                                <td class="text-end font-bold text-error" x-text="formatRupiah(row.sisa_tagihan)"></td>
                                 <td class="text-center">
                                     <span class="badge"
                                         :class="{ 'badge-success': row.status === 'PAID', 'badge-warning': row.status === 'PARTIALLY_PAID', 'badge-ghost': row.status === 'UNPAID' }"
@@ -131,10 +131,10 @@
                             </div>
                             <div class="divider my-2"></div>
                             <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
-                                <div><p class="text-sm text-base-content/50">Sub Total</p><p class="font-bold" x-text="'Rp ' + Number(invoice?.sub_total || 0).toLocaleString('id-ID')"></p></div>
-                                <div><p class="text-sm text-base-content/50" x-text="`PPN (${Number(invoice?.tarif_ppn || 0).toLocaleString('id-ID')}%)`"></p><p class="font-bold" x-text="'Rp ' + Number(invoice?.ppn || 0).toLocaleString('id-ID')"></p></div>
-                                <div><p class="text-sm text-base-content/50">Grand Total</p><p class="text-lg font-bold text-primary" x-text="'Rp ' + Number(invoice?.grand_total || 0).toLocaleString('id-ID')"></p></div>
-                                <div><p class="text-sm text-base-content/50">Sisa Tagihan</p><p class="text-lg font-bold text-error" x-text="'Rp ' + Number(invoice?.sisa_tagihan || 0).toLocaleString('id-ID')"></p></div>
+                                <div><p class="text-sm text-base-content/50">Sub Total</p><p class="font-bold" x-text="formatRupiah(invoice?.sub_total || 0)"></p></div>
+                                <div><p class="text-sm text-base-content/50" x-text="`PPN (${Number(invoice?.tarif_ppn || 0).toLocaleString('id-ID')}%)`"></p><p class="font-bold" x-text="formatRupiah(invoice?.ppn || 0)"></p></div>
+                                <div><p class="text-sm text-base-content/50">Grand Total</p><p class="text-lg font-bold text-primary" x-text="formatRupiah(invoice?.grand_total || 0)"></p></div>
+                                <div><p class="text-sm text-base-content/50">Sisa Tagihan</p><p class="text-lg font-bold text-error" x-text="formatRupiah(invoice?.sisa_tagihan || 0)"></p></div>
                             </div>
                             <template x-if="invoice?.no_faktur_pajak">
                                 <div class="mt-2"><p class="text-sm text-base-content/50">No. Faktur Pajak</p><p class="font-bold" x-text="invoice?.no_faktur_pajak"></p></div>
@@ -176,13 +176,13 @@
                                             <td x-text="item.tanggal_pembayaran"></td>
                                             <td class="font-bold" x-text="item.metode_pembayaran"></td>
                                             <td class="font-bold text-info" x-text="item.coa_kas_bank ? `${item.coa_kas_bank.kode_akun} - ${item.coa_kas_bank.nama_akun}` : '-'"></td>
-                                            <td class="text-end" x-text="'Rp ' + Number(item.jumlah_pembayaran).toLocaleString('id-ID')"></td>
-                                            <td class="text-end" x-text="'Rp ' + Number(item.potongan_pph23).toLocaleString('id-ID')"></td>
+                                            <td class="text-end" x-text="formatRupiah(item.jumlah_pembayaran)"></td>
+                                            <td class="text-end" x-text="formatRupiah(item.potongan_pph23)"></td>
                                             <td class="text-end">
-                                                <span x-text="'Rp ' + Number(item.selisih_bayar).toLocaleString('id-ID')"></span>
+                                                <span x-text="formatRupiah(item.selisih_bayar)"></span>
                                                 <small class="block text-base-content/50" x-text="item.jenis_selisih ? item.jenis_selisih.replaceAll('_', ' ') : ''"></small>
                                             </td>
-                                            <td class="text-end font-bold text-success" x-text="'Rp ' + Number(item.total_transaksi_pengurang_hutang).toLocaleString('id-ID')"></td>
+                                            <td class="text-end font-bold text-success" x-text="formatRupiah(item.total_transaksi_pengurang_hutang)"></td>
                                             <td x-text="item.user_finance ? item.user_finance.name : '-'"></td>
                                         </tr>
                                     </template>
@@ -352,10 +352,6 @@
                         biaya_transfer_bank: 0, selisih_bayar: 0, jenis_selisih: '', coa_selisih_id: '',
                         uang_muka_sumber_payment_id: '', uang_muka_dipakai: 0, keterangan: '',
                     };
-                },
-
-                formatRupiah(value) {
-                    return 'Rp ' + Number(value || 0).toLocaleString('id-ID');
                 },
 
                 get draft() {

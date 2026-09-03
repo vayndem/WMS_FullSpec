@@ -25,7 +25,7 @@
                     </a>
                 </li>
 
-                @if (Auth::user()->can('viewAny', App\Models\Supplier::class) || Auth::user()->can('viewAny', App\Models\Asset::class))
+                @if (Auth::user()->can('viewAny', App\Models\Supplier::class) || Auth::user()->can('viewAny', App\Models\Aset::class))
                     <li
                         class="{{ request()->routeIs('supplier.*') || request()->routeIs('bahan.*') || request()->routeIs('reconciliation.*') ? 'active' : '' }}">
                         <a href="#master" class="svg-icon"
@@ -71,11 +71,11 @@
                                     </a>
                                 </li>
                             @endcan
-                            @can('viewAny', App\Models\Asset::class)
+                            @can('viewAny', App\Models\Aset::class)
                                 <li
-                                    class="{{ request()->routeIs('assets.*') || request()->routeIs('asset-categories.*') ? 'active' : '' }}">
-                                    <a href="{{ route('assets.index') }}" class="svg-icon">
-                                        <i class="fa-solid fa-building-columns"></i><span>Asset Tetap</span>
+                                    class="{{ request()->routeIs('aset.*') || request()->routeIs('kategori-aset.*') ? 'active' : '' }}">
+                                    <a href="{{ route('aset.index') }}" class="svg-icon">
+                                        <i class="fa-solid fa-building-columns"></i><span>Aset Tetap</span>
                                     </a>
                                 </li>
                             @endcan
@@ -85,11 +85,12 @@
 
                 @if (Auth::user()->can('viewAny', App\Models\TipePembebanan::class) ||
                         Auth::user()->can('viewAny', App\Models\ChartOfAccount::class) ||
-                        Auth::user()->can('viewAny', App\Models\Jurnal::class))
+                        Auth::user()->can('viewAny', App\Models\Jurnal::class) ||
+                        Auth::user()->can('viewFinancialStatements'))
                     <li
-                        class="{{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('chart-of-accounts.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') ? 'active' : '' }}">
+                        class="{{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('chart-of-accounts.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') || request()->routeIs('financial-statements.*') ? 'active' : '' }}">
                         <a href="#akuntansi" class="svg-icon"
-                            aria-expanded="{{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('chart-of-accounts.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') ? 'true' : 'false' }}">
+                            aria-expanded="{{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('chart-of-accounts.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') || request()->routeIs('financial-statements.*') ? 'true' : 'false' }}">
                             <i>
                                 <svg class="svg-icon" id="mm-akuntansi-1" width="20"
                                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -103,7 +104,7 @@
                             <i class="fa-solid fa-chevron-down mm-arrow-right arrow-hover"></i>
                         </a>
                         <ul id="akuntansi"
-                            class="submenu {{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('chart-of-accounts.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') ? 'show' : '' }}">
+                            class="submenu {{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('chart-of-accounts.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') || request()->routeIs('financial-statements.*') ? 'show' : '' }}">
 
                             @can('viewAny', App\Models\TipePembebanan::class)
                                 <li class="{{ request()->routeIs('tipe-pembebanan.*') ? 'active' : '' }}">
@@ -169,6 +170,13 @@
                                 <li class="{{ request()->routeIs('tax-rate.*') ? 'active' : '' }}">
                                     <a href="{{ route('tax-rate.index') }}" class="svg-icon">
                                         <i class="fa-solid fa-percent"></i><span>Tarif Pajak</span>
+                                    </a>
+                                </li>
+                            @endcan
+                            @can('viewFinancialStatements')
+                                <li class="{{ request()->routeIs('financial-statements.*') ? 'active' : '' }}">
+                                    <a href="{{ route('financial-statements.neraca-saldo') }}" class="svg-icon">
+                                        <i class="fa-solid fa-file-invoice-dollar"></i><span>Laporan Keuangan</span>
                                     </a>
                                 </li>
                             @endcan

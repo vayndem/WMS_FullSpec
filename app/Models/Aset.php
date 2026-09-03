@@ -4,8 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Asset extends Model
+class Aset extends Model
 {
+    protected $table = 'wms_asets';
     protected $guarded = [];
     protected $casts = [
         'acquisition_date' => 'date', 'depreciation_start_date' => 'date',
@@ -14,10 +15,10 @@ class Asset extends Model
         'accumulated_depreciation' => 'decimal:2', 'book_value' => 'decimal:2',
     ];
 
-    public function category() { return $this->belongsTo(AssetCategory::class, 'asset_category_id'); }
+    public function category() { return $this->belongsTo(KategoriAset::class, 'kategori_aset_id'); }
     public function acquisitionCreditAccount() { return $this->belongsTo(ChartOfAccount::class, 'acquisition_credit_coa_id'); }
-    public function depreciations() { return $this->hasMany(AssetDepreciation::class); }
-    public function disposal() { return $this->hasOne(AssetDisposal::class); }
+    public function depreciations() { return $this->hasMany(PenyusutanAset::class, 'aset_id'); }
+    public function disposal() { return $this->hasOne(PelepasanAset::class, 'aset_id'); }
 
     public function suggestedMonthlyDepreciation(): float
     {

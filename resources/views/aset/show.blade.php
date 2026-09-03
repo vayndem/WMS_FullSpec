@@ -5,7 +5,7 @@
         async confirmDispose(event) {
             const form = event.target;
             if (form.dataset.confirmed) return;
-            const result = await AppAlert.confirm('Posting pelepasan asset? Tindakan ini tidak dapat diedit kembali.');
+            const result = await AppAlert.confirm('Posting pelepasan aset? Tindakan ini tidak dapat diedit kembali.');
             if (result.isConfirmed) {
                 form.dataset.confirmed = '1';
                 form.submit();
@@ -14,17 +14,17 @@
     }">
         <div class="mb-4 flex items-center justify-between">
             <div>
-                <h3 class="text-2xl font-bold">{{ $asset->asset_number }} — {{ $asset->name }}</h3>
+                <h3 class="text-2xl font-bold">{{ $asset->nomor_aset }} — {{ $asset->name }}</h3>
                 <p class="text-base-content/60">{{ $asset->category->name }} · {{ $asset->status }}</p>
             </div>
             @can('update', $asset)
-                <a href="{{ route('assets.edit', $asset) }}" class="btn btn-outline btn-primary">Edit</a>
+                <a href="{{ route('aset.edit', $asset) }}" class="btn btn-outline btn-primary">Edit</a>
             @endcan
         </div>
         <div class="grid grid-cols-1 gap-3 lg:grid-cols-12">
             <div class="card border border-base-300 bg-base-100 shadow-sm lg:col-span-5">
                 <div class="card-body p-4">
-                    <h5 class="font-bold">Identitas Asset</h5>
+                    <h5 class="font-bold">Identitas Aset</h5>
                     <dl class="mt-2 grid grid-cols-2 gap-y-2 text-sm">
                         @foreach (['Nomor Seri' => $asset->serial_number, 'Lokasi' => $asset->location, 'Penanggung Jawab' => $asset->responsible_person, 'Kondisi' => $asset->condition, 'Tanggal Perolehan' => $asset->acquisition_date->format('d-m-Y'), 'Jenis Perolehan' => $asset->acquisition_type] as $k => $v)
                             <dt class="text-base-content/50">{{ $k }}</dt>
@@ -52,7 +52,7 @@
 
         @can('depreciate', $asset)
             <div class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
-                <form method="post" action="{{ route('assets.depreciate', $asset) }}" class="card border border-base-300 bg-base-100 shadow-sm">
+                <form method="post" action="{{ route('aset.depreciate', $asset) }}" class="card border border-base-300 bg-base-100 shadow-sm">
                     @csrf
                     <div class="p-4">
                         <h5 class="font-bold">Posting Penyusutan Manual</h5>
@@ -79,7 +79,7 @@
                         <button class="btn btn-primary">Posting Penyusutan</button>
                     </div>
                 </form>
-                <form method="post" action="{{ route('assets.dispose', $asset) }}" class="card border border-base-300 bg-base-100 shadow-sm" @submit="confirmDispose($event)">
+                <form method="post" action="{{ route('aset.dispose', $asset) }}" class="card border border-base-300 bg-base-100 shadow-sm" @submit="confirmDispose($event)">
                     @csrf
                     <div class="p-4">
                         <h5 class="font-bold">Penjualan / Penghapusan</h5>

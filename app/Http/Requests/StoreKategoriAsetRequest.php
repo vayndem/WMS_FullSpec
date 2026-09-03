@@ -2,25 +2,25 @@
 
 namespace App\Http\Requests;
 
-use App\Models\AssetCategory;
+use App\Models\KategoriAset;
 use App\Models\ChartOfAccount;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class StoreAssetCategoryRequest extends FormRequest
+class StoreKategoriAsetRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can($this->route('asset_category') ? 'update' : 'create', $this->route('asset_category') ?: AssetCategory::class);
+        return $this->user()->can($this->route('kategori_aset') ? 'update' : 'create', $this->route('kategori_aset') ?: KategoriAset::class);
     }
     public function rules(): array
     {
-        $id = $this->route('asset_category')?->id;
+        $id = $this->route('kategori_aset')?->id;
         return [
-            'code' => ['required', 'string', 'max:30', Rule::unique('asset_categories', 'code')->ignore($id)],
+            'code' => ['required', 'string', 'max:30', Rule::unique('wms_kategori_asets', 'code')->ignore($id)],
             'name' => 'required|string|max:150',
-            'asset_coa_id' => 'required|exists:chart_of_accounts,id',
-            'accumulated_depreciation_coa_id' => 'required|different:asset_coa_id|exists:chart_of_accounts,id',
+            'akun_aset_id' => 'required|exists:chart_of_accounts,id',
+            'accumulated_depreciation_coa_id' => 'required|different:akun_aset_id|exists:chart_of_accounts,id',
             'depreciation_expense_coa_id' => 'required|exists:chart_of_accounts,id',
             'disposal_gain_coa_id' => 'required|exists:chart_of_accounts,id',
             'disposal_loss_coa_id' => 'required|exists:chart_of_accounts,id',
@@ -32,7 +32,7 @@ class StoreAssetCategoryRequest extends FormRequest
     {
         return [function ($validator) {
             $rules = [
-                'asset_coa_id' => [['ASET', 'DEBIT']],
+                'akun_aset_id' => [['ASET', 'DEBIT']],
                 'accumulated_depreciation_coa_id' => [['ASET', 'KREDIT']],
                 'depreciation_expense_coa_id' => [['BEBAN', 'DEBIT']],
                 'disposal_gain_coa_id' => [['PENDAPATAN', 'KREDIT']],
@@ -42,7 +42,7 @@ class StoreAssetCategoryRequest extends FormRequest
             foreach ($rules as $field => $allowed) {
                 $account = ChartOfAccount::find($this->input($field));
                 if ($account && !$account->isUsableFor($allowed)) {
-                    $validator->errors()->add($field, 'Akun harus aktif, postable, serta sesuai dengan fungsi kategori asset.');
+                    $validator->errors()->add($field, 'Akun harus aktif, postable, serta sesuai dengan fungsi kategori aset.');
                 }
             }
         }];

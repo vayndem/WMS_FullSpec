@@ -36,8 +36,8 @@
                         <option value="INVOICE_SUPPLIER">Invoice Supplier</option>
                         <option value="PELUNASAN_HUTANG">Pelunasan Hutang</option>
                         <option value="REVERSAL">Reversal</option>
-                        <option value="ASSET_ACQUISITION">Asset Acquisition</option>
-                        <option value="ASSET_DEPRECIATION">Asset Depreciation</option>
+                        <option value="ASSET_ACQUISITION">Perolehan Aset</option>
+                        <option value="ASSET_DEPRECIATION">Penyusutan Aset</option>
                     </select>
                 </div>
                 <div class="form-control">
@@ -102,8 +102,8 @@
                                 <td x-text="row.tanggal"></td>
                                 <td><span class="badge badge-ghost" x-text="String(row.sumber_transaksi || '-').replaceAll('_', ' ')"></span></td>
                                 <td x-text="row.keterangan || '-'"></td>
-                                <td class="text-end font-bold text-success" x-text="'Rp ' + Number(row.total_debit).toLocaleString('id-ID')"></td>
-                                <td class="text-end font-bold text-error" x-text="'Rp ' + Number(row.total_kredit).toLocaleString('id-ID')"></td>
+                                <td class="text-end font-bold text-success" x-text="formatRupiah(row.total_debit)"></td>
+                                <td class="text-end font-bold text-error" x-text="formatRupiah(row.total_kredit)"></td>
                                 <td class="text-center">
                                     <div class="flex items-center justify-center gap-1">
                                         <button type="button" class="btn btn-outline btn-info btn-sm" @click="openShow(row.id, $refs.jurnalShowDialog)">
@@ -158,8 +158,8 @@
                         <div><p class="text-sm text-base-content/50">Reff ID</p><p class="text-lg font-bold" x-text="jurnal?.reff_id ?? '-'"></p></div>
                     </div>
                     <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-                        <div><p class="text-sm text-base-content/50">Total Debit</p><p class="text-lg font-bold text-success" x-text="'Rp ' + Number(jurnal?.total_debit || 0).toLocaleString('id-ID')"></p></div>
-                        <div><p class="text-sm text-base-content/50">Total Kredit</p><p class="text-lg font-bold text-error" x-text="'Rp ' + Number(jurnal?.total_kredit || 0).toLocaleString('id-ID')"></p></div>
+                        <div><p class="text-sm text-base-content/50">Total Debit</p><p class="text-lg font-bold text-success" x-text="formatRupiah(jurnal?.total_debit || 0)"></p></div>
+                        <div><p class="text-sm text-base-content/50">Total Kredit</p><p class="text-lg font-bold text-error" x-text="formatRupiah(jurnal?.total_kredit || 0)"></p></div>
                     </div>
                     <div class="mt-3">
                         <p class="text-sm text-base-content/50">Keterangan Header</p>
@@ -189,8 +189,8 @@
                                         <td class="text-center" x-text="i + 1"></td>
                                         <td class="font-bold" x-text="item.coa ? `${item.coa.kode_akun} - ${item.coa.nama_akun}` : '-'"></td>
                                         <td x-text="item.keterangan || '-'"></td>
-                                        <td class="text-end font-bold text-success" x-text="'Rp ' + Number(item.debit).toLocaleString('id-ID')"></td>
-                                        <td class="text-end font-bold text-error" x-text="'Rp ' + Number(item.kredit).toLocaleString('id-ID')"></td>
+                                        <td class="text-end font-bold text-success" x-text="formatRupiah(item.debit)"></td>
+                                        <td class="text-end font-bold text-error" x-text="formatRupiah(item.kredit)"></td>
                                     </tr>
                                 </template>
                             </tbody>

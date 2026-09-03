@@ -2,16 +2,16 @@
 @section('content')
     <div class="content-page">
         <div class="mb-4">
-            <h3 class="text-2xl font-bold">Kategori &amp; Mapping Asset</h3>
-            <p class="text-base-content/60">Mapping jurnal perolehan, penyusutan, dan pelepasan asset.</p>
+            <h3 class="text-2xl font-bold">Kategori &amp; Mapping Aset</h3>
+            <p class="text-base-content/60">Mapping jurnal perolehan, penyusutan, dan pelepasan aset.</p>
         </div>
-        @can('create', App\Models\AssetCategory::class)
-            <form method="post" action="{{ route('asset-categories.store') }}" class="card mb-4 border border-base-300 bg-base-100 p-4 shadow-sm">
+        @can('create', App\Models\KategoriAset::class)
+            <form method="post" action="{{ route('kategori-aset.store') }}" class="card mb-4 border border-base-300 bg-base-100 p-4 shadow-sm">
                 @csrf
                 <div class="grid grid-cols-1 gap-2 md:grid-cols-5">
                     <input required name="code" class="input input-bordered" placeholder="Kode">
                     <input required name="name" class="input input-bordered md:col-span-2" placeholder="Nama kategori">
-                    @foreach ([['asset_coa_id', 'COA Asset'], ['accumulated_depreciation_coa_id', 'Akumulasi'], ['depreciation_expense_coa_id', 'Beban Penyusutan'], ['disposal_gain_coa_id', 'Untung Pelepasan'], ['disposal_loss_coa_id', 'Rugi Pelepasan']] as [$n, $l])
+                    @foreach ([['akun_aset_id', 'COA Aset'], ['accumulated_depreciation_coa_id', 'Akumulasi'], ['depreciation_expense_coa_id', 'Beban Penyusutan'], ['disposal_gain_coa_id', 'Untung Pelepasan'], ['disposal_loss_coa_id', 'Rugi Pelepasan']] as [$n, $l])
                         <select required name="{{ $n }}" class="select select-bordered" data-app-picker data-placeholder="Cari akun...">
                             <option value="">{{ $l }}</option>
                             @foreach ($accounts as $a)
@@ -33,7 +33,7 @@
                         <tr>
                             <th>Kode</th>
                             <th>Nama</th>
-                            <th>COA Asset</th>
+                            <th>COA Aset</th>
                             <th>Akumulasi</th>
                             <th>Beban</th>
                             <th>Status</th>
@@ -54,7 +54,7 @@
                                         <button class="btn btn-outline btn-primary btn-sm" onclick="editCategory{{ $c->id }}.showModal()">Edit</button>
                                     @endcan
                                     @can('delete', $c)
-                                        <form method="post" action="{{ route('asset-categories.destroy', $c) }}" class="inline swal-confirm-form" data-confirm="Hapus kategori asset ini?">
+                                        <form method="post" action="{{ route('kategori-aset.destroy', $c) }}" class="inline swal-confirm-form" data-confirm="Hapus kategori aset ini?">
                                             @csrf
                                             @method('DELETE')
                                             <button class="btn btn-outline btn-error btn-sm">Hapus</button>
@@ -65,14 +65,14 @@
                             @can('update', $c)
                                 <dialog id="editCategory{{ $c->id }}" class="modal">
                                     <div class="modal-box max-w-2xl">
-                                        <form method="post" action="{{ route('asset-categories.update', $c) }}">
+                                        <form method="post" action="{{ route('kategori-aset.update', $c) }}">
                                             @csrf
                                             @method('PUT')
                                             <h3 class="mb-4 text-lg font-bold">Edit {{ $c->name }}</h3>
                                             <div class="grid grid-cols-1 gap-2 md:grid-cols-3">
                                                 <input required name="code" class="input input-bordered" value="{{ $c->code }}" placeholder="Kode">
                                                 <input required name="name" class="input input-bordered md:col-span-2" value="{{ $c->name }}" placeholder="Nama">
-                                                @foreach ([['asset_coa_id', 'COA Asset'], ['accumulated_depreciation_coa_id', 'Akumulasi'], ['depreciation_expense_coa_id', 'Beban Penyusutan'], ['disposal_gain_coa_id', 'Untung Pelepasan'], ['disposal_loss_coa_id', 'Rugi Pelepasan']] as [$n, $l])
+                                                @foreach ([['akun_aset_id', 'COA Aset'], ['accumulated_depreciation_coa_id', 'Akumulasi'], ['depreciation_expense_coa_id', 'Beban Penyusutan'], ['disposal_gain_coa_id', 'Untung Pelepasan'], ['disposal_loss_coa_id', 'Rugi Pelepasan']] as [$n, $l])
                                                     <select data-app-picker data-placeholder="Cari akun..." required name="{{ $n }}" class="select select-bordered">
                                                         <option value="">{{ $l }}</option>
                                                         @foreach ($accounts as $a)

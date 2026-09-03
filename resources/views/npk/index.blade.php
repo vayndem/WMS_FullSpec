@@ -83,8 +83,8 @@
                                 <td class="font-semibold" x-text="row.nama_barang"></td>
                                 <td class="text-center font-bold text-primary" x-text="row.jumlah_display"></td>
                                 @if ($financial)
-                                    <td class="text-end" x-text="'Rp ' + Number(row.harga_satuan || 0).toLocaleString('id-ID')"></td>
-                                    <td class="text-end font-semibold" x-text="'Rp ' + Number(row.total_nilai || 0).toLocaleString('id-ID')"></td>
+                                    <td class="text-end" x-text="formatRupiah(row.harga_satuan || 0)"></td>
+                                    <td class="text-end font-semibold" x-text="formatRupiah(row.total_nilai || 0)"></td>
                                 @endif
                                 <td class="text-center">
                                     <span class="badge"
