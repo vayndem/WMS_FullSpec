@@ -29,7 +29,7 @@ return new class extends Migration
         Schema::table('pembelians', function (Blueprint $table) {
             $table->foreignId('gudang_id')->nullable()->after('supplier_id')->constrained('gudangs')->restrictOnDelete();
         });
-        Schema::table('lpbs', function (Blueprint $table) {
+        Schema::table('wms_penerimaan_barang', function (Blueprint $table) {
             $table->foreignId('gudang_id')->nullable()->after('no_po')->constrained('gudangs')->restrictOnDelete();
         });
 
@@ -155,10 +155,10 @@ return new class extends Migration
             $table->unique(['pemeriksaan_consider_id', 'bahan_id'], 'detail_consider_bahan_unique');
         });
 
-        foreach (DB::table('lpbs')->leftJoin('lpb_details', 'lpb_details.id_lpb', '=', 'lpbs.id_lpb')
-            ->leftJoin('bahans', 'bahans.id', '=', 'lpb_details.id_bahan')
-            ->whereNull('lpbs.gudang_id')->select('lpbs.id', 'bahans.tipe_gudang')->distinct()->get() as $receipt) {
-            if ($receipt->tipe_gudang) DB::table('lpbs')->where('id', $receipt->id)->update(['gudang_id' => $receipt->tipe_gudang]);
+        foreach (DB::table('wms_penerimaan_barang')->leftJoin('wms_penerimaan_barang_detail', 'wms_penerimaan_barang_detail.id_lpb', '=', 'wms_penerimaan_barang.id_lpb')
+            ->leftJoin('bahans', 'bahans.id', '=', 'wms_penerimaan_barang_detail.id_bahan')
+            ->whereNull('wms_penerimaan_barang.gudang_id')->select('wms_penerimaan_barang.id', 'bahans.tipe_gudang')->distinct()->get() as $receipt) {
+            if ($receipt->tipe_gudang) DB::table('wms_penerimaan_barang')->where('id', $receipt->id)->update(['gudang_id' => $receipt->tipe_gudang]);
         }
         foreach (DB::table('pembelians')->leftJoin('pembelian_details', 'pembelian_details.no_po', '=', 'pembelians.no_po')
             ->leftJoin('bahans', 'bahans.id', '=', 'pembelian_details.bahan_id')
@@ -169,7 +169,7 @@ return new class extends Migration
         $defaultGudang = DB::table('gudangs')->orderBy('id')->value('id');
         if ($defaultGudang) {
             DB::table('pembelians')->whereNull('gudang_id')->update(['gudang_id' => $defaultGudang]);
-            DB::table('lpbs')->whereNull('gudang_id')->update(['gudang_id' => $defaultGudang]);
+            DB::table('wms_penerimaan_barang')->whereNull('gudang_id')->update(['gudang_id' => $defaultGudang]);
         }
 
         DB::table('stok_gudangs')->insertUsing(
@@ -211,7 +211,7 @@ return new class extends Migration
         Schema::dropIfExists('pengaturan_bahan_gudangs');
         Schema::dropIfExists('pembagian_gudangs');
         Schema::dropIfExists('stok_gudangs');
-        Schema::table('lpbs', fn(Blueprint $table) => $table->dropConstrainedForeignId('gudang_id'));
+        Schema::table('wms_penerimaan_barang', fn(Blueprint $table) => $table->dropConstrainedForeignId('gudang_id'));
         Schema::table('pembelians', fn(Blueprint $table) => $table->dropConstrainedForeignId('gudang_id'));
         Schema::table('gudangs', fn(Blueprint $table) => $table->dropColumn([
             'kode',

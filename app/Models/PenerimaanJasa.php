@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-class ServiceBap extends Lpb
+class PenerimaanJasa extends PenerimaanBarang
 {
     protected static function booted(): void
     {

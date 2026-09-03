@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class LpbDetail extends Model
+class PenerimaanBarangDetail extends Model
 {
     use HasFactory;
 
-    protected $table = 'lpb_details';
+    protected $table = 'wms_penerimaan_barang_detail';
 
     protected $fillable = [
         'id_lpb',
@@ -45,6 +45,6 @@ class LpbDetail extends Model
 
     public function lpb(): BelongsTo
     {
-        return $this->belongsTo(Lpb::class, 'id_lpb', 'id_lpb');
+        return $this->belongsTo(PenerimaanBarang::class, 'id_lpb', 'id_lpb');
     }
 }

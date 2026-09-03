@@ -6,7 +6,7 @@ use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Lpb extends Model
+class PenerimaanBarang extends Model
 {
     use HasFactory, Auditable;
 
@@ -15,7 +15,7 @@ class Lpb extends Model
     public const REVERSED = 'REVERSED';
     public const CANCELLED = 'CANCELLED';
 
-    protected $table = 'lpbs';
+    protected $table = 'wms_penerimaan_barang';
 
     protected $fillable = [
         'id_lpb',
@@ -43,7 +43,7 @@ class Lpb extends Model
 
     public function details()
     {
-        return $this->hasMany(LpbDetail::class, 'id_lpb', 'id_lpb');
+        return $this->hasMany(PenerimaanBarangDetail::class, 'id_lpb', 'id_lpb');
     }
 
     public function pembelian()
@@ -68,7 +68,7 @@ class Lpb extends Model
 
     public function serviceDetails()
     {
-        return $this->hasMany(ServiceBapDetail::class, 'lpb_id');
+        return $this->hasMany(PenerimaanJasaDetail::class, 'lpb_id');
     }
 
     protected $casts = [

@@ -91,7 +91,7 @@ return new class extends Migration
             $table->index(['gudang_id', 'bahan_id', 'stock_status'], 'layers_stock_lookup');
         });
 
-        Schema::table('lpbs', function (Blueprint $table) {
+        Schema::table('wms_penerimaan_barang', function (Blueprint $table) {
             $table->string('receiving_status', 30)->default('RECEIVED')->after('status');
             $table->foreignId('putaway_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('putaway_at')->nullable();
@@ -100,7 +100,7 @@ return new class extends Migration
         Schema::create('quality_inspections', function (Blueprint $table) {
             $table->id();
             $table->string('number', 50)->unique();
-            $table->foreignId('lpb_id')->constrained('lpbs')->restrictOnDelete();
+            $table->foreignId('lpb_id')->constrained('wms_penerimaan_barang')->restrictOnDelete();
             $table->string('status', 30)->default('DRAFT');
             $table->text('notes')->nullable();
             $table->foreignId('inspected_by')->nullable()->constrained('users')->nullOnDelete();
@@ -111,7 +111,7 @@ return new class extends Migration
         Schema::create('quality_inspection_lines', function (Blueprint $table) {
             $table->id();
             $table->foreignId('quality_inspection_id')->constrained('quality_inspections')->cascadeOnDelete();
-            $table->foreignId('lpb_detail_id')->constrained('lpb_details')->restrictOnDelete();
+            $table->foreignId('lpb_detail_id')->constrained('wms_penerimaan_barang_detail')->restrictOnDelete();
             $table->decimal('quantity_received', 18, 6);
             $table->decimal('quantity_accepted', 18, 6)->default(0);
             $table->decimal('quantity_rejected', 18, 6)->default(0);
@@ -247,7 +247,7 @@ return new class extends Migration
         });
         Schema::dropIfExists('quality_inspection_lines');
         Schema::dropIfExists('quality_inspections');
-        Schema::table('lpbs', function (Blueprint $table) {
+        Schema::table('wms_penerimaan_barang', function (Blueprint $table) {
             $table->dropConstrainedForeignId('putaway_by');
             $table->dropColumn(['receiving_status', 'putaway_at']);
         });

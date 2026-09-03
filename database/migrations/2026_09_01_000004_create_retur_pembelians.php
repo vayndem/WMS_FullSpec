@@ -21,7 +21,7 @@ return new class extends Migration
             $table->timestamp('posted_at')->nullable();
             $table->timestamps();
 
-            $table->foreign('lpb_id')->references('id')->on('lpbs')->onDelete('restrict');
+            $table->foreign('lpb_id')->references('id')->on('wms_penerimaan_barang')->onDelete('restrict');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
         });
 
@@ -35,7 +35,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('retur_pembelian_id')->references('id')->on('retur_pembelians')->onDelete('cascade');
-            $table->foreign('lpb_detail_id')->references('id')->on('lpb_details')->onDelete('restrict');
+            $table->foreign('lpb_detail_id')->references('id')->on('wms_penerimaan_barang_detail')->onDelete('restrict');
         });
     }
 

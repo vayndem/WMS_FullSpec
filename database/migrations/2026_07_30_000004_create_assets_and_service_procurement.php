@@ -137,7 +137,7 @@ return new class extends Migration
             $table->index(['pembelian_id', 'service_type']);
         });
 
-        Schema::table('lpbs', function (Blueprint $table) {
+        Schema::table('wms_penerimaan_barang', function (Blueprint $table) {
             $table->string('document_type', 20)->default('GOODS')->after('id_lpb')->index()
                 ->comment('Jenis penerimaan: GOODS=LPB barang, SERVICE_BAP=BAP jasa');
             $table->unsignedBigInteger('cancelled_by')->nullable()->after('status')
@@ -146,7 +146,7 @@ return new class extends Migration
             $table->text('cancellation_reason')->nullable()->after('cancelled_at');
         });
 
-        Schema::create('service_bap_details', function (Blueprint $table) {
+        Schema::create('wms_penerimaan_jasa_detail', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('lpb_id');
             $table->unsignedBigInteger('service_po_detail_id');
@@ -155,27 +155,27 @@ return new class extends Migration
             $table->string('department_cost_center', 150)->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
-            $table->foreign('lpb_id')->references('id')->on('lpbs')->cascadeOnDelete();
+            $table->foreign('lpb_id')->references('id')->on('wms_penerimaan_barang')->cascadeOnDelete();
             $table->foreign('service_po_detail_id')->references('id')->on('service_po_details')->restrictOnDelete();
         });
 
-        Schema::create('service_bap_allocations', function (Blueprint $table) {
+        Schema::create('wms_penerimaan_jasa_alokasi', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('service_bap_detail_id');
             $table->string('datapesanan_code', 100);
             $table->decimal('percentage', 8, 4);
             $table->decimal('amount', 18, 2);
             $table->timestamps();
-            $table->foreign('service_bap_detail_id')->references('id')->on('service_bap_details')->cascadeOnDelete();
+            $table->foreign('service_bap_detail_id')->references('id')->on('wms_penerimaan_jasa_detail')->cascadeOnDelete();
             $table->unique(['service_bap_detail_id', 'datapesanan_code'], 'service_bap_datapesanan_unique');
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('service_bap_allocations');
-        Schema::dropIfExists('service_bap_details');
-        Schema::table('lpbs', fn (Blueprint $table) => $table->dropColumn([
+        Schema::dropIfExists('wms_penerimaan_jasa_alokasi');
+        Schema::dropIfExists('wms_penerimaan_jasa_detail');
+        Schema::table('wms_penerimaan_barang', fn (Blueprint $table) => $table->dropColumn([
             'document_type', 'cancelled_by', 'cancelled_at', 'cancellation_reason',
         ]));
         Schema::dropIfExists('service_po_details');

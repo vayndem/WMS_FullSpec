@@ -6,13 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class ServiceBapDetail extends Model
+class PenerimaanJasaDetail extends Model
 {
+    protected $table = 'wms_penerimaan_jasa_detail';
     protected $guarded = [];
     protected $casts = ['progress_percent' => 'decimal:4', 'amount' => 'decimal:2'];
     public function lpb(): BelongsTo
     {
-        return $this->belongsTo(Lpb::class);
+        return $this->belongsTo(PenerimaanBarang::class, 'lpb_id');
     }
     public function servicePoDetail(): BelongsTo
     {
@@ -24,6 +25,6 @@ class ServiceBapDetail extends Model
     }
     public function allocations(): HasMany
     {
-        return $this->hasMany(ServiceBapAllocation::class);
+        return $this->hasMany(PenerimaanJasaAlokasi::class, 'service_bap_detail_id');
     }
 }
