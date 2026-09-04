@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('stock_opnames', function (Blueprint $table) {
+        Schema::create('wms_stock_opname', function (Blueprint $table) {
             $table->id();
             $table->string('number', 50)->unique();
             $table->unsignedBigInteger('warehouse_id');
@@ -31,7 +31,7 @@ return new class extends Migration
             $table->index(['warehouse_id', 'status']);
         });
 
-        Schema::create('stock_opname_details', function (Blueprint $table) {
+        Schema::create('wms_stock_opname_detail', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('stock_opname_id');
             $table->unsignedBigInteger('bahan_id');
@@ -50,11 +50,11 @@ return new class extends Migration
             $table->timestamp('valuation_confirmed_at')->nullable();
             $table->timestamps();
             $table->unique(['stock_opname_id', 'bahan_id']);
-            $table->foreign('stock_opname_id')->references('id')->on('stock_opnames')->onDelete('cascade');
+            $table->foreign('stock_opname_id')->references('id')->on('wms_stock_opname')->onDelete('cascade');
             $table->foreign('bahan_id')->references('id')->on('bahans')->onDelete('restrict');
         });
 
-        Schema::create('stock_opname_allocations', function (Blueprint $table) {
+        Schema::create('wms_stock_opname_alokasi', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('stock_opname_detail_id');
             $table->unsignedBigInteger('inventory_layer_id');
@@ -62,7 +62,7 @@ return new class extends Migration
             $table->decimal('unit_cost', 18, 4);
             $table->decimal('total_cost', 18, 2);
             $table->timestamps();
-            $table->foreign('stock_opname_detail_id')->references('id')->on('stock_opname_details')->onDelete('cascade');
+            $table->foreign('stock_opname_detail_id')->references('id')->on('wms_stock_opname_detail')->onDelete('cascade');
             $table->foreign('inventory_layer_id')->references('id')->on('inventory_layers')->onDelete('restrict');
         });
 
@@ -81,8 +81,8 @@ return new class extends Migration
             $table->dropForeign(['coa_koreksi_opname_id']);
             $table->dropColumn(['coa_beban_selisih_opname_id', 'coa_koreksi_opname_id']);
         });
-        Schema::dropIfExists('stock_opname_allocations');
-        Schema::dropIfExists('stock_opname_details');
-        Schema::dropIfExists('stock_opnames');
+        Schema::dropIfExists('wms_stock_opname_alokasi');
+        Schema::dropIfExists('wms_stock_opname_detail');
+        Schema::dropIfExists('wms_stock_opname');
     }
 };

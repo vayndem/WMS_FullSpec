@@ -21,7 +21,7 @@ class ApproveStockOpnameRequest extends FormRequest
         if ($this->routeIs('stock-opname.approve')) {
             $rules += [
                 'items' => 'required|array|min:1',
-                'items.*.id' => 'required|integer|exists:stock_opname_details,id',
+                'items.*.id' => 'required|integer|exists:wms_stock_opname_detail,id',
                 'items.*.unit_cost' => 'nullable|numeric|min:0|max:99999999999999',
             ];
         }

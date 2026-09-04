@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class StockOpnameDetail extends Model
 {
+    protected $table = 'wms_stock_opname_detail';
+
     protected $fillable = [
         'stock_opname_id',
         'bahan_id',

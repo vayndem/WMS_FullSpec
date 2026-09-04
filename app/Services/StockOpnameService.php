@@ -157,7 +157,7 @@ class StockOpnameService
             $lineValue = round($take * (float) $layer->unit_cost, 2);
             $total += $lineValue;
             if ($consume) {
-                DB::table('stock_opname_allocations')->insert([
+                DB::table('wms_stock_opname_alokasi')->insert([
                     'stock_opname_detail_id' => $detail->id,
                     'inventory_layer_id' => $layer->id,
                     'quantity' => $take,

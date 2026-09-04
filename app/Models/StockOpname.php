@@ -9,6 +9,8 @@ class StockOpname extends Model
 {
     use HasFactory;
 
+    protected $table = 'wms_stock_opname';
+
     public const DRAFT = 'DRAFT';
     public const SUBMITTED = 'SUBMITTED';
     public const APPROVED = 'APPROVED';

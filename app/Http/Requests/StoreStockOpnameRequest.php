@@ -15,7 +15,7 @@ class StoreStockOpnameRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'number' => ['required', 'string', 'max:30', 'regex:/^[A-Z]{3}-[A-Z]{2,3}-\d{7}$/', 'unique:stock_opnames,number'],
+            'number' => ['required', 'string', 'max:30', 'regex:/^[A-Z]{3}-[A-Z]{2,3}-\d{7}$/', 'unique:wms_stock_opname,number'],
             'warehouse_id' => 'required|integer|exists:gudangs,id',
             'cutoff_at' => 'required|date',
             'notes' => 'nullable|string|max:2000',
