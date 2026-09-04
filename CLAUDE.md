@@ -137,7 +137,7 @@ The user's 4-phase modernization plan, approved 2026-09-01:
 3. **File/class naming**: must match what `php artisan make:model -a` generates (model + migration + factory + seeder + controller + policy + form requests all named consistently off the same model name) — this is a hard readability requirement for the next phase. **🚧 IN PROGRESS**, being done together with #2, cluster by cluster (see checkpoint below).
 4. **Structural convention to standardize and carry into the user's future projects, not just this one**: Controllers stay thin; validation lives in Form Requests; authorization lives in Policies; any logic reused more than once belongs in a Service class. This is the target pattern going forward — keep it in mind for any new code even before the rest of the refactor lands.
 
-## Phase 2/3 rename sweep — resume checkpoint (2026-09-03)
+## Phase 2/3 rename sweep — resume checkpoint (2026-09-03, ✅ completed 2026-09-04)
 
 The user approved doing Phase 2 (DB naming → Indonesian) and Phase 3 (file/class naming) together, going further than the original plan: not just `snake_case`, but replacing jargon/abbreviations (LPB, BAP, NPK, PO...) with full **baku** (proper/standard) Indonesian terms, and prefixing domain tables with `wms_`. The user explicitly granted full autonomy for this work ("tabrak saja gausah minta izin ... khusus di sesi ini saja") — no need to ask before continuing, just keep applying the same conventions below.
 
@@ -206,8 +206,16 @@ The largest cluster: 14 tables/models renamed together — `AuditLog`→`LogAudi
 
 **Documented, not fixed**: `Auditable` trait writes `$model::class` (raw FQCN) into `audit_logs.auditable_type` for 8 of these models — renaming those classes means old `wms_log_audit` rows keep the pre-rename class-name string while new rows get the new one. No code anywhere queries `auditable_type` today, so this is latent debt, not an active bug — treated the same as every other cluster's historical-data drift (kept `LPB-` journal prefixes, stored `NPK`/`LPB` `sumber_transaksi` values, etc.), not backfilled.
 
-### Cluster 11 — Docs pass: 🚧 in progress
+### Cluster 11 — Docs pass: ✅ DONE, committed
 
-Sweep `README.md`, `feed.MD`, and this file's own non-checkpoint sections (the "Domain concepts to know before editing warehouse/inventory code" and "Architecture rules" content above the Phase 2/3 checkpoint, which still describe pre-rename table/class names — e.g. `InventoryLayer`, `Lpb`, `Npk`, `Pembelian` model-name mentions) for old terminology so documentation matches the renamed code. This is the last remaining piece of the whole rename sweep.
+Swept `README.md`, `feed.MD`, and this file's own non-checkpoint sections (`Domain concepts...`, `Known gaps`) for old table/class names and updated them to the renamed code. Full detail in the commit message ("Docs pass: update README.md/feed.MD/CLAUDE.md for the renamed schema").
 
-To resume: re-read this checkpoint, `git log --oneline` on `refactor/rename-baku-indonesia` to see exactly what's committed, `git status` to see any uncommitted WIP, then continue the docs pass (or, if it's already done, the whole Phase 2/3 sweep is complete and this checkpoint section can be archived/removed). No need to ask the user before continuing — full autonomy for this rename work was already granted for as long as this checkpoint stands; re-confirm with the user only if resuming in a context where that grant is unclear (e.g. a very different session much later). The user has also said explicitly not to push this branch anywhere — everything stays local so they can review progress themselves.
+## Phase 2/3 sweep is complete — nothing left to resume here
+
+All 11 clusters (10 code + docs) are done and committed on `refactor/rename-baku-indonesia`, verified green after every cluster (`migrate:fresh --seed`, full test suite, `composer test:case-sensitive`). The branch has **not** been merged into `main` and has **not** been pushed anywhere — the user asked explicitly to keep it local so they can review it themselves; do not push or merge without being asked. This checkpoint section (everything from "Phase 2/3 rename sweep" down to here) is now historical record of how the rename was done — safe to leave as reference, or the user may want it trimmed/archived once they've reviewed the branch. Don't resume cluster work from here; if the user asks to continue "the rename," confirm first what specifically they mean, since the sweep as scoped is finished.
+
+### What's actually next, per the rest of this file
+
+The original 4-phase plan (see "Planned future work" above) is now fully done: framework upgrade (phase 1), DB naming (phase 2), file/class naming (phase 3) — phase 4 ("controllers thin, validation in Requests, auth in Policies, reusable logic in Services") was never a discrete task, it's the standing convention to keep following on any new code.
+
+The next concrete, unresolved things this file points at are the **"Known gaps" list** above (analyzed 2026-09-01, updated for the new names in the docs-pass commit) — still-open items include: no statutory financial statement reports beyond the raw journal list (biggest accounting-completeness gap), PPh 22 / PPh 4(2) final not modeled, no multi-currency/kurs handling, no AR/piutang or outbound-to-customer side at all, no real barcode/RF scanning, no wave/batch picking or slotting, no BOM/manufacturing/WIP model, no external API/EDI integration, no kitting/bundling, and the residual retur-after-invoice-posted case. None of these are part of the rename work — they're the pre-existing product backlog, unaffected by this sweep. Ask the user which (if any) they want tackled next rather than assuming.
