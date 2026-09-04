@@ -59,7 +59,7 @@
         'items' => [
             'PO jasa tidak boleh mencampur barang.',
             'Jasa operasional dan produksi menggunakan mapping COA berbeda.',
-            'BAP menandai pekerjaan mulai; invoice menandai pekerjaan selesai 100%.',
+            'Penerimaan jasa menandai pekerjaan mulai; invoice menandai pekerjaan selesai 100%.',
         ],
     ])
 @endsection

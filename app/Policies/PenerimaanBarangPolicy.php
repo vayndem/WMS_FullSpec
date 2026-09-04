@@ -2,10 +2,10 @@
 
 namespace App\Policies;
 
-use App\Models\Lpb;
+use App\Models\PenerimaanBarang;
 use App\Models\User;
 
-class LpbPolicy
+class PenerimaanBarangPolicy
 {
     private function canViewReceipts(User $user): bool
     {
@@ -22,7 +22,7 @@ class LpbPolicy
         return $this->canViewReceipts($user);
     }
 
-    public function view(User $user, Lpb $lpb): bool
+    public function view(User $user, PenerimaanBarang $lpb): bool
     {
         return $this->canViewReceipts($user);
     }
@@ -32,12 +32,12 @@ class LpbPolicy
         return $this->canManageReceipts($user);
     }
 
-    public function update(User $user, Lpb $lpb): bool
+    public function update(User $user, PenerimaanBarang $lpb): bool
     {
         return $this->canManageReceipts($user) && (int) $lpb->kunci === 0;
     }
 
-    public function delete(User $user, Lpb $lpb): bool
+    public function delete(User $user, PenerimaanBarang $lpb): bool
     {
         return $this->canManageReceipts($user) && (int) $lpb->kunci === 0;
     }

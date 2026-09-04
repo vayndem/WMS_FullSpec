@@ -86,7 +86,7 @@ class InvoiceLpb extends Model
 
     public function lpbs()
     {
-        return $this->belongsToMany(Lpb::class, 'invoice_lpb_receipts', 'invoice_lpb_id', 'lpb_id')
+        return $this->belongsToMany(PenerimaanBarang::class, 'invoice_lpb_receipts', 'invoice_lpb_id', 'lpb_id')
             ->withPivot('amount')->withTimestamps();
     }
 

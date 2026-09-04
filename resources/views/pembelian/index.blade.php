@@ -331,7 +331,7 @@
                                             <td x-text="item.realisasi"></td>
                                             <td>
                                                 <span x-text="formatRupiah(item.harga_referensi || 0)"></span>
-                                                <small class="block text-base-content/50">Rata-rata 5 LPB terakhir</small>
+                                                <small class="block text-base-content/50">Rata-rata 5 penerimaan barang terakhir</small>
                                             </td>
                                             <td x-text="item.jumlah_order - item.realisasi"></td>
                                             <td class="text-center">

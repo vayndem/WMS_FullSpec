@@ -7,8 +7,8 @@ use App\Models\MaterialRequest;
 use App\Http\Requests\StoreRequestDetailRequest;
 use App\Http\Requests\UpdateRequestDetailRequest;
 use Illuminate\Http\Request;
-use App\Models\LpbDetail;
-use App\Models\Lpb;
+use App\Models\PenerimaanBarangDetail;
+use App\Models\PenerimaanBarang;
 
 class RequestDetailController extends Controller
 {
@@ -67,15 +67,15 @@ class RequestDetailController extends Controller
 
     private function lastFiveLpbAverage(int $bahanId): float
     {
-        $receipts = LpbDetail::query()
-            ->join('lpbs', 'lpbs.id_lpb', '=', 'lpb_details.id_lpb')
-            ->where('lpb_details.id_bahan', $bahanId)
-            ->where('lpb_details.jumlah_barang_diterima', '>', 0)
-            ->where('lpbs.status', Lpb::POSTED)
-            ->orderByDesc('lpbs.tanggal')
-            ->orderByDesc('lpb_details.id')
+        $receipts = PenerimaanBarangDetail::query()
+            ->join('wms_penerimaan_barang', 'wms_penerimaan_barang.id_lpb', '=', 'wms_penerimaan_barang_detail.id_lpb')
+            ->where('wms_penerimaan_barang_detail.id_bahan', $bahanId)
+            ->where('wms_penerimaan_barang_detail.jumlah_barang_diterima', '>', 0)
+            ->where('wms_penerimaan_barang.status', PenerimaanBarang::POSTED)
+            ->orderByDesc('wms_penerimaan_barang.tanggal')
+            ->orderByDesc('wms_penerimaan_barang_detail.id')
             ->limit(5)
-            ->get(['lpb_details.jumlah_barang_diterima', 'lpb_details.harga']);
+            ->get(['wms_penerimaan_barang_detail.jumlah_barang_diterima', 'wms_penerimaan_barang_detail.harga']);
         $quantity = (float) $receipts->sum('jumlah_barang_diterima');
         return $quantity > 0
             ? round($receipts->sum(fn($row) => (float) $row->jumlah_barang_diterima * (float) $row->harga) / $quantity, 4)

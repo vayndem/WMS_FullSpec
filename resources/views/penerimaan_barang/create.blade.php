@@ -1,17 +1,17 @@
-<dialog id="createLpbModal" class="modal">
-    <div class="modal-box max-w-6xl p-0 overflow-hidden" x-data="lpbCreateForm({ kategoris: {{ Js::from($kategoris) }} })">
+<dialog id="createPenerimaanBarangModal" class="modal">
+    <div class="modal-box max-w-6xl p-0 overflow-hidden" x-data="penerimaanBarangCreateForm({ kategoris: {{ Js::from($kategoris) }} })">
         <div class="flex items-center gap-3 bg-primary px-6 py-4 text-primary-content">
             <i class="fa-solid fa-boxes-packing"></i>
             <h3 class="text-lg font-bold">Buat Penerimaan Barang (LPB)</h3>
         </div>
-        <form action="{{ route('lpb.store') }}" method="POST" @submit.prevent="submit()" data-autosave data-autosave-key="lpb-create" class="flex flex-col">
+        <form action="{{ route('penerimaan-barang.store') }}" method="POST" @submit.prevent="submit()" data-autosave data-autosave-key="penerimaan-barang-create" class="flex flex-col">
             @csrf
             <div class="max-h-[70vh] overflow-y-auto p-6">
                 <div class="rounded-lg border border-base-300 p-4">
                     <h6 class="mb-3 font-bold"><i class="fa-solid fa-truck-ramp-box"></i> Dokumen Penerimaan</h6>
                     <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
                         <div class="form-control">
-                            <label class="label"><span class="label-text font-semibold">Nomor LPB</span></label>
+                            <label class="label"><span class="label-text font-semibold">Nomor Penerimaan Barang</span></label>
                             <input type="text" class="input input-bordered bg-base-200" name="id_lpb" value="{{ $documentNumber }}" readonly>
                         </div>
                         <div class="form-control">
@@ -40,7 +40,7 @@
                             <input type="text" class="input input-bordered" name="no_invoice" placeholder="Opsi Tambahan...">
                         </div>
                         <div class="form-control">
-                            <label class="label"><span class="label-text font-semibold">Jenis LPB</span></label>
+                            <label class="label"><span class="label-text font-semibold">Jenis Penerimaan</span></label>
                             <select class="select select-bordered" name="jenis_lpb">
                                 <option value="1">Reguler</option>
                                 <option value="2">Pengganti / Retur</option>
@@ -116,7 +116,7 @@
                 <button type="button" class="btn btn-ghost" onclick="closeAjaxModal(this)">Batal</button>
                 <button type="submit" class="btn btn-primary" :disabled="submitting">
                     <span x-show="submitting" class="loading loading-spinner loading-sm"></span>
-                    <i class="fa-solid fa-floppy-disk" x-show="!submitting"></i> Simpan LPB
+                    <i class="fa-solid fa-floppy-disk" x-show="!submitting"></i> Simpan Penerimaan Barang
                 </button>
             </div>
         </form>
@@ -124,7 +124,7 @@
 </dialog>
 
 <script>
-    function lpbCreateForm(config) {
+    function penerimaanBarangCreateForm(config) {
         return {
             kategoris: config.kategoris,
             noPo: '',
@@ -142,7 +142,7 @@
                     return;
                 }
                 try {
-                    const response = await fetch(`{{ url('lpb/po') }}/${this.noPo}`, {
+                    const response = await fetch(`{{ url('penerimaan-barang/po') }}/${this.noPo}`, {
                         headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                     });
                     const res = await response.json();
@@ -193,7 +193,7 @@
                     window.dispatchEvent(new CustomEvent('wms:table-refresh'));
                     this.$root.closest('dialog').close();
                 } catch (error) {
-                    window.AppAlert.error('Gagal menyimpan LPB.');
+                    window.AppAlert.error('Gagal menyimpan penerimaan barang.');
                 } finally {
                     this.submitting = false;
                 }

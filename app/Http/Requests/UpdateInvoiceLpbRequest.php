@@ -35,7 +35,7 @@ class UpdateInvoiceLpbRequest extends FormRequest
             'no_invoice'              => 'required|string|max:100|unique:invoice_lpbs,no_invoice,' . $idTarget,
             'kode_supplier'           => 'required|exists:suppliers,id',
             'lpb_ids'                 => 'required|array|min:1',
-            'lpb_ids.*'               => 'required|integer|distinct|exists:lpbs,id',
+            'lpb_ids.*'               => 'required|integer|distinct|exists:wms_penerimaan_barang,id',
             'tanggal'                 => 'required|date',
             'tgl_deadline_pembayaran' => 'nullable|date',
             'is_ppn'                  => 'required|boolean',

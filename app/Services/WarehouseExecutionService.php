@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\InventoryLayer;
 use App\Models\InventoryReservation;
 use App\Models\Gudang;
-use App\Models\Lpb;
+use App\Models\PenerimaanBarang;
 use App\Models\PickingOrder;
 use App\Models\QualityInspection;
 use App\Models\StokGudang;
@@ -88,10 +88,10 @@ class WarehouseExecutionService
         $reservation->update(['status' => 'CONSUMED']);
     }
 
-    public function inspect(Lpb $lpb, array $decisions): QualityInspection
+    public function inspect(PenerimaanBarang $lpb, array $decisions): QualityInspection
     {
         return DB::transaction(function () use ($lpb, $decisions) {
-            $lpb = Lpb::with('details')->lockForUpdate()->findOrFail($lpb->id);
+            $lpb = PenerimaanBarang::with('details')->lockForUpdate()->findOrFail($lpb->id);
             if ($lpb->receiving_status !== 'RECEIVED') throw new RuntimeException('LPB hanya dapat diperiksa QC satu kali sebelum putaway.');
             $inspection = QualityInspection::create(['number' => $this->numbers->internal('QCI', 'WH'), 'lpb_id' => $lpb->id, 'status' => 'COMPLETED', 'inspected_by' => Auth::id(), 'inspected_at' => now()]);
             $hasRejected = false;
@@ -122,10 +122,10 @@ class WarehouseExecutionService
         });
     }
 
-    public function putaway(Lpb $lpb, WarehouseLocation $location): void
+    public function putaway(PenerimaanBarang $lpb, WarehouseLocation $location): void
     {
         DB::transaction(function () use ($lpb, $location) {
-            $lpb = Lpb::with('details')->lockForUpdate()->findOrFail($lpb->id);
+            $lpb = PenerimaanBarang::with('details')->lockForUpdate()->findOrFail($lpb->id);
             $location = WarehouseLocation::findOrFail($location->id);
             if ((int) $location->gudang_id !== (int) $lpb->gudang_id || !$location->active) throw new RuntimeException('Lokasi putaway tidak valid untuk gudang LPB.');
             $detailIds = $lpb->details->pluck('id');

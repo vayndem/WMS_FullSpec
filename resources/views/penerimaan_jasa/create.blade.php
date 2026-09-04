@@ -2,12 +2,12 @@
 @section('content')
     @php($selected = $orders->firstWhere('id', (int) request('po')) ?? $orders->first())
     <div class="content-page">
-        <h3 class="mb-4 text-2xl font-bold">Buat BAP Jasa</h3>
+        <h3 class="mb-4 text-2xl font-bold">Buat Penerimaan Jasa</h3>
         @if (!$selected)
             <div class="card border border-base-300 bg-base-100 shadow-sm">
                 <div class="py-10 text-center text-base-content/50">
                     <i class="fa-solid fa-circle-info mb-2 text-2xl"></i>
-                    <div>Tidak ada PO Jasa yang belum mempunyai BAP.</div>
+                    <div>Tidak ada PO Jasa yang belum mempunyai Penerimaan Jasa.</div>
                 </div>
             </div>
         @else
@@ -19,15 +19,15 @@
                     @endforeach
                 </select>
             </form>
-            <form method="post" action="{{ route('service-baps.store') }}" class="card border border-base-300 bg-base-100 shadow-sm">
+            <form method="post" action="{{ route('penerimaan-jasa.store') }}" class="card border border-base-300 bg-base-100 shadow-sm">
                 @csrf
                 <div class="p-4">
                     <input type="hidden" name="no_po" value="{{ $selected->no_po }}">
                     <div class="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                         <div class="form-control">
-                            <label class="label"><span class="label-text font-semibold">No BAP</span></label>
+                            <label class="label"><span class="label-text font-semibold">No Penerimaan Jasa</span></label>
                             <input name="id_lpb" class="input input-bordered bg-base-200" value="{{ $documentNumber }}" readonly>
-                            <span class="label-text-alt mt-1 text-base-content/50">Format BAP mengikuti tanggal dokumen.</span>
+                            <span class="label-text-alt mt-1 text-base-content/50">Format nomor mengikuti tanggal dokumen.</span>
                         </div>
                         <div class="form-control">
                             <label class="label"><span class="label-text font-semibold">Tanggal</span></label>
@@ -39,7 +39,7 @@
                         </div>
                     </div>
                     <div role="alert" class="alert alert-info mb-4">
-                        <span>BAP menandai seluruh pekerjaan dalam PO ini mulai dikerjakan. Belum ada jurnal sampai BAP dimasukkan ke invoice.</span>
+                        <span>Penerimaan jasa menandai seluruh pekerjaan dalam PO ini mulai dikerjakan. Belum ada jurnal sampai penerimaan jasa dimasukkan ke invoice.</span>
                     </div>
                     @foreach ($selected->serviceDetails as $i => $d)
                         <div class="bap-item mb-3 rounded-lg border border-base-300 p-3">
@@ -83,7 +83,7 @@
                     @endforeach
                 </div>
                 <div class="flex justify-end border-t border-base-300 p-4">
-                    <button class="btn btn-primary">Mulai Pekerjaan &amp; Simpan BAP</button>
+                    <button class="btn btn-primary">Mulai Pekerjaan &amp; Simpan Penerimaan Jasa</button>
                 </div>
             </form>
         @endif

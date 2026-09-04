@@ -8,7 +8,7 @@ use App\Models\InvoicePayment;
 use App\Models\InventoryLayer;
 use App\Models\ChartOfAccount;
 use App\Models\LandedCost;
-use App\Models\Lpb;
+use App\Models\PenerimaanBarang;
 use App\Models\InventoryReservation;
 use App\Models\Gudang;
 use App\Models\TransferGudang;
@@ -136,14 +136,14 @@ class WmsControlFrameworkTest extends TestCase
     {
         $user = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);
         Auth::login($user);
-        $lpb = Lpb::where('document_type', 'GOODS')->whereDoesntHave('invoiceReceipts')->firstOrFail();
+        $lpb = PenerimaanBarang::where('document_type', 'GOODS')->whereDoesntHave('invoiceReceipts')->firstOrFail();
         $detail = $lpb->details()->firstOrFail();
         $balance = StokGudang::where('gudang_id', $lpb->gudang_id)->where('bahan_id', $detail->id_bahan)->firstOrFail();
         $before = (float) $balance->stok_tersedia;
 
         app(InventoryReversalService::class)->reverseLpb($lpb, 'Koreksi integration test LPB');
 
-        $this->assertSame(Lpb::REVERSED, $lpb->fresh()->status);
+        $this->assertSame(PenerimaanBarang::REVERSED, $lpb->fresh()->status);
         $this->assertSame($before - (float) $detail->jumlah_barang_diterima, (float) $balance->fresh()->stok_tersedia);
         $this->assertDatabaseHas('document_reversals', ['document_type' => 'LPB', 'document_id' => $lpb->id]);
     }
@@ -315,11 +315,11 @@ class WmsControlFrameworkTest extends TestCase
     {
         $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
 
-        $index = $this->actingAs($warehouse)->get(route('lpb.index'));
+        $index = $this->actingAs($warehouse)->get(route('penerimaan-barang.index'));
         $index->assertOk()->assertSee('Daftar Penerimaan');
         $index->assertSeeInOrder(['x-for="row in rows" :key="row.id"', '<tbody>', 'toggleExpand(row.id)', 'expanded[row.id]', '</tbody>'], false);
 
-        $this->actingAs($warehouse)->get(route('lpb.create'))->assertOk()->assertSee('LPB');
+        $this->actingAs($warehouse)->get(route('penerimaan-barang.create'))->assertOk()->assertSee('LPB');
     }
 
     public function test_request_index_and_create_views_render_without_a_stray_detail_row_template(): void
@@ -356,7 +356,7 @@ class WmsControlFrameworkTest extends TestCase
     public function test_purchase_return_reduces_stock_and_grni_then_can_be_reversed(): void
     {
         $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
-        $lpb = Lpb::where('document_type', 'GOODS')->whereDoesntHave('invoiceReceipts')->where('status', Lpb::POSTED)->firstOrFail();
+        $lpb = PenerimaanBarang::where('document_type', 'GOODS')->whereDoesntHave('invoiceReceipts')->where('status', PenerimaanBarang::POSTED)->firstOrFail();
         $detail = $lpb->details()->where('jumlah_tersisa', '>', 0)->firstOrFail();
         $layer = InventoryLayer::where('source_type', 'LPB_DETAIL')->where('source_id', $detail->id)->firstOrFail();
         $balance = StokGudang::where('gudang_id', $lpb->gudang_id)->where('bahan_id', $detail->id_bahan)->firstOrFail();

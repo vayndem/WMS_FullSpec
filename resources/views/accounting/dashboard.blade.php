@@ -30,7 +30,7 @@
         ['Chart of Accounts', 'Kelola akun dan mapping jurnal otomatis WMS.', 'chart-of-accounts.index', 'fa-sitemap', 'warning'],
         ['Kunci Periode', 'Tutup periode agar transaksi lama tidak berubah.', 'period-lock.index', 'fa-calendar-xmark', 'danger'],
         ['Tarif Pajak', 'Kelola tarif PPN dan PPh berdasarkan tanggal efektif.', 'tax-rate.index', 'fa-percent', 'secondary'],
-        ['Invoice Supplier', 'Periksa invoice LPB, pembayaran, PPh, dan sisa tagihan.', 'invoice-lpb.index', 'fa-file-invoice-dollar', 'primary'],
+        ['Invoice Supplier', 'Periksa invoice penerimaan barang, pembayaran, PPh, dan sisa tagihan.', 'invoice-lpb.index', 'fa-file-invoice-dollar', 'primary'],
         ['Stock Opname', 'Periksa dan approve hasil penghitungan fisik gudang.', 'stock-opname.index', 'fa-clipboard-check', 'success'],
     ] as [$title, $description, $route, $icon, $color])
                 <a href="{{ route($route) }}" class="card border border-base-300 bg-base-100 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">

@@ -7,13 +7,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\MaterialRequest;
 use App\Models\Pembelian;
-use App\Models\Lpb;
+use App\Models\PenerimaanBarang;
 use App\Models\InvoiceLpb;
 use App\Models\InvoicePayment;
 use App\Models\Bahan;
 use App\Models\Npk;
 use App\Models\StockOpname;
-use App\Models\ServiceBap;
+use App\Models\PenerimaanJasa;
 use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
@@ -79,7 +79,7 @@ class AuthController extends Controller
             'warehouseMetrics' => [
                 'total_materials' => Bahan::count(),
                 'stock_attention' => Bahan::whereColumn('stok_onhand', '<=', 'planning')->count(),
-                'receipts_today' => Lpb::whereDate('tanggal', today())->count(),
+                'receipts_today' => PenerimaanBarang::whereDate('tanggal', today())->count(),
                 'issues_today' => Npk::whereDate('tanggal', today())->count(),
                 'open_opnames' => StockOpname::whereIn('status', [
                     StockOpname::DRAFT,
@@ -87,9 +87,9 @@ class AuthController extends Controller
                     StockOpname::SUBMITTED,
                     StockOpname::APPROVED,
                 ])->count(),
-                'service_baps_today' => ServiceBap::whereDate('tanggal', today())->count(),
+                'service_baps_today' => PenerimaanJasa::whereDate('tanggal', today())->count(),
             ],
-            'recentReceipts' => Lpb::with('pembelian.supplier')
+            'recentReceipts' => PenerimaanBarang::with('pembelian.supplier')
                 ->latest('tanggal')->latest('id')->limit(5)->get(),
             'recentIssues' => Npk::with('barang')
                 ->latest('tanggal')->latest('id')->limit(5)->get(),
@@ -164,7 +164,7 @@ class AuthController extends Controller
             'awaiting_receipt' => Pembelian::where('status', Pembelian::OPEN)
                 ->whereHas('details', fn($query) => $query->whereColumn('diterima', '<', 'jumlah'))
                 ->count(),
-            'unbilled_receipts' => Lpb::whereNull('no_invoice')->count(),
+            'unbilled_receipts' => PenerimaanBarang::whereNull('no_invoice')->count(),
             'unpaid_invoices' => InvoiceLpb::where('status', '!=', InvoiceLpb::VOID)->where('sisa_tagihan', '>', 0)->count(),
             'overdue_invoices' => InvoiceLpb::where('status', '!=', InvoiceLpb::VOID)->where('sisa_tagihan', '>', 0)
                 ->whereDate('tgl_deadline_pembayaran', '<', today())->count(),
@@ -179,7 +179,7 @@ class AuthController extends Controller
             ->withSum('details as received_quantity', 'diterima')
             ->where('status', Pembelian::OPEN)->latest('tanggal')->limit(5)->get();
 
-        $unbilledReceipts = Lpb::with('pembelian.supplier')
+        $unbilledReceipts = PenerimaanBarang::with('pembelian.supplier')
             ->whereNull('no_invoice')->latest('tanggal')->limit(5)->get();
 
         $dueInvoices = InvoiceLpb::with('supplier')->where('status', '!=', InvoiceLpb::VOID)

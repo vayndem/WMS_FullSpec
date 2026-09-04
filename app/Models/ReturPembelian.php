@@ -33,7 +33,7 @@ class ReturPembelian extends Model
 
     public function lpb()
     {
-        return $this->belongsTo(Lpb::class, 'lpb_id');
+        return $this->belongsTo(PenerimaanBarang::class, 'lpb_id');
     }
 
     public function details()

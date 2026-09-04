@@ -6,8 +6,8 @@ use App\Models\AccountingSetting;
 use App\Models\InvoiceLpb;
 use App\Models\InvoicePayment;
 use App\Models\Jurnal;
-use App\Models\Lpb;
-use App\Models\LpbDetail;
+use App\Models\PenerimaanBarang;
+use App\Models\PenerimaanBarangDetail;
 use App\Models\Npk;
 use App\Models\NpkStockAllocation;
 use App\Models\InventoryLayer;
@@ -26,7 +26,7 @@ class WmsAccountingService
         private DocumentNumberService $numbers
     ) {}
 
-    public function postLpb(Lpb $lpb): Jurnal
+    public function postLpb(PenerimaanBarang $lpb): Jurnal
     {
         $this->periods->assertOpen($lpb->tanggal, 'LPB');
         if ($lpb->document_type === 'SERVICE_BAP') {
@@ -127,7 +127,7 @@ class WmsAccountingService
             $newRemaining = (float) $layer->remaining_quantity - $take;
             $layer->update(['remaining_quantity' => $newRemaining]);
             if ($layer->source_type === 'LPB_DETAIL') {
-                LpbDetail::whereKey($layer->source_id)->update([
+                PenerimaanBarangDetail::whereKey($layer->source_id)->update([
                     'jumlah_dipakai' => DB::raw('jumlah_dipakai + ' . (float) $take),
                     'jumlah_tersisa' => $newRemaining,
                     'flag_dipakai' => $newRemaining > 0 ? 1 : 0,
@@ -149,7 +149,7 @@ class WmsAccountingService
                 'remaining_quantity' => (float) $layer->remaining_quantity + (float) $allocation->quantity,
             ]);
             if ($layer->source_type === 'LPB_DETAIL') {
-                LpbDetail::whereKey($layer->source_id)->update([
+                PenerimaanBarangDetail::whereKey($layer->source_id)->update([
                     'jumlah_dipakai' => DB::raw('GREATEST(jumlah_dipakai - ' . (float) $allocation->quantity . ', 0)'),
                     'jumlah_tersisa' => $layer->remaining_quantity,
                     'flag_dipakai' => 1,

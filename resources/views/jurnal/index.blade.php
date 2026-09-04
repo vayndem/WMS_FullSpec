@@ -31,7 +31,7 @@
                     <select class="select select-bordered select-sm" x-model="extraParams.sumber_transaksi">
                         <option value="">Semua sumber</option>
                         <option value="MANUAL">Manual</option>
-                        <option value="LPB">LPB</option>
+                        <option value="LPB">Penerimaan Barang</option>
                         <option value="NPK">NPK</option>
                         <option value="INVOICE_SUPPLIER">Invoice Supplier</option>
                         <option value="PELUNASAN_HUTANG">Pelunasan Hutang</option>

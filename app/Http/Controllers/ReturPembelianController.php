@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreReturPembelianRequest;
 use App\Models\InventoryLayer;
-use App\Models\Lpb;
-use App\Models\LpbDetail;
+use App\Models\PenerimaanBarang;
+use App\Models\PenerimaanBarangDetail;
 use App\Models\ReturPembelian;
 use App\Services\AccountingPeriodService;
 use App\Services\DocumentNumberService;
@@ -43,8 +43,8 @@ class ReturPembelianController extends Controller
     {
         $this->authorize('create', ReturPembelian::class);
 
-        $lpbs = Lpb::whereNull('no_invoice')
-            ->where('status', Lpb::POSTED)
+        $lpbs = PenerimaanBarang::whereNull('no_invoice')
+            ->where('status', PenerimaanBarang::POSTED)
             ->where('document_type', '!=', 'SERVICE_BAP')
             ->with(['pembelian.supplier'])
             ->orderBy('id_lpb', 'desc')
@@ -58,13 +58,13 @@ class ReturPembelianController extends Controller
     {
         $this->authorize('create', ReturPembelian::class);
 
-        $lpb = Lpb::where('id_lpb', $id_lpb)
+        $lpb = PenerimaanBarang::where('id_lpb', $id_lpb)
             ->whereNull('no_invoice')
-            ->where('status', Lpb::POSTED)
+            ->where('status', PenerimaanBarang::POSTED)
             ->with(['details.bahan', 'pembelian.supplier'])
             ->firstOrFail();
 
-        $items = $lpb->details->map(function (LpbDetail $detail) {
+        $items = $lpb->details->map(function (PenerimaanBarangDetail $detail) {
             return [
                 'id' => $detail->id,
                 'nama_bahan' => $detail->bahan->nama ?? '-',
@@ -87,8 +87,8 @@ class ReturPembelianController extends Controller
         $user = $request->user();
 
         $retur = DB::transaction(function () use ($validated, $user) {
-            $lpb = Lpb::lockForUpdate()->findOrFail($validated['lpb_id']);
-            abort_if($lpb->status !== Lpb::POSTED, 422, 'LPB harus berstatus posted.');
+            $lpb = PenerimaanBarang::lockForUpdate()->findOrFail($validated['lpb_id']);
+            abort_if($lpb->status !== PenerimaanBarang::POSTED, 422, 'LPB harus berstatus posted.');
             abort_if($lpb->no_invoice !== null, 422, 'LPB sudah ditagih; retur tidak dapat dibuat lagi untuk LPB ini.');
             abort_if($lpb->document_type === 'SERVICE_BAP', 422, 'Retur pembelian hanya berlaku untuk penerimaan barang, bukan jasa.');
             $this->periods->assertOpen($validated['tanggal'], 'Retur pembelian');
@@ -107,7 +107,7 @@ class ReturPembelianController extends Controller
             $totalNilai = 0;
             $detailRows = [];
             foreach ($validated['details'] as $line) {
-                $lpbDetail = LpbDetail::lockForUpdate()->findOrFail($line['lpb_detail_id']);
+                $lpbDetail = PenerimaanBarangDetail::lockForUpdate()->findOrFail($line['lpb_detail_id']);
                 abort_if($lpbDetail->id_lpb !== $lpb->id_lpb, 422, 'Baris LPB yang dipilih tidak sesuai dengan LPB ini.');
 
                 $layer = InventoryLayer::where('source_type', 'LPB_DETAIL')->where('source_id', $lpbDetail->id)->lockForUpdate()->firstOrFail();

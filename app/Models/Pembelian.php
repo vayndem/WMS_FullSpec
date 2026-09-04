@@ -70,7 +70,7 @@ class Pembelian extends Model
 
     public function lpbs(): HasMany
     {
-        return $this->hasMany(Lpb::class, 'no_po', 'no_po');
+        return $this->hasMany(PenerimaanBarang::class, 'no_po', 'no_po');
     }
 
     public function serviceDetails(): HasMany

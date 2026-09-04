@@ -16,11 +16,11 @@ class StoreReturPembelianRequest extends FormRequest
     {
         return [
             'no_retur'                    => ['required', 'string', 'max:100', 'unique:retur_pembelians,no_retur'],
-            'lpb_id'                       => ['required', 'integer', 'exists:lpbs,id'],
+            'lpb_id'                       => ['required', 'integer', 'exists:wms_penerimaan_barang,id'],
             'tanggal'                      => ['required', 'date'],
             'alasan'                       => ['required', 'string', 'max:1000'],
             'details'                      => ['required', 'array', 'min:1'],
-            'details.*.lpb_detail_id'      => ['required', 'integer', 'distinct', 'exists:lpb_details,id'],
+            'details.*.lpb_detail_id'      => ['required', 'integer', 'distinct', 'exists:wms_penerimaan_barang_detail,id'],
             'details.*.jumlah_retur'       => ['required', 'numeric', 'min:0.000001'],
         ];
     }

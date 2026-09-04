@@ -31,6 +31,6 @@ class ServicePoDetail extends Model
     }
     public function bapDetails(): HasMany
     {
-        return $this->hasMany(ServiceBapDetail::class);
+        return $this->hasMany(PenerimaanJasaDetail::class);
     }
 }

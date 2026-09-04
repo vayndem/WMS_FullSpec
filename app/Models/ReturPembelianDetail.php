@@ -32,6 +32,6 @@ class ReturPembelianDetail extends Model
 
     public function lpbDetail()
     {
-        return $this->belongsTo(LpbDetail::class, 'lpb_detail_id');
+        return $this->belongsTo(PenerimaanBarangDetail::class, 'lpb_detail_id');
     }
 }

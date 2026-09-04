@@ -2,12 +2,12 @@
 
 namespace App\Http\Requests;
 
-use App\Models\ServiceBap;
+use App\Models\PenerimaanJasa;
 use App\Models\ServicePoDetail;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
-class StoreServiceBapRequest extends FormRequest
+class StorePenerimaanJasaRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
@@ -26,12 +26,12 @@ class StoreServiceBapRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->user()->can('create', ServiceBap::class);
+        return $this->user()->can('create', PenerimaanJasa::class);
     }
     public function rules(): array
     {
         return [
-            'id_lpb' => ['required', 'string', 'max:30', 'regex:/^[A-Z]{3}\d{9}$/', 'unique:lpbs,id_lpb'],
+            'id_lpb' => ['required', 'string', 'max:30', 'regex:/^[A-Z]{3}\d{9}$/', 'unique:wms_penerimaan_barang,id_lpb'],
             'tanggal' => 'required|date',
             'no_po' => 'required|exists:pembelians,no_po',
             'no_sj' => 'required|string|max:250',

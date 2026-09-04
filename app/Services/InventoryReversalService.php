@@ -5,8 +5,8 @@ namespace App\Services;
 use App\Models\DocumentReversal;
 use App\Models\Bahan;
 use App\Models\InventoryLayer;
-use App\Models\Lpb;
-use App\Models\LpbDetail;
+use App\Models\PenerimaanBarang;
+use App\Models\PenerimaanBarangDetail;
 use App\Models\Npk;
 use App\Models\PembelianDetail;
 use App\Models\ReturPembelian;
@@ -41,13 +41,13 @@ class InventoryReversalService
         });
     }
 
-    public function reverseLpb(Lpb $lpb, string $reason): DocumentReversal
+    public function reverseLpb(PenerimaanBarang $lpb, string $reason): DocumentReversal
     {
         $this->periods->assertOpen(now(), 'Reversal LPB');
         return DB::transaction(function () use ($lpb, $reason) {
-            $lpb = Lpb::with('details')->lockForUpdate()->findOrFail($lpb->id);
+            $lpb = PenerimaanBarang::with('details')->lockForUpdate()->findOrFail($lpb->id);
             $this->assertNotReversed('LPB', $lpb->id);
-            if ($lpb->status !== Lpb::POSTED) throw new RuntimeException('Hanya LPB posted aktif yang dapat dibalik.');
+            if ($lpb->status !== PenerimaanBarang::POSTED) throw new RuntimeException('Hanya LPB posted aktif yang dapat dibalik.');
             if ($lpb->invoiceReceipts()->exists()) throw new RuntimeException('LPB sudah ditagih. Void invoice terlebih dahulu.');
 
             foreach ($lpb->details as $detail) {
@@ -69,7 +69,7 @@ class InventoryReversalService
                 }
             }
             $journal = $this->accounting->reverseAutomaticJournal('LPB', $lpb->id, "Reversal LPB {$lpb->id_lpb}: {$reason}");
-            $lpb->update(['cancelled_by' => Auth::id(), 'cancelled_at' => now(), 'cancellation_reason' => $reason, 'status' => Lpb::REVERSED]);
+            $lpb->update(['cancelled_by' => Auth::id(), 'cancelled_at' => now(), 'cancellation_reason' => $reason, 'status' => PenerimaanBarang::REVERSED]);
             return $this->record('LPB', $lpb->id, $reason, $journal->id);
         });
     }
@@ -81,10 +81,10 @@ class InventoryReversalService
             $retur = ReturPembelian::with('details')->lockForUpdate()->findOrFail($retur->id);
             $this->assertNotReversed('RETUR_PEMBELIAN', $retur->id);
             if ($retur->status !== ReturPembelian::POSTED) throw new RuntimeException('Hanya retur pembelian posted yang dapat dibalik.');
-            $lpb = Lpb::lockForUpdate()->findOrFail($retur->lpb_id);
+            $lpb = PenerimaanBarang::lockForUpdate()->findOrFail($retur->lpb_id);
 
             foreach ($retur->details as $detail) {
-                $lpbDetail = LpbDetail::lockForUpdate()->findOrFail($detail->lpb_detail_id);
+                $lpbDetail = PenerimaanBarangDetail::lockForUpdate()->findOrFail($detail->lpb_detail_id);
                 $layer = InventoryLayer::where('source_type', 'LPB_DETAIL')->where('source_id', $lpbDetail->id)->lockForUpdate()->firstOrFail();
                 $layer->update(['remaining_quantity' => (float) $layer->remaining_quantity + (float) $detail->jumlah_retur]);
                 $lpbDetail->update([

@@ -31,7 +31,7 @@
                                 <td class="font-semibold">{{ $g->nama }}</td>
                                 <td><span class="badge badge-ghost">{{ $g->jenis }}</span></td>
                                 <td>{{ $g->aktif ? 'Aktif' : 'Nonaktif' }}</td>
-                                <td>{{ collect(['LPB' => $g->boleh_penerimaan, 'NPK' => $g->boleh_npk, 'Transfer' => $g->boleh_transfer, 'Opname' => $g->boleh_opname])->filter()->keys()->join(', ') }}</td>
+                                <td>{{ collect(['Penerimaan Barang' => $g->boleh_penerimaan, 'NPK' => $g->boleh_npk, 'Transfer' => $g->boleh_transfer, 'Opname' => $g->boleh_opname])->filter()->keys()->join(', ') }}</td>
                                 <td>
                                     <div class="flex items-center gap-1">
                                         @can('view', $g)

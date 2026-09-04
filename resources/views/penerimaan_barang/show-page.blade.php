@@ -6,10 +6,10 @@
         <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
                 <div class="mb-1 flex items-center gap-2">
-                    <a href="{{ route('lpb.index') }}" class="btn btn-sm btn-ghost border border-base-300" title="Kembali">
+                    <a href="{{ route('penerimaan-barang.index') }}" class="btn btn-sm btn-ghost border border-base-300" title="Kembali">
                         <i class="fa-solid fa-arrow-left"></i>
                     </a>
-                    <h3 class="text-2xl font-bold">{{ $isService ? 'Detail BAP Jasa' : 'Detail Penerimaan Barang' }}</h3>
+                    <h3 class="text-2xl font-bold">{{ $isService ? 'Detail Penerimaan Jasa' : 'Detail Penerimaan Barang' }}</h3>
                 </div>
                 <p class="text-base-content/60">
                     {{ $isService ? 'Informasi pekerjaan jasa yang mulai dikerjakan; selesai ketika masuk invoice.' : 'Informasi barang yang telah diterima dari supplier.' }}
@@ -58,7 +58,7 @@
                                 <th>Kategori</th>
                                 <th>Status Pekerjaan</th>
                                 <th>Cost Center/Alokasi</th>
-                                @if ($financial)<th class="text-end">Nilai BAP</th>@endif
+                                @if ($financial)<th class="text-end">Nilai Penerimaan Jasa</th>@endif
                             </tr>
                         </thead>
                         <tbody>
@@ -123,7 +123,7 @@
                 @endif
             </div>
             <div class="flex justify-end border-t border-base-300 p-4">
-                <a href="{{ route('lpb.index') }}" class="btn btn-ghost border border-base-300">Kembali</a>
+                <a href="{{ route('penerimaan-barang.index') }}" class="btn btn-ghost border border-base-300">Kembali</a>
             </div>
         </div>
     </div>

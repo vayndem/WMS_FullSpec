@@ -10,8 +10,8 @@ use App\Models\InvoiceLpb;
 use App\Models\InvoicePayment;
 use App\Models\Jurnal;
 use App\Models\KategoriBahan;
-use App\Models\Lpb;
-use App\Models\LpbDetail;
+use App\Models\PenerimaanBarang;
+use App\Models\PenerimaanBarangDetail;
 use App\Models\Npk;
 use App\Models\Pembelian;
 use App\Models\PembelianDetail;
@@ -146,7 +146,7 @@ class FinancialStatementDemoSeeder extends Seeder
 
         $lpbDate = $date->copy()->addDays(2);
         $lpbNumber = $numbers->external('LPB', $lpbDate);
-        $lpb = Lpb::create([
+        $lpb = PenerimaanBarang::create([
             'id_lpb' => $lpbNumber,
             'tanggal' => $lpbDate,
             'no_po' => $po->no_po,
@@ -154,11 +154,11 @@ class FinancialStatementDemoSeeder extends Seeder
             'no_sj' => "SJ-{$lpbNumber}",
             'id_user' => 5,
             'flag' => 0,
-            'status' => Lpb::POSTED,
+            'status' => PenerimaanBarang::POSTED,
             'jenis_lpb' => 1,
             'kunci' => 1,
         ]);
-        $detail = LpbDetail::create([
+        $detail = PenerimaanBarangDetail::create([
             'id_lpb' => $lpb->id_lpb,
             'id_bahan' => $material->id,
             'id_kategori' => $category->id,
@@ -191,7 +191,7 @@ class FinancialStatementDemoSeeder extends Seeder
         PaymentAllocationService $allocation,
         DocumentNumberService $numbers,
         ChartOfAccount $bank,
-        Lpb $lpb,
+        PenerimaanBarang $lpb,
         Carbon $invoiceDate,
         Carbon $paymentDate,
         float $grandTotal,

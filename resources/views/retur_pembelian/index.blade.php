@@ -5,7 +5,7 @@
         <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
                 <h3 class="text-2xl font-bold">Retur Pembelian</h3>
-                <p class="text-base-content/60">Kelola pengembalian barang ke supplier sebelum LPB ditagih</p>
+                <p class="text-base-content/60">Kelola pengembalian barang ke supplier sebelum penerimaan barang ditagih</p>
             </div>
             @can('create', App\Models\ReturPembelian::class)
                 <button type="button" class="btn btn-primary" onclick="openAjaxModal('{{ route('retur-pembelian.create') }}')">
@@ -34,7 +34,7 @@
                         <tr>
                             <th class="cursor-pointer select-none" @click="sortBy(0)">No. Retur</th>
                             <th class="cursor-pointer select-none" @click="sortBy(1)">Tanggal</th>
-                            <th class="cursor-pointer select-none" @click="sortBy(2)">No. LPB</th>
+                            <th class="cursor-pointer select-none" @click="sortBy(2)">No. Penerimaan Barang</th>
                             <th class="cursor-pointer select-none" @click="sortBy(3)">Alasan</th>
                             <th class="cursor-pointer select-none text-end" @click="sortBy(4)">Total Nilai</th>
                             <th class="cursor-pointer select-none text-center" @click="sortBy(5)">Status</th>

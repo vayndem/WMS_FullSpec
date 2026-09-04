@@ -3,10 +3,10 @@
     <div class="content-page">
         <div class="mb-4 flex items-center justify-between">
             <div>
-                <h3 class="text-2xl font-bold">BAP Jasa</h3>
-                <p class="text-base-content/60">BAP menandai pekerjaan dimulai; invoice menandai pekerjaan selesai.</p>
+                <h3 class="text-2xl font-bold">Penerimaan Jasa</h3>
+                <p class="text-base-content/60">Penerimaan jasa menandai pekerjaan dimulai; invoice menandai pekerjaan selesai.</p>
             </div>
-            <a href="{{ route('service-baps.create') }}" class="btn btn-primary">+ Buat BAP</a>
+            <a href="{{ route('penerimaan-jasa.create') }}" class="btn btn-primary">+ Buat Penerimaan Jasa</a>
         </div>
         <div class="card border border-base-300 bg-base-100 shadow-sm">
             <div class="p-4">
@@ -16,15 +16,15 @@
                             <option value="{{ $size }}" @selected((string) request('per_page', 10) === (string) $size)>{{ $size === 'all' ? 'Semua' : $size }} data</option>
                         @endforeach
                     </select>
-                    <a class="btn btn-error" href="{{ route('service-baps.report.pdf', request()->query()) }}"><i class="fa-solid fa-file-pdf"></i> PDF</a>
-                    <input name="q" value="{{ request('q') }}" onchange="this.form.submit()" class="input input-bordered max-w-xs" placeholder="Cari nomor BAP...">
+                    <a class="btn btn-error" href="{{ route('penerimaan-jasa.report.pdf', request()->query()) }}"><i class="fa-solid fa-file-pdf"></i> PDF</a>
+                    <input name="q" value="{{ request('q') }}" onchange="this.form.submit()" class="input input-bordered max-w-xs" placeholder="Cari nomor penerimaan jasa...">
                 </form>
             </div>
             <div class="overflow-x-auto">
                 <table class="table" data-row-start="{{ $baps->firstItem() ? $baps->firstItem() - 1 : 0 }}">
                     <thead>
                         <tr>
-                            <th>No BAP</th>
+                            <th>No Penerimaan Jasa</th>
                             <th>Tanggal</th>
                             <th>PO Jasa</th>
                             <th>Supplier</th>
@@ -40,14 +40,14 @@
                                 <td>{{ $bap->no_po }}</td>
                                 <td>{{ $bap->pembelian->supplier->nama }}</td>
                                 <td>
-                                    <span class="badge {{ $bap->status === \App\Models\Lpb::CANCELLED ? 'badge-error' : ($bap->invoiceReceipts->isNotEmpty() ? 'badge-success' : 'badge-warning') }}">
-                                        {{ $bap->status === \App\Models\Lpb::CANCELLED ? 'Dibatalkan' : ($bap->invoiceReceipts->isNotEmpty() ? 'Selesai / Sudah Invoice' : 'Sedang Dikerjakan') }}
+                                    <span class="badge {{ $bap->status === \App\Models\PenerimaanBarang::CANCELLED ? 'badge-error' : ($bap->invoiceReceipts->isNotEmpty() ? 'badge-success' : 'badge-warning') }}">
+                                        {{ $bap->status === \App\Models\PenerimaanBarang::CANCELLED ? 'Dibatalkan' : ($bap->invoiceReceipts->isNotEmpty() ? 'Selesai / Sudah Invoice' : 'Sedang Dikerjakan') }}
                                     </span>
                                 </td>
-                                <td class="text-end"><a class="btn btn-outline btn-primary btn-sm" href="{{ route('service-baps.show', $bap) }}">Detail</a></td>
+                                <td class="text-end"><a class="btn btn-outline btn-primary btn-sm" href="{{ route('penerimaan-jasa.show', $bap) }}">Detail</a></td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="text-center text-base-content/50">Belum ada BAP.</td></tr>
+                            <tr><td colspan="6" class="text-center text-base-content/50">Belum ada penerimaan jasa.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -56,12 +56,12 @@
         </div>
     </div>
     @include('layouts.template.page-help', [
-        'title' => 'BAP Jasa',
+        'title' => 'Penerimaan Jasa',
         'items' => [
-            'BAP menandai seluruh pekerjaan dalam PO Jasa mulai dikerjakan.',
-            'Pembuatan BAP tidak membentuk jurnal.',
-            'Saat BAP masuk invoice, pekerjaan menjadi selesai 100% dan beban/WIP serta hutang dijurnal.',
-            'BAP belum di-invoice dapat dibatalkan oleh role Purchasing atau Accounting.',
+            'Penerimaan jasa menandai seluruh pekerjaan dalam PO Jasa mulai dikerjakan.',
+            'Pembuatan penerimaan jasa tidak membentuk jurnal.',
+            'Saat penerimaan jasa masuk invoice, pekerjaan menjadi selesai 100% dan beban/WIP serta hutang dijurnal.',
+            'Penerimaan jasa belum di-invoice dapat dibatalkan oleh role Purchasing atau Accounting.',
         ],
     ])
 @endsection

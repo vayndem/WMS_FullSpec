@@ -4,7 +4,7 @@
         async confirmCancel(event) {
             if (event.target.dataset.confirmed) return;
             event.preventDefault();
-            const result = await AppAlert.confirm('Batalkan BAP yang sedang berjalan?');
+            const result = await AppAlert.confirm('Batalkan penerimaan jasa yang sedang berjalan?');
             if (result.isConfirmed) {
                 event.target.dataset.confirmed = '1';
                 event.target.submit();
@@ -16,8 +16,8 @@
                 <h3 class="text-2xl font-bold">{{ $bap->id_lpb }}</h3>
                 <p class="text-base-content/60">{{ $bap->pembelian->supplier->nama }} · PO {{ $bap->no_po }}</p>
             </div>
-            <span class="badge badge-lg {{ $bap->status === \App\Models\Lpb::CANCELLED ? 'badge-error' : ($bap->invoiceReceipts->isNotEmpty() ? 'badge-success' : 'badge-warning') }}">
-                {{ $bap->status === \App\Models\Lpb::CANCELLED ? 'Dibatalkan' : ($bap->invoiceReceipts->isNotEmpty() ? 'SELESAI · SUDAH INVOICE' : 'SEDANG DIKERJAKAN') }}
+            <span class="badge badge-lg {{ $bap->status === \App\Models\PenerimaanBarang::CANCELLED ? 'badge-error' : ($bap->invoiceReceipts->isNotEmpty() ? 'badge-success' : 'badge-warning') }}">
+                {{ $bap->status === \App\Models\PenerimaanBarang::CANCELLED ? 'Dibatalkan' : ($bap->invoiceReceipts->isNotEmpty() ? 'SELESAI · SUDAH INVOICE' : 'SEDANG DIKERJAKAN') }}
             </span>
         </div>
         <div class="card border border-base-300 bg-base-100 shadow-sm">
@@ -60,12 +60,12 @@
             </div>
         </div>
         @can('cancel', $bap)
-            <form method="post" action="{{ route('service-baps.cancel', $bap) }}" class="card mt-4 border border-base-300 bg-base-100 p-4 shadow-sm" @submit="confirmCancel($event)">
+            <form method="post" action="{{ route('penerimaan-jasa.cancel', $bap) }}" class="card mt-4 border border-base-300 bg-base-100 p-4 shadow-sm" @submit="confirmCancel($event)">
                 @csrf
                 <label class="label"><span class="label-text font-semibold">Alasan Pembatalan</span></label>
                 <div class="join">
                     <input required name="reason" class="input input-bordered join-item flex-1">
-                    <button class="btn btn-error join-item">Batalkan BAP</button>
+                    <button class="btn btn-error join-item">Batalkan Penerimaan Jasa</button>
                 </div>
             </form>
         @endcan

@@ -35,7 +35,7 @@ class KategoriBahan extends Model
 
     public function lpbDetails(): HasMany
     {
-        return $this->hasMany(LpbDetail::class, 'id_kategori', 'id');
+        return $this->hasMany(PenerimaanBarangDetail::class, 'id_kategori', 'id');
     }
 
     public function serviceCategories(): HasMany
@@ -50,7 +50,7 @@ class KategoriBahan extends Model
 
     public function serviceBapDetails(): HasMany
     {
-        return $this->hasMany(ServiceBapDetail::class, 'id_kategori', 'id');
+        return $this->hasMany(PenerimaanJasaDetail::class, 'id_kategori', 'id');
     }
 
     public function tipePembebanan(): BelongsTo

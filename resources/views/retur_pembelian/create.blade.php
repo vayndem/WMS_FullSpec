@@ -12,9 +12,9 @@
                             <input type="text" class="input input-bordered bg-base-200" :value="documentNumber" readonly>
                         </div>
                         <div class="form-control">
-                            <label class="label"><span class="label-text font-semibold">Pilih LPB (belum ditagih) <span class="text-error">*</span></span></label>
+                            <label class="label"><span class="label-text font-semibold">Pilih Penerimaan Barang (belum ditagih) <span class="text-error">*</span></span></label>
                             <select class="select select-bordered" x-model="idLpb" @change="loadLpbDetail()" required
-                                data-app-picker data-placeholder="Cari nomor LPB, PO, atau supplier...">
+                                data-app-picker data-placeholder="Cari nomor penerimaan barang, PO, atau supplier...">
                                 <option value=""></option>
                                 @foreach ($lpbs as $lpb)
                                     <option value="{{ $lpb->id_lpb }}" data-id="{{ $lpb->id }}">
@@ -50,7 +50,7 @@
                             <tbody>
                                 <template x-if="items.length === 0">
                                     <tr>
-                                        <td colspan="5" class="py-3 text-center text-base-content/50" x-text="idLpb ? 'Tidak ada barang yang masih tersedia untuk diretur pada LPB ini.' : 'Pilih LPB terlebih dahulu.'"></td>
+                                        <td colspan="5" class="py-3 text-center text-base-content/50" x-text="idLpb ? 'Tidak ada barang yang masih tersedia untuk diretur pada penerimaan barang ini.' : 'Pilih penerimaan barang terlebih dahulu.'"></td>
                                     </tr>
                                 </template>
                                 <template x-for="(item, idx) in items" :key="item.id">
@@ -103,12 +103,12 @@
                     if (!res.success || !res.items.length) { this.items = []; return; }
                     this.items = res.items.map((item) => ({ ...item, jumlah_retur: 0 }));
                 } catch (error) {
-                    window.AppAlert.error('Gagal memuat detail LPB.');
+                    window.AppAlert.error('Gagal memuat detail penerimaan barang.');
                 }
             },
 
             async submit() {
-                if (!this.lpbId) { window.AppAlert.warning('Pilih LPB terlebih dahulu.'); return; }
+                if (!this.lpbId) { window.AppAlert.warning('Pilih penerimaan barang terlebih dahulu.'); return; }
                 if (!this.items.some((item) => Number(item.jumlah_retur) > 0)) {
                     window.AppAlert.warning('Isi jumlah retur untuk minimal satu barang.');
                     return;

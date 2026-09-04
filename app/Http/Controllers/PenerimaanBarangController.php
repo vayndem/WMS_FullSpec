@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Lpb;
-use App\Models\LpbDetail;
+use App\Models\PenerimaanBarang;
+use App\Models\PenerimaanBarangDetail;
 use App\Models\Pembelian;
 use App\Models\PembelianDetail;
 use App\Models\Bahan;
 use App\Models\Jurnal;
 use App\Models\KategoriBahan;
 use App\Models\User;
-use App\Http\Requests\StoreLpbRequest;
-use App\Http\Requests\UpdateLpbRequest;
-use App\Http\Requests\StoreLpbDetailRequest;
-use App\Http\Requests\UpdateLpbDetailRequest;
+use App\Http\Requests\StorePenerimaanBarangRequest;
+use App\Http\Requests\UpdatePenerimaanBarangRequest;
+use App\Http\Requests\StorePenerimaanBarangDetailRequest;
+use App\Http\Requests\UpdatePenerimaanBarangDetailRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -24,15 +24,15 @@ use App\Models\InventoryLot;
 use App\Services\DocumentNumberService;
 use App\Services\StokGudangService;
 
-class LpbController extends Controller
+class PenerimaanBarangController extends Controller
 {
     public function __construct(private WmsAccountingService $accounting, private DocumentNumberService $numbers, private StokGudangService $stokGudang) {}
     public function index(Request $request)
     {
-        $this->authorize('viewAny', Lpb::class);
+        $this->authorize('viewAny', PenerimaanBarang::class);
 
         if ($request->ajax()) {
-            $query = Lpb::with([
+            $query = PenerimaanBarang::with([
                 'pembelian.supplier',
                 'gudang',
                 'user',
@@ -135,16 +135,16 @@ class LpbController extends Controller
         }
 
         $financial = $request->user()->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING]);
-        return view('lpb.index', compact('financial'));
+        return view('penerimaan_barang.index', compact('financial'));
     }
 
     public function reportPdf(Request $request)
     {
-        $this->authorize('viewAny', Lpb::class);
+        $this->authorize('viewAny', PenerimaanBarang::class);
 
         $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
         $search = trim((string) $request->input('search', ''));
-        $query = Lpb::with(['pembelian.supplier', 'gudang', 'user'])->latest('tanggal');
+        $query = PenerimaanBarang::with(['pembelian.supplier', 'gudang', 'user'])->latest('tanggal');
 
         $receiptType = strtoupper((string) $request->input('jenis_lpb', ''));
         if (in_array($receiptType, ['3', 'SERVICE_BAP'], true)) {
@@ -214,7 +214,7 @@ class LpbController extends Controller
 
     public function create()
     {
-        $this->authorize('create', Lpb::class);
+        $this->authorize('create', PenerimaanBarang::class);
 
         $pos = Pembelian::with(['supplier', 'details'])
             ->where('status', Pembelian::OPEN)
@@ -223,12 +223,12 @@ class LpbController extends Controller
         $kategoris = KategoriBahan::all();
         $documentNumber = $this->numbers->external('LPB');
 
-        return view('lpb.create', compact('pos', 'kategoris', 'documentNumber'));
+        return view('penerimaan_barang.create', compact('pos', 'kategoris', 'documentNumber'));
     }
 
     public function getPoDetail($no_po)
     {
-        $this->authorize('create', Lpb::class);
+        $this->authorize('create', PenerimaanBarang::class);
         $po = Pembelian::where('no_po', $no_po)->with(['supplier', 'gudang', 'details.bahan'])->firstOrFail();
 
         $items = $po->details->map(function ($detail) {
@@ -255,7 +255,7 @@ class LpbController extends Controller
         ]);
     }
 
-    public function store(StoreLpbRequest $request)
+    public function store(StorePenerimaanBarangRequest $request)
     {
         $validated = $request->validated();
         $user = Auth::user();
@@ -289,7 +289,7 @@ class LpbController extends Controller
         $lpb = DB::transaction(function () use ($validated, $user, $po) {
             $idLpb = $validated['id_lpb'];
 
-            $lpb = Lpb::create([
+            $lpb = PenerimaanBarang::create([
                 'id_lpb'      => $idLpb,
                 'tanggal'     => $validated['tanggal'],
                 'no_po'       => $validated['no_po'],
@@ -298,7 +298,7 @@ class LpbController extends Controller
                 'id_user'     => $user->id,
                 'flag'        => 0,
                 'no_invoice'  => $validated['no_invoice'] ?? null,
-                'status'      => Lpb::DRAFT,
+                'status'      => PenerimaanBarang::DRAFT,
                 'jenis_lpb'   => $validated['jenis_lpb'] ?? 1,
                 'ulang'       => 0,
                 'kunci'       => 0,
@@ -323,7 +323,7 @@ class LpbController extends Controller
                     throw new \RuntimeException("Kategori bahan {$bahan->nama} tidak sesuai master.");
                 }
                 $unitPrice = (float) $poDetail->harga;
-                $lpbDetail = LpbDetail::create([
+                $lpbDetail = PenerimaanBarangDetail::create([
                     'id_lpb'                 => $idLpb,
                     'id_bahan'               => $item['id_bahan'],
                     'id_kategori'            => $item['id_kategori'] ?? null,
@@ -367,7 +367,7 @@ class LpbController extends Controller
             }
 
             $this->accounting->postLpb($lpb);
-            $lpb->update(['kunci' => true, 'status' => Lpb::POSTED]);
+            $lpb->update(['kunci' => true, 'status' => PenerimaanBarang::POSTED]);
 
             return $lpb;
         });
@@ -381,7 +381,7 @@ class LpbController extends Controller
 
     public function show(Request $request, $lpb)
     {
-        $lpbData = Lpb::where('id', $lpb)->orWhere('id_lpb', $lpb)
+        $lpbData = PenerimaanBarang::where('id', $lpb)->orWhere('id_lpb', $lpb)
             ->with([
                 'details.bahan',
                 'details.kategori',
@@ -396,7 +396,7 @@ class LpbController extends Controller
         $this->authorize('view', $lpbData);
 
         if (!$request->expectsJson() && !$request->ajax()) {
-            return view('lpb.show-page', [
+            return view('penerimaan_barang.show-page', [
                 'lpb' => $lpbData,
                 'financial' => $request->user()->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING]),
             ]);
@@ -414,9 +414,9 @@ class LpbController extends Controller
         ]);
     }
 
-    public function update(UpdateLpbRequest $request, $lpb)
+    public function update(UpdatePenerimaanBarangRequest $request, $lpb)
     {
-        $lpbData = Lpb::where('id', $lpb)->orWhere('id_lpb', $lpb)
+        $lpbData = PenerimaanBarang::where('id', $lpb)->orWhere('id_lpb', $lpb)
             ->with('details')
             ->firstOrFail();
 
@@ -481,7 +481,7 @@ class LpbController extends Controller
             ]);
 
             foreach ($validated['details'] as $item) {
-                LpbDetail::create([
+                PenerimaanBarangDetail::create([
                     'id_lpb'                 => $lpbData->id_lpb,
                     'id_bahan'               => $item['id_bahan'],
                     'id_kategori'            => $item['id_kategori'] ?? null,
@@ -522,7 +522,7 @@ class LpbController extends Controller
 
     public function destroy($lpb)
     {
-        $lpbData = Lpb::where('id', $lpb)->orWhere('id_lpb', $lpb)
+        $lpbData = PenerimaanBarang::where('id', $lpb)->orWhere('id_lpb', $lpb)
             ->with('details')
             ->firstOrFail();
 
@@ -569,15 +569,15 @@ class LpbController extends Controller
         ]);
     }
 
-    public function storeDetail(StoreLpbDetailRequest $request, $lpb)
+    public function storeDetail(StorePenerimaanBarangDetailRequest $request, $lpb)
     {
-        $lpbData = Lpb::where('id', $lpb)->orWhere('id_lpb', $lpb)->firstOrFail();
+        $lpbData = PenerimaanBarang::where('id', $lpb)->orWhere('id_lpb', $lpb)->firstOrFail();
         $this->authorize('update', $lpbData);
 
         $validated = $request->validated();
 
         $detail = DB::transaction(function () use ($validated, $lpbData) {
-            $newDetail = LpbDetail::create([
+            $newDetail = PenerimaanBarangDetail::create([
                 'id_lpb'                 => $lpbData->id_lpb,
                 'id_bahan'               => $validated['id_bahan'],
                 'id_kategori'            => $validated['id_kategori'] ?? null,
@@ -618,12 +618,12 @@ class LpbController extends Controller
         ], 201);
     }
 
-    public function updateDetail(UpdateLpbDetailRequest $request, $lpb, $detailId)
+    public function updateDetail(UpdatePenerimaanBarangDetailRequest $request, $lpb, $detailId)
     {
-        $lpbData = Lpb::where('id', $lpb)->orWhere('id_lpb', $lpb)->firstOrFail();
+        $lpbData = PenerimaanBarang::where('id', $lpb)->orWhere('id_lpb', $lpb)->firstOrFail();
         $this->authorize('update', $lpbData);
 
-        $detail = LpbDetail::where('id', $detailId)
+        $detail = PenerimaanBarangDetail::where('id', $detailId)
             ->where('id_lpb', $lpbData->id_lpb)
             ->firstOrFail();
 
@@ -690,10 +690,10 @@ class LpbController extends Controller
 
     public function destroyDetail($lpb, $detailId)
     {
-        $lpbData = Lpb::where('id', $lpb)->orWhere('id_lpb', $lpb)->firstOrFail();
+        $lpbData = PenerimaanBarang::where('id', $lpb)->orWhere('id_lpb', $lpb)->firstOrFail();
         $this->authorize('update', $lpbData);
 
-        $detail = LpbDetail::where('id', $detailId)
+        $detail = PenerimaanBarangDetail::where('id', $detailId)
             ->where('id_lpb', $lpbData->id_lpb)
             ->firstOrFail();
 
@@ -725,7 +725,7 @@ class LpbController extends Controller
         ]);
     }
 
-    private function syncJurnalPenerimaanBarang(Lpb $lpb): void
+    private function syncJurnalPenerimaanBarang(PenerimaanBarang $lpb): void
     {
         $this->accounting->postLpb($lpb);
     }

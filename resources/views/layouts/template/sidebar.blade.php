@@ -243,10 +243,10 @@
                     </li>
                 @endif
 
-                @if (Auth::user()->can('viewAny', App\Models\Lpb::class) || Auth::user()->can('viewAny', App\Models\ServiceBap::class) || Auth::user()->can('viewAny', App\Models\ReturPembelian::class))
-                    <li class="{{ request()->routeIs('lpb.*', 'service-baps.*', 'retur-pembelian.*') ? 'active' : '' }}">
+                @if (Auth::user()->can('viewAny', App\Models\PenerimaanBarang::class) || Auth::user()->can('viewAny', App\Models\PenerimaanJasa::class) || Auth::user()->can('viewAny', App\Models\ReturPembelian::class))
+                    <li class="{{ request()->routeIs('penerimaan-barang.*', 'penerimaan-jasa.*', 'retur-pembelian.*') ? 'active' : '' }}">
                         <a href="#penerimaan" class="svg-icon"
-                            aria-expanded="{{ request()->routeIs('lpb.*', 'service-baps.*', 'retur-pembelian.*') ? 'true' : 'false' }}">
+                            aria-expanded="{{ request()->routeIs('penerimaan-barang.*', 'penerimaan-jasa.*', 'retur-pembelian.*') ? 'true' : 'false' }}">
                             <i>
                                 <svg class="svg-icon" id="mm-penerimaan" width="20"
                                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -260,18 +260,18 @@
                             <i class="fa-solid fa-chevron-down mm-arrow-right arrow-hover"></i>
                         </a>
                         <ul id="penerimaan"
-                            class="submenu {{ request()->routeIs('lpb.*', 'service-baps.*', 'retur-pembelian.*') ? 'show' : '' }}">
-                            @can('viewAny', App\Models\Lpb::class)
-                                <li class="{{ request()->routeIs('lpb.*') ? 'active' : '' }}">
-                                    <a href="{{ route('lpb.index') }}" class="svg-icon">
-                                        <i class="fa-solid fa-boxes-stacked"></i><span>LPB Barang</span>
+                            class="submenu {{ request()->routeIs('penerimaan-barang.*', 'penerimaan-jasa.*', 'retur-pembelian.*') ? 'show' : '' }}">
+                            @can('viewAny', App\Models\PenerimaanBarang::class)
+                                <li class="{{ request()->routeIs('penerimaan-barang.*') ? 'active' : '' }}">
+                                    <a href="{{ route('penerimaan-barang.index') }}" class="svg-icon">
+                                        <i class="fa-solid fa-boxes-stacked"></i><span>Penerimaan Barang</span>
                                     </a>
                                 </li>
                             @endcan
-                            @can('viewAny', App\Models\ServiceBap::class)
-                                <li class="{{ request()->routeIs('service-baps.*') ? 'active' : '' }}">
-                                    <a href="{{ route('service-baps.index') }}" class="svg-icon">
-                                        <i class="fa-solid fa-clipboard-check"></i><span>BAP Jasa</span>
+                            @can('viewAny', App\Models\PenerimaanJasa::class)
+                                <li class="{{ request()->routeIs('penerimaan-jasa.*') ? 'active' : '' }}">
+                                    <a href="{{ route('penerimaan-jasa.index') }}" class="svg-icon">
+                                        <i class="fa-solid fa-clipboard-check"></i><span>Penerimaan Jasa</span>
                                     </a>
                                 </li>
                             @endcan

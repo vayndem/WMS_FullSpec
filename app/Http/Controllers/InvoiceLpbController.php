@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\InvoiceLpb;
-use App\Models\Lpb;
+use App\Models\PenerimaanBarang;
 use App\Models\Jurnal;
 use App\Http\Requests\StoreInvoiceLpbRequest;
 use App\Http\Requests\UpdateInvoiceLpbRequest;
@@ -120,7 +120,7 @@ class InvoiceLpbController extends Controller
     public function create()
     {
         $this->authorize('create', InvoiceLpb::class);
-        $lpbs = Lpb::whereNull('no_invoice')->where('status', Lpb::POSTED)
+        $lpbs = PenerimaanBarang::whereNull('no_invoice')->where('status', PenerimaanBarang::POSTED)
             ->with(['pembelian.supplier', 'details', 'serviceDetails'])->orderBy('id_lpb', 'desc')->get();
         $supplierIds = $lpbs->pluck('pembelian.supplier_id')->filter()->unique()->values();
         $suppliers = Supplier::whereIn('id', $supplierIds)->orderBy('nama')->get();
@@ -130,9 +130,9 @@ class InvoiceLpbController extends Controller
     public function getLpbDetail($id_lpb)
     {
         $this->authorize('create', InvoiceLpb::class);
-        $lpb = Lpb::where('id_lpb', $id_lpb)
+        $lpb = PenerimaanBarang::where('id_lpb', $id_lpb)
             ->whereNull('no_invoice')
-            ->where('status', Lpb::POSTED)
+            ->where('status', PenerimaanBarang::POSTED)
             ->with(['details.bahan', 'serviceDetails.servicePoDetail.category', 'serviceDetails.allocations', 'pembelian.supplier'])
             ->firstOrFail();
 
@@ -175,8 +175,8 @@ class InvoiceLpbController extends Controller
         $validated = $request->validated();
 
         $invoice = DB::transaction(function () use ($validated) {
-            $lpbs = Lpb::whereIn('id', $validated['lpb_ids'])->whereNull('no_invoice')
-                ->where('status', Lpb::POSTED)
+            $lpbs = PenerimaanBarang::whereIn('id', $validated['lpb_ids'])->whereNull('no_invoice')
+                ->where('status', PenerimaanBarang::POSTED)
                 ->with(['details', 'serviceDetails', 'pembelian'])->lockForUpdate()->get();
             if ($lpbs->count() !== count($validated['lpb_ids'])) {
                 throw new \RuntimeException('Salah satu LPB sudah digunakan invoice lain.');
@@ -259,7 +259,7 @@ class InvoiceLpbController extends Controller
         $invoice = InvoiceLpb::with('lpbs')->findOrFail($id);
         $this->authorize('update', $invoice);
 
-        $lpbs = Lpb::where('status', Lpb::POSTED)
+        $lpbs = PenerimaanBarang::where('status', PenerimaanBarang::POSTED)
             ->where(fn($query) => $query->whereNull('no_invoice')->orWhereIn('id', $invoice->lpbs->pluck('id')))
             ->whereHas('pembelian', fn($query) => $query->where('supplier_id', $invoice->kode_supplier))
             ->with(['pembelian.supplier', 'serviceDetails'])->get();
@@ -277,7 +277,7 @@ class InvoiceLpbController extends Controller
             if ($invoice->payments()->exists()) {
                 throw new \RuntimeException('Invoice yang sudah memiliki pembayaran tidak boleh diubah.');
             }
-            $lpbs = Lpb::whereIn('id', $validated['lpb_ids'])->where('status', Lpb::POSTED)
+            $lpbs = PenerimaanBarang::whereIn('id', $validated['lpb_ids'])->where('status', PenerimaanBarang::POSTED)
                 ->with(['details', 'serviceDetails', 'pembelian'])->lockForUpdate()->get();
             $supplierIds = $lpbs->pluck('pembelian.supplier_id')->unique();
             if (
@@ -350,7 +350,7 @@ class InvoiceLpbController extends Controller
             if ($invoice->payments()->exists()) {
                 throw new \RuntimeException('Invoice yang sudah memiliki pembayaran tidak boleh dihapus.');
             }
-            $receipts = Lpb::where('no_invoice', $invoice->no_invoice)->get();
+            $receipts = PenerimaanBarang::where('no_invoice', $invoice->no_invoice)->get();
             foreach ($receipts as $receipt) {
                 $receipt->update(['no_invoice' => null]);
             }
@@ -380,7 +380,7 @@ class InvoiceLpbController extends Controller
         $this->accounting->postInvoice($invoice);
     }
 
-    private function receiptAmount(Lpb $lpb): float
+    private function receiptAmount(PenerimaanBarang $lpb): float
     {
         return (float) $lpb->details->sum(fn($detail) => (float) $detail->jumlah_barang_diterima * (float) $detail->harga)
             + (float) $lpb->serviceDetails->sum('amount');

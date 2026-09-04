@@ -8,10 +8,10 @@ use App\Models\KategoriAset;
 use App\Models\ChartOfAccount;
 use App\Models\InvoiceLpb;
 use App\Models\InvoicePayment;
-use App\Models\ServiceBap;
+use App\Models\PenerimaanJasa;
 use App\Models\ServiceCategory;
 use App\Models\ServicePurchase;
-use App\Models\Lpb;
+use App\Models\PenerimaanBarang;
 use App\Models\Supplier;
 use App\Services\AsetAccountingService;
 use App\Services\WmsAccountingService;
@@ -100,14 +100,14 @@ class AssetAndServiceDemoSeeder extends Seeder
                     'subtotal' => 6000000,
                     'accepted_amount' => 6000000
                 ]);
-                $bap = ServiceBap::create([
+                $bap = PenerimaanJasa::create([
                     'id_lpb' => $numbers->external('BAP', today()->subDays(2)),
                     'document_type' => 'SERVICE_BAP',
                     'tanggal' => today()->subDays(2),
                     'no_po' => $po->no_po,
                     'no_sj' => 'DEMO-BA-001',
                     'id_user' => 5,
-                    'status' => Lpb::POSTED,
+                    'status' => PenerimaanBarang::POSTED,
                     'jenis_lpb' => 3,
                     'kunci' => 1
                 ]);
@@ -198,14 +198,14 @@ class AssetAndServiceDemoSeeder extends Seeder
                     'subtotal' => 1500000,
                     'accepted_amount' => 1500000,
                 ]);
-                $bapLunas = ServiceBap::create([
+                $bapLunas = PenerimaanJasa::create([
                     'id_lpb' => $numbers->external('BAP', today()->subDays(3)),
                     'document_type' => 'SERVICE_BAP',
                     'tanggal' => today()->subDays(3),
                     'no_po' => $poLunas->no_po,
                     'no_sj' => 'DEMO-BA-002',
                     'id_user' => 5,
-                    'status' => Lpb::POSTED,
+                    'status' => PenerimaanBarang::POSTED,
                     'jenis_lpb' => 3,
                     'kunci' => 1
                 ]);

@@ -3,10 +3,10 @@
 namespace App\Policies;
 
 use App\Models\User;
-use App\Models\ServiceBap;
-use App\Models\Lpb;
+use App\Models\PenerimaanJasa;
+use App\Models\PenerimaanBarang;
 
-class ServiceBapPolicy
+class PenerimaanJasaPolicy
 {
     private function canViewServiceBaps(User $user): bool
     {
@@ -23,7 +23,7 @@ class ServiceBapPolicy
         return $this->canViewServiceBaps($user);
     }
 
-    public function view(User $user, ServiceBap $bap): bool
+    public function view(User $user, PenerimaanJasa $bap): bool
     {
         return $this->canViewServiceBaps($user) && $bap->document_type === 'SERVICE_BAP';
     }
@@ -33,11 +33,11 @@ class ServiceBapPolicy
         return $this->canViewServiceBaps($user);
     }
 
-    public function cancel(User $user, ServiceBap $bap): bool
+    public function cancel(User $user, PenerimaanJasa $bap): bool
     {
         return $this->canViewServiceBapFinancials($user)
             && $this->view($user, $bap)
-            && $bap->status === Lpb::POSTED
+            && $bap->status === PenerimaanBarang::POSTED
             && !$bap->invoiceReceipts()->exists();
     }
 

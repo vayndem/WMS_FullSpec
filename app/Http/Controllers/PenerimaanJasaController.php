@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreServiceBapRequest;
-use App\Http\Requests\CancelServiceBapRequest;
-use App\Models\Lpb;
-use App\Models\ServiceBap;
+use App\Http\Requests\StorePenerimaanJasaRequest;
+use App\Http\Requests\CancelPenerimaanJasaRequest;
+use App\Models\PenerimaanBarang;
+use App\Models\PenerimaanJasa;
 use App\Models\ServicePurchase;
 use App\Models\ServicePoDetail;
 use Illuminate\Http\Request;
@@ -15,17 +15,17 @@ use RuntimeException;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\DocumentNumberService;
 
-class ServiceBapController extends Controller
+class PenerimaanJasaController extends Controller
 {
     public function __construct(private DocumentNumberService $numbers) {}
     public function index(Request $request)
     {
-        $this->authorize('viewAny', ServiceBap::class);
-        $query = ServiceBap::with(['pembelian.supplier', 'invoiceReceipts'])->when($request->filled('q'), fn($q) => $q->where('id_lpb', 'like', '%' . $request->q . '%'))
+        $this->authorize('viewAny', PenerimaanJasa::class);
+        $query = PenerimaanJasa::with(['pembelian.supplier', 'invoiceReceipts'])->when($request->filled('q'), fn($q) => $q->where('id_lpb', 'like', '%' . $request->q . '%'))
             ->latest('tanggal');
         $perPage = $this->perPage($request, $query->count());
         $baps = $query->paginate($perPage)->withQueryString();
-        return view('service_baps.index', compact('baps'));
+        return view('penerimaan_jasa.index', compact('baps'));
     }
     private function perPage(Request $request, int $total): int
     {
@@ -34,9 +34,9 @@ class ServiceBapController extends Controller
     }
     public function reportPdf(Request $request)
     {
-        $this->authorize('viewAny', ServiceBap::class);
-        $financial = $request->user()->can('viewFinancials', ServiceBap::class);
-        $query = ServiceBap::with(['pembelian.supplier', 'invoiceReceipts'])->when($request->filled('q'), fn($q) => $q->where('id_lpb', 'like', '%' . $request->q . '%'));
+        $this->authorize('viewAny', PenerimaanJasa::class);
+        $financial = $request->user()->can('viewFinancials', PenerimaanJasa::class);
+        $query = PenerimaanJasa::with(['pembelian.supplier', 'invoiceReceipts'])->when($request->filled('q'), fn($q) => $q->where('id_lpb', 'like', '%' . $request->q . '%'));
         if ($financial) $query->withSum('serviceDetails', 'amount');
         $rows = $query->get()->map(function ($b) use ($financial) {
             $row = [
@@ -44,7 +44,7 @@ class ServiceBapController extends Controller
                 'date' => $b->tanggal->format('d-m-Y'),
                 'po' => $b->no_po,
                 'supplier' => $b->pembelian->supplier->nama,
-                'status' => $b->status === Lpb::CANCELLED ? 'Dibatalkan' : ($b->invoiceReceipts->isNotEmpty() ? 'Selesai / Sudah Invoice' : 'Sedang Dikerjakan'),
+                'status' => $b->status === PenerimaanBarang::CANCELLED ? 'Dibatalkan' : ($b->invoiceReceipts->isNotEmpty() ? 'Selesai / Sudah Invoice' : 'Sedang Dikerjakan'),
             ];
             if ($financial) $row['amount'] = 'Rp ' . number_format($b->service_details_sum_amount, 0, ',', '.');
             return $row;
@@ -56,29 +56,29 @@ class ServiceBapController extends Controller
     }
     public function create()
     {
-        $this->authorize('create', ServiceBap::class);
+        $this->authorize('create', PenerimaanJasa::class);
         $orders = ServicePurchase::with(['supplier', 'serviceDetails.category'])
             ->whereDoesntHave(
                 'serviceDetails.bapDetails.lpb',
-                fn($query) => $query->where('status', Lpb::POSTED)
+                fn($query) => $query->where('status', PenerimaanBarang::POSTED)
             )
             ->latest('tanggal')->get();
         $documentNumber = $this->numbers->external('BAP');
-        $financial = request()->user()->can('viewFinancials', ServiceBap::class);
-        return view('service_baps.create', compact('orders', 'documentNumber', 'financial'));
+        $financial = request()->user()->can('viewFinancials', PenerimaanJasa::class);
+        return view('penerimaan_jasa.create', compact('orders', 'documentNumber', 'financial'));
     }
-    public function store(StoreServiceBapRequest $request)
+    public function store(StorePenerimaanJasaRequest $request)
     {
         $bap = DB::transaction(function () use ($request) {
             $data = $request->validated();
             $po = ServicePurchase::where('no_po', $data['no_po'])->lockForUpdate()->firstOrFail();
-            $bap = ServiceBap::create([
+            $bap = PenerimaanJasa::create([
                 'id_lpb' => $data['id_lpb'],
                 'tanggal' => $data['tanggal'],
                 'no_po' => $po->no_po,
                 'no_sj' => $data['no_sj'],
                 'id_user' => Auth::id(),
-                'status' => Lpb::POSTED,
+                'status' => PenerimaanBarang::POSTED,
                 'jenis_lpb' => 3,
                 'kunci' => 1,
                 'document_type' => 'SERVICE_BAP'
@@ -87,7 +87,7 @@ class ServiceBapController extends Controller
                 $poDetail = ServicePoDetail::with('category')->lockForUpdate()->findOrFail($item['service_po_detail_id']);
                 if ($poDetail->pembelian_id !== $po->id) throw new RuntimeException('Detail jasa bukan bagian dari PO yang dipilih.');
                 $hasActiveBap = $poDetail->bapDetails()
-                    ->whereHas('lpb', fn($query) => $query->where('status', Lpb::POSTED))
+                    ->whereHas('lpb', fn($query) => $query->where('status', PenerimaanBarang::POSTED))
                     ->exists();
                 if ((float) $poDetail->accepted_amount > .01 || $hasActiveBap) {
                     throw new RuntimeException("Pekerjaan {$poDetail->description} sudah mempunyai BAP.");
@@ -106,23 +106,23 @@ class ServiceBapController extends Controller
             }
             return $bap;
         });
-        return redirect()->route('service-baps.show', $bap)
+        return redirect()->route('penerimaan-jasa.show', $bap)
             ->with('success', 'BAP jasa dibuat. Pekerjaan berstatus sedang berjalan dan belum membentuk jurnal.');
     }
-    public function show(ServiceBap $serviceBap)
+    public function show(PenerimaanJasa $serviceBap)
     {
         $this->authorize('view', $serviceBap);
         $serviceBap->load(['pembelian.supplier', 'serviceDetails.servicePoDetail.category', 'serviceDetails.kategori', 'serviceDetails.allocations', 'invoiceReceipts.invoice']);
-        $financial = request()->user()->can('viewFinancials', ServiceBap::class);
-        return view('service_baps.show', ['bap' => $serviceBap, 'financial' => $financial]);
+        $financial = request()->user()->can('viewFinancials', PenerimaanJasa::class);
+        return view('penerimaan_jasa.show', ['bap' => $serviceBap, 'financial' => $financial]);
     }
-    public function cancel(CancelServiceBapRequest $request, ServiceBap $serviceBap)
+    public function cancel(CancelPenerimaanJasaRequest $request, PenerimaanJasa $serviceBap)
     {
         DB::transaction(function () use ($request, $serviceBap) {
             foreach ($serviceBap->serviceDetails()->lockForUpdate()->get() as $detail) {
                 $detail->servicePoDetail()->update(['accepted_amount' => 0]);
             }
-            $serviceBap->update(['status' => Lpb::CANCELLED, 'cancelled_by' => Auth::id(), 'cancelled_at' => now(), 'cancellation_reason' => $request->validated('reason')]);
+            $serviceBap->update(['status' => PenerimaanBarang::CANCELLED, 'cancelled_by' => Auth::id(), 'cancelled_at' => now(), 'cancellation_reason' => $request->validated('reason')]);
         });
         return back()->with('success', 'BAP jasa dibatalkan. Tidak ada jurnal yang perlu direversal.');
     }

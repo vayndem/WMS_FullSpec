@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('content')
-    @php($hasActiveBap = $po->serviceDetails->flatMap->bapDetails->contains(fn($detail) => $detail->lpb?->status === \App\Models\Lpb::POSTED))
+    @php($hasActiveBap = $po->serviceDetails->flatMap->bapDetails->contains(fn($detail) => $detail->lpb?->status === \App\Models\PenerimaanBarang::POSTED))
     <div class="content-page">
         <div class="mb-4 flex items-center justify-between">
             <div>
@@ -8,7 +8,7 @@
                 <p class="text-base-content/60">{{ $po->supplier->nama }} · {{ $po->tanggal }}</p>
             </div>
             @unless($hasActiveBap)
-                <a href="{{ route('service-baps.create', ['po' => $po->id]) }}" class="btn btn-primary">Buat BAP</a>
+                <a href="{{ route('penerimaan-jasa.create', ['po' => $po->id]) }}" class="btn btn-primary">Buat Penerimaan Jasa</a>
             @endunless
         </div>
         <div class="card border border-base-300 bg-base-100 shadow-sm">

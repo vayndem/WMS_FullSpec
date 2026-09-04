@@ -10,7 +10,7 @@ use App\Models\InventoryLot;
 use App\Models\InventoryReservation;
 use App\Models\InvoiceLpb;
 use App\Models\LandedCost;
-use App\Models\Lpb;
+use App\Models\PenerimaanBarang;
 use App\Models\Npk;
 use App\Models\PickingOrder;
 use App\Models\QualityInspection;
@@ -41,10 +41,10 @@ class WmsControlController extends Controller
             'layers' => $mayControlFinance ? InventoryLayer::with(['bahan', 'gudang'])->where('remaining_quantity', '>', 0)->latest()->limit(200)->get() : collect(),
             'gudangs' => Gudang::whereIn('id', $warehouseIds)->where('aktif', true)->orderBy('nama')->get(),
             'bahans' => Bahan::orderBy('nama')->get(),
-            'pendingLpbs' => Lpb::with('details.bahan')->whereIn('gudang_id', $warehouseIds)->whereIn('status', [Lpb::DRAFT, Lpb::POSTED])->where(fn ($query) => $query->whereNull('document_type')->orWhere('document_type', '!=', 'SERVICE_BAP'))->where('receiving_status', '!=', 'PUTAWAY')->latest()->limit(30)->get(),
+            'pendingLpbs' => PenerimaanBarang::with('details.bahan')->whereIn('gudang_id', $warehouseIds)->whereIn('status', [PenerimaanBarang::DRAFT, PenerimaanBarang::POSTED])->where(fn ($query) => $query->whereNull('document_type')->orWhere('document_type', '!=', 'SERVICE_BAP'))->where('receiving_status', '!=', 'PUTAWAY')->latest()->limit(30)->get(),
             'invoices' => $mayMatchInvoice ? InvoiceLpb::where('status', '!=', InvoiceLpb::VOID)->latest()->limit(30)->get() : collect(),
             'creditAccounts' => $mayControlFinance ? ChartOfAccount::where('is_active', true)->where('is_postable', true)->whereIn('kategori_akun', ['LIABILITAS', 'ASET'])->orderBy('kode_akun')->get() : collect(),
-            'reversibleLpbs' => $mayControlFinance ? Lpb::where('status', Lpb::POSTED)->where(fn ($query) => $query->whereNull('document_type')->orWhere('document_type', '!=', 'SERVICE_BAP'))->whereDoesntHave('invoiceReceipts')->latest()->limit(20)->get() : collect(),
+            'reversibleLpbs' => $mayControlFinance ? PenerimaanBarang::where('status', PenerimaanBarang::POSTED)->where(fn ($query) => $query->whereNull('document_type')->orWhere('document_type', '!=', 'SERVICE_BAP'))->whereDoesntHave('invoiceReceipts')->latest()->limit(20)->get() : collect(),
             'reversibleNpks' => $mayControlFinance ? Npk::where('status', Npk::POSTED)->latest()->limit(20)->get() : collect(),
         ]);
     }

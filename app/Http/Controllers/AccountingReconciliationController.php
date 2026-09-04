@@ -43,11 +43,11 @@ class AccountingReconciliationController extends Controller
             ->selectRaw('SUM(COALESCE(sisa_tagihan,0)) outstanding')
             ->first();
 
-        $grniExpected = (float) DB::table('lpb_details')
-            ->join('lpbs', 'lpbs.id_lpb', '=', 'lpb_details.id_lpb')
-            ->leftJoin('invoice_lpb_receipts', 'invoice_lpb_receipts.lpb_id', '=', 'lpbs.id')
+        $grniExpected = (float) DB::table('wms_penerimaan_barang_detail')
+            ->join('wms_penerimaan_barang', 'wms_penerimaan_barang.id_lpb', '=', 'wms_penerimaan_barang_detail.id_lpb')
+            ->leftJoin('invoice_lpb_receipts', 'invoice_lpb_receipts.lpb_id', '=', 'wms_penerimaan_barang.id')
             ->whereNull('invoice_lpb_receipts.id')
-            ->sum(DB::raw('lpb_details.jumlah_barang_diterima * lpb_details.harga'));
+            ->sum(DB::raw('wms_penerimaan_barang_detail.jumlah_barang_diterima * wms_penerimaan_barang_detail.harga'));
         $grniAccounts = DB::table('kategori_bahans')->whereNotNull('coa_clearing_lpb_id')
             ->distinct()->pluck('coa_clearing_lpb_id');
         $grniLedger = (float) DB::table('jurnal_details')->join('jurnals', 'jurnals.id', '=', 'jurnal_details.jurnal_id')
@@ -134,12 +134,12 @@ class AccountingReconciliationController extends Controller
                 ->select('id', 'no_invoice', 'tanggal', 'grand_total', 'total_pembayaran', 'sisa_tagihan', 'status')
                 ->selectRaw('sisa_tagihan-GREATEST(grand_total-total_pembayaran,0) difference')->orderByDesc('tanggal')->get();
         } else {
-            $goods = DB::table('lpbs')->join('lpb_details', 'lpb_details.id_lpb', '=', 'lpbs.id_lpb')
-                ->leftJoin('invoice_lpb_receipts', 'invoice_lpb_receipts.lpb_id', '=', 'lpbs.id')
+            $goods = DB::table('wms_penerimaan_barang')->join('wms_penerimaan_barang_detail', 'wms_penerimaan_barang_detail.id_lpb', '=', 'wms_penerimaan_barang.id_lpb')
+                ->leftJoin('invoice_lpb_receipts', 'invoice_lpb_receipts.lpb_id', '=', 'wms_penerimaan_barang.id')
                 ->whereNull('invoice_lpb_receipts.id')
-                ->select('lpbs.id', 'lpbs.id_lpb', 'lpbs.tanggal', 'lpbs.no_po')
-                ->selectRaw('SUM(lpb_details.jumlah_barang_diterima * lpb_details.harga) amount')
-                ->groupBy('lpbs.id', 'lpbs.id_lpb', 'lpbs.tanggal', 'lpbs.no_po')->get();
+                ->select('wms_penerimaan_barang.id', 'wms_penerimaan_barang.id_lpb', 'wms_penerimaan_barang.tanggal', 'wms_penerimaan_barang.no_po')
+                ->selectRaw('SUM(wms_penerimaan_barang_detail.jumlah_barang_diterima * wms_penerimaan_barang_detail.harga) amount')
+                ->groupBy('wms_penerimaan_barang.id', 'wms_penerimaan_barang.id_lpb', 'wms_penerimaan_barang.tanggal', 'wms_penerimaan_barang.no_po')->get();
             $rows = $goods->sortByDesc('tanggal')->values();
         }
 

@@ -169,7 +169,7 @@ class StockOpnameService
                 $layer->decrement('remaining_quantity', $take);
             }
             if ($consume && $layer->source_type === 'LPB_DETAIL') {
-                DB::table('lpb_details')->where('id', $layer->source_id)->update([
+                DB::table('wms_penerimaan_barang_detail')->where('id', $layer->source_id)->update([
                     'jumlah_dipakai' => DB::raw('jumlah_dipakai + ' . (float) $take),
                     'jumlah_tersisa' => DB::raw('GREATEST(jumlah_tersisa - ' . (float) $take . ', 0)'),
                     'flag_dipakai' => DB::raw("CASE WHEN jumlah_tersisa - " . (float) $take . " > 0 THEN 1 ELSE 0 END"),

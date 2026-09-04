@@ -33,7 +33,7 @@
                                     <th class="text-end">Selisih</th>
                                 @endif
                             @elseif($check === 'grni')
-                                <th>No LPB</th>
+                                <th>No Penerimaan Barang</th>
                                 <th>Tanggal</th>
                                 <th>No PO</th>
                                 @if ($financial)

@@ -167,7 +167,7 @@
                                 <span class="badge badge-info">{{ $lpb->receiving_status }}</span>
                             </div>
                             @if ($lpb->receiving_status === 'RECEIVED')
-                                <form method="POST" action="{{ route('wms-control.lpb.inspect', $lpb) }}" class="mt-2">
+                                <form method="POST" action="{{ route('wms-control.penerimaan-barang.inspect', $lpb) }}" class="mt-2">
                                     @csrf
                                     <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
                                         @foreach ($lpb->details as $d)
@@ -189,7 +189,7 @@
                                 </form>
                             @endif
                             @if ($locations->where('gudang_id', $lpb->gudang_id)->isNotEmpty())
-                                <form method="POST" action="{{ route('wms-control.lpb.putaway', $lpb) }}" class="mt-2 flex gap-2">
+                                <form method="POST" action="{{ route('wms-control.penerimaan-barang.putaway', $lpb) }}" class="mt-2 flex gap-2">
                                     @csrf
                                     <select name="warehouse_location_id" class="select select-bordered select-sm" required>
                                         @foreach ($locations->where('gudang_id', $lpb->gudang_id) as $loc)
@@ -209,7 +209,7 @@
 
         @if ($invoices->isNotEmpty())
             <div class="card mb-4 border border-base-300 bg-base-100 shadow-sm">
-                <div class="border-b border-base-300 p-4"><h5 class="font-bold">Three-Way Match: PO &middot; LPB &middot; Invoice</h5></div>
+                <div class="border-b border-base-300 p-4"><h5 class="font-bold">Three-Way Match: PO &middot; Penerimaan Barang &middot; Invoice</h5></div>
                 <div class="overflow-x-auto">
                     <table class="table">
                         <thead><tr><th>Invoice</th><th>Subtotal</th><th>Match</th><th>Issue</th><th></th></tr></thead>
@@ -325,17 +325,17 @@
                 <div class="border-b border-base-300 p-4"><h5 class="font-bold">Controlled Reversal</h5></div>
                 <div class="grid grid-cols-1 gap-4 p-4 lg:grid-cols-2">
                     <div>
-                        <h6 class="mb-2 font-semibold">LPB</h6>
+                        <h6 class="mb-2 font-semibold">Penerimaan Barang</h6>
                         @forelse($reversibleLpbs as $d)
-                            <form method="POST" action="{{ route('wms-control.lpb.reverse', $d) }}"
-                                @submit.prevent="submitOrConfirm($event, 'Balik seluruh stok dan jurnal LPB?')" class="join mb-2 w-full">
+                            <form method="POST" action="{{ route('wms-control.penerimaan-barang.reverse', $d) }}"
+                                @submit.prevent="submitOrConfirm($event, 'Balik seluruh stok dan jurnal penerimaan barang?')" class="join mb-2 w-full">
                                 @csrf
                                 <span class="join-item btn btn-disabled btn-outline">{{ $d->id_lpb }}</span>
                                 <input name="reason" class="input input-bordered join-item flex-1" minlength="10" placeholder="Alasan reversal (wajib)" required>
                                 <button class="join-item btn btn-outline btn-error">Reverse</button>
                             </form>
                         @empty
-                            <small class="text-base-content/50">Tidak ada LPB yang eligible.</small>
+                            <small class="text-base-content/50">Tidak ada penerimaan barang yang eligible.</small>
                         @endforelse
                     </div>
                     <div>

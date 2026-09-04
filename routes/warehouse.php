@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\GudangController;
 use App\Http\Controllers\InventoryFinancialControlController;
-use App\Http\Controllers\LpbController;
+use App\Http\Controllers\PenerimaanBarangController;
 use App\Http\Controllers\MutasiStokController;
 use App\Http\Controllers\NpkController;
 use App\Http\Controllers\PembagianGudangController;
@@ -34,12 +34,12 @@ Route::middleware('auth')->group(function () {
     Route::resource('mutasi-stoks', MutasiStokController::class)->only('index');
     Route::get('rekonsiliasi-gudangs', [RekonsiliasiGudangController::class, 'index'])->name('rekonsiliasi-gudangs.index');
 
-    Route::get('lpb/po/{no_po}', [LpbController::class, 'getPoDetail'])->name('lpb.get-po-detail');
-    Route::get('lpb-report/pdf', [LpbController::class, 'reportPdf'])->name('lpb.report.pdf');
-    Route::post('lpb/{lpb}/details', [LpbController::class, 'storeDetail'])->name('lpb.details.store');
-    Route::put('lpb/{lpb}/details/{detail}', [LpbController::class, 'updateDetail'])->name('lpb.details.update');
-    Route::delete('lpb/{lpb}/details/{detail}', [LpbController::class, 'destroyDetail'])->name('lpb.details.destroy');
-    Route::resource('lpb', LpbController::class)->except(['edit']);
+    Route::get('penerimaan-barang/po/{no_po}', [PenerimaanBarangController::class, 'getPoDetail'])->name('penerimaan-barang.get-po-detail');
+    Route::get('penerimaan-barang-report/pdf', [PenerimaanBarangController::class, 'reportPdf'])->name('penerimaan-barang.report.pdf');
+    Route::post('penerimaan-barang/{lpb}/details', [PenerimaanBarangController::class, 'storeDetail'])->name('penerimaan-barang.details.store');
+    Route::put('penerimaan-barang/{lpb}/details/{detail}', [PenerimaanBarangController::class, 'updateDetail'])->name('penerimaan-barang.details.update');
+    Route::delete('penerimaan-barang/{lpb}/details/{detail}', [PenerimaanBarangController::class, 'destroyDetail'])->name('penerimaan-barang.details.destroy');
+    Route::resource('penerimaan-barang', PenerimaanBarangController::class)->parameters(['penerimaan-barang' => 'lpb'])->except(['edit']);
 
     Route::get('retur-pembelian/lpb-detail/{id_lpb}', [ReturPembelianController::class, 'getLpbDetail'])->name('retur-pembelian.get-lpb-detail');
     Route::resource('retur-pembelian', ReturPembelianController::class)->only(['index', 'create', 'store', 'show']);
@@ -63,8 +63,8 @@ Route::middleware('auth')->group(function () {
         Route::post('lots', [WmsTraceabilityController::class, 'storeLot'])->name('lots.store');
         Route::post('serials', [WmsTraceabilityController::class, 'storeSerial'])->name('serials.store');
         Route::patch('lots/{lot}/block', [WmsTraceabilityController::class, 'updateLotBlock'])->name('lots.block');
-        Route::post('lpb/{lpb}/inspect', [WarehouseExecutionController::class, 'inspect'])->name('lpb.inspect');
-        Route::post('lpb/{lpb}/putaway', [WarehouseExecutionController::class, 'putaway'])->name('lpb.putaway');
+        Route::post('penerimaan-barang/{lpb}/inspect', [WarehouseExecutionController::class, 'inspect'])->name('penerimaan-barang.inspect');
+        Route::post('penerimaan-barang/{lpb}/putaway', [WarehouseExecutionController::class, 'putaway'])->name('penerimaan-barang.putaway');
         Route::post('reservations', [WarehouseExecutionController::class, 'reserve'])->name('reservations.store');
         Route::post('reservations/{reservation}/release', [WarehouseExecutionController::class, 'releaseReservation'])->name('reservations.release');
         Route::post('reservations/{reservation}/pick', [WarehouseExecutionController::class, 'createPick'])->name('reservations.pick');
@@ -73,7 +73,7 @@ Route::middleware('auth')->group(function () {
         Route::post('invoices/{invoice}/match', [InventoryFinancialControlController::class, 'matchInvoice'])->name('invoices.match');
         Route::post('landed-costs', [InventoryFinancialControlController::class, 'storeLandedCost'])->name('landed-costs.store');
         Route::post('landed-costs/{landedCost}/post', [InventoryFinancialControlController::class, 'postLandedCost'])->name('landed-costs.post');
-        Route::post('lpb/{lpb}/reverse', [InventoryFinancialControlController::class, 'reverseLpb'])->name('lpb.reverse');
+        Route::post('penerimaan-barang/{lpb}/reverse', [InventoryFinancialControlController::class, 'reverseLpb'])->name('penerimaan-barang.reverse');
         Route::post('npk/{npk}/reverse', [InventoryFinancialControlController::class, 'reverseNpk'])->name('npk.reverse');
         Route::post('retur-pembelian/{returPembelian}/reverse', [InventoryFinancialControlController::class, 'reverseReturPembelian'])->name('retur-pembelian.reverse');
     });

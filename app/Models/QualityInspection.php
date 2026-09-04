@@ -12,7 +12,7 @@ class QualityInspection extends Model
     protected $casts = ['inspected_at' => 'datetime'];
     public function lpb()
     {
-        return $this->belongsTo(Lpb::class);
+        return $this->belongsTo(PenerimaanBarang::class);
     }
     public function lines()
     {

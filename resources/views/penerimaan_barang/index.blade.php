@@ -4,20 +4,20 @@
     <div class="content-page">
         <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h3 class="text-2xl font-bold">Daftar Penerimaan (LPB &amp; BAP)</h3>
+                <h3 class="text-2xl font-bold">Daftar Penerimaan (Barang &amp; Jasa)</h3>
                 <p class="text-base-content/60">Kelola penerimaan barang dan dimulainya pekerjaan jasa dari supplier</p>
             </div>
-            @can('create', App\Models\Lpb::class)
-                <button type="button" class="btn btn-primary" onclick="openAjaxModal('{{ route('lpb.create') }}')">
-                    <i class="fa-solid fa-plus"></i> Buat LPB Baru
+            @can('create', App\Models\PenerimaanBarang::class)
+                <button type="button" class="btn btn-primary" onclick="openAjaxModal('{{ route('penerimaan-barang.create') }}')">
+                    <i class="fa-solid fa-plus"></i> Buat Penerimaan Barang Baru
                 </button>
             @endcan
         </div>
 
         <div class="card border border-base-300 bg-base-100 shadow-sm"
             x-data="wmsDataTable({
-                url: '{{ route('lpb.index') }}',
-                reportUrl: '{{ route('lpb.report.pdf') }}',
+                url: '{{ route('penerimaan-barang.index') }}',
+                reportUrl: '{{ route('penerimaan-barang.report.pdf') }}',
                 extraParams: { jenis_lpb: '1' },
                 columns: [
                     { data: 'id_lpb' }, { data: 'jenis_lpb_label' }, { data: 'tanggal' }, { data: 'no_po' },
@@ -31,15 +31,15 @@
                         <i class="fa-solid fa-layer-group"></i>&nbsp;Semua
                     </a>
                     <a role="tab" class="tab" :class="extraParams.jenis_lpb === '1' && 'tab-active'" @click="extraParams.jenis_lpb = '1'">
-                        <i class="fa-solid fa-box"></i>&nbsp;LPB Barang
+                        <i class="fa-solid fa-box"></i>&nbsp;Penerimaan Barang
                     </a>
                     <a role="tab" class="tab" :class="extraParams.jenis_lpb === '3' && 'tab-active'" @click="extraParams.jenis_lpb = '3'">
-                        <i class="fa-solid fa-screwdriver-wrench"></i>&nbsp;BAP Jasa
+                        <i class="fa-solid fa-screwdriver-wrench"></i>&nbsp;Penerimaan Jasa
                     </a>
                 </div>
                 <label class="input input-bordered flex w-full max-w-xs items-center gap-2">
                     <i class="fa-solid fa-magnifying-glass text-base-content/40"></i>
-                    <input type="search" class="grow" placeholder="Cari LPB..." x-model="search">
+                    <input type="search" class="grow" placeholder="Cari Penerimaan Barang..." x-model="search">
                 </label>
                 <a :href="buildReportUrl()" target="_blank" rel="noopener" class="btn btn-error btn-sm">
                     <i class="fa-solid fa-file-pdf"></i> PDF
@@ -51,7 +51,7 @@
                     <thead>
                         <tr>
                             <th class="w-8"></th>
-                            <th class="cursor-pointer select-none" @click="sortBy(0)">No LPB</th>
+                            <th class="cursor-pointer select-none" @click="sortBy(0)">No Penerimaan Barang</th>
                             <th>Jenis</th>
                             <th class="cursor-pointer select-none" @click="sortBy(2)">Tanggal</th>
                             <th class="cursor-pointer select-none" @click="sortBy(3)">No PO</th>
@@ -100,7 +100,7 @@
                                             <i class="fa-solid fa-eye"></i> Detail
                                         </button>
                                         <button type="button" x-show="row.can_delete" class="btn btn-outline btn-error btn-sm"
-                                            @click="AppAlert.confirm('Hapus LPB draft ini? LPB yang sudah diposting tidak dapat dihapus.').then(r => { if (r.isConfirmed) fetch(`{{ url('lpb') }}/${row.id}`, { method: 'DELETE', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } }).then(r => r.json()).then(d => { AppAlert.auto(d.message ? d : 'Data berhasil dihapus.'); fetchData(); }).catch(() => AppAlert.error('Gagal menghapus data.')) })">
+                                            @click="AppAlert.confirm('Hapus penerimaan barang draft ini? Penerimaan yang sudah diposting tidak dapat dihapus.').then(r => { if (r.isConfirmed) fetch(`{{ url('penerimaan-barang') }}/${row.id}`, { method: 'DELETE', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } }).then(r => r.json()).then(d => { AppAlert.auto(d.message ? d : 'Data berhasil dihapus.'); fetchData(); }).catch(() => AppAlert.error('Gagal menghapus data.')) })">
                                             <i class="fa-solid fa-trash"></i>
                                         </button>
                                     </div>
@@ -112,7 +112,7 @@
                                     <div class="my-2 rounded-lg border border-base-300 bg-base-100 p-4">
                                         <h6 class="mb-2 font-bold">
                                             <i class="fa-solid fa-list-check"></i>
-                                            <span x-text="row.document_type === 'SERVICE_BAP' ? 'Detail BAP Jasa' : 'Detail Item LPB'"></span>
+                                            <span x-text="row.document_type === 'SERVICE_BAP' ? 'Detail Penerimaan Jasa' : 'Detail Item Penerimaan Barang'"></span>
                                             (<span x-text="row.id_lpb"></span>)
                                         </h6>
                                         <div class="overflow-x-auto">
@@ -124,7 +124,7 @@
                                                         <th x-text="row.document_type === 'SERVICE_BAP' ? 'Cost Center / Datapesanan' : 'Lot Number'"></th>
                                                         <th class="text-center" x-text="row.document_type === 'SERVICE_BAP' ? 'Status Pekerjaan' : 'Qty Diterima'"></th>
                                                         @if ($financial)
-                                                            <th class="text-end" x-text="row.document_type === 'SERVICE_BAP' ? 'Nilai BAP' : 'Harga Satuan'"></th>
+                                                            <th class="text-end" x-text="row.document_type === 'SERVICE_BAP' ? 'Nilai Penerimaan Jasa' : 'Harga Satuan'"></th>
                                                         @endif
                                                     </tr>
                                                 </thead>

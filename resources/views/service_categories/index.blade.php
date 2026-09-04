@@ -28,7 +28,7 @@
                             @endforeach
                         </select>
                         <p class="text-sm text-base-content/50">
-                            COA ini didebit ketika BAP masuk invoice. BAP yang baru dibuat belum membentuk jurnal. Mapping GRNI disimpan sebagai kontrol konfigurasi dan persiapan accrual jasa.
+                            COA ini didebit ketika penerimaan jasa masuk invoice. Penerimaan jasa yang baru dibuat belum membentuk jurnal. Mapping GRNI disimpan sebagai kontrol konfigurasi dan persiapan accrual jasa.
                         </p>
                         <input type="hidden" name="is_active" value="1">
                     </div>
@@ -46,8 +46,8 @@
         'items' => [
             'Kategori 98 wajib cost center/departemen.',
             'Kategori 99 wajib alokasi Datapesanan 100%.',
-            'BAP menandai pekerjaan mulai dan tidak membentuk jurnal.',
-            'Mapping COA digunakan ketika BAP masuk invoice dan pekerjaan menjadi selesai.',
+            'Penerimaan jasa menandai pekerjaan mulai dan tidak membentuk jurnal.',
+            'Mapping COA digunakan ketika penerimaan jasa masuk invoice dan pekerjaan menjadi selesai.',
         ],
     ])
 @endsection

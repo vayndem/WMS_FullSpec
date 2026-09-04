@@ -12,8 +12,8 @@ use App\Models\InvoicePayment;
 use App\Models\InventoryLayer;
 use App\Models\Jurnal;
 use App\Models\KategoriBahan;
-use App\Models\Lpb;
-use App\Models\LpbDetail;
+use App\Models\PenerimaanBarang;
+use App\Models\PenerimaanBarangDetail;
 use App\Models\Npk;
 use App\Models\Pembelian;
 use App\Models\PembelianDetail;
@@ -288,9 +288,9 @@ class WmsTransactionScenarioSeeder extends Seeder
         $date,
         float $quantity,
         string $lot
-    ): Lpb {
+    ): PenerimaanBarang {
         $number = app(DocumentNumberService::class)->external('LPB', $date);
-        $lpb = Lpb::create([
+        $lpb = PenerimaanBarang::create([
             'id_lpb' => $number,
             'tanggal' => $date,
             'no_po' => $po->no_po,
@@ -298,11 +298,11 @@ class WmsTransactionScenarioSeeder extends Seeder
             'no_sj' => 'SJ-' . $number,
             'id_user' => 5,
             'flag' => 0,
-            'status' => Lpb::POSTED,
+            'status' => PenerimaanBarang::POSTED,
             'jenis_lpb' => 1,
             'kunci' => 1,
         ]);
-        $detail = LpbDetail::create([
+        $detail = PenerimaanBarangDetail::create([
             'id_lpb' => $lpb->id_lpb,
             'id_bahan' => $material->id,
             'id_kategori' => $category->id,
@@ -351,10 +351,10 @@ class WmsTransactionScenarioSeeder extends Seeder
         $grniLedger = (float) DB::table('jurnal_details')->join('jurnals', 'jurnals.id', '=', 'jurnal_details.jurnal_id')
             ->whereIn('jurnals.status', ['POSTED', 'REVERSED'])->whereIn('jurnal_details.coa_id', $grniIds)
             ->selectRaw('COALESCE(SUM(kredit-debit),0) balance')->value('balance');
-        $grniExpected = (float) DB::table('lpb_details')->join('lpbs', 'lpbs.id_lpb', '=', 'lpb_details.id_lpb')
-            ->leftJoin('invoice_lpb_receipts', 'invoice_lpb_receipts.lpb_id', '=', 'lpbs.id')
+        $grniExpected = (float) DB::table('wms_penerimaan_barang_detail')->join('wms_penerimaan_barang', 'wms_penerimaan_barang.id_lpb', '=', 'wms_penerimaan_barang_detail.id_lpb')
+            ->leftJoin('invoice_lpb_receipts', 'invoice_lpb_receipts.lpb_id', '=', 'wms_penerimaan_barang.id')
             ->whereNull('invoice_lpb_receipts.id')
-            ->sum(DB::raw('lpb_details.jumlah_barang_diterima * lpb_details.harga'));
+            ->sum(DB::raw('wms_penerimaan_barang_detail.jumlah_barang_diterima * wms_penerimaan_barang_detail.harga'));
         if (abs($grniLedger - $grniExpected) > 0.01) {
             throw new RuntimeException("Seeder gagal: GRNI ledger {$grniLedger} tidak sama dengan LPB belum ditagih {$grniExpected}.");
         }

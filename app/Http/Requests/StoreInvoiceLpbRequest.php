@@ -3,7 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\InvoiceLpb;
-use App\Models\Lpb;
+use App\Models\PenerimaanBarang;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -31,7 +31,7 @@ class StoreInvoiceLpbRequest extends FormRequest
         return [
             'no_invoice'              => 'required|string|max:100|unique:invoice_lpbs,no_invoice',
             'lpb_ids'                 => 'required|array|min:1',
-            'lpb_ids.*'               => 'required|integer|distinct|exists:lpbs,id',
+            'lpb_ids.*'               => 'required|integer|distinct|exists:wms_penerimaan_barang,id',
             'kode_supplier'           => 'required|exists:suppliers,id',
             'tanggal'                 => 'required|date',
             'tgl_deadline_pembayaran' => 'nullable|date',
@@ -54,10 +54,10 @@ class StoreInvoiceLpbRequest extends FormRequest
                 return;
             }
 
-            $lpbs = Lpb::query()
+            $lpbs = PenerimaanBarang::query()
                 ->whereIn('id', $this->input('lpb_ids', []))
                 ->whereNull('no_invoice')
-                ->where('status', Lpb::POSTED)
+                ->where('status', PenerimaanBarang::POSTED)
                 ->with('pembelian:id,no_po,supplier_id')
                 ->get();
 

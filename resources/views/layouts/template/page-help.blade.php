@@ -27,7 +27,7 @@
                     ? [
                         'Periksa request yang masih pending.',
                         'Pantau PO yang belum diterima penuh.',
-                        'Tindak lanjuti LPB yang belum memiliki invoice.',
+                        'Tindak lanjuti penerimaan barang yang belum memiliki invoice.',
                         'Perhatikan invoice jatuh tempo dan bahan di bawah planning.',
                     ]
                     : ($userType === \App\Models\User::ROLE_FINANCE
@@ -84,17 +84,17 @@
                 'Tutup PO hanya setelah penerimaan atau penyelesaian transaksi selesai.',
             ],
         ],
-        'lpb.' => [
-            'title' => 'Panduan LPB',
-            'intro' => 'LPB mencatat barang yang benar-benar diterima berdasarkan Purchase Order.',
+        'penerimaan-barang.' => [
+            'title' => 'Panduan Penerimaan Barang',
+            'intro' => 'Penerimaan Barang (LPB) mencatat barang yang benar-benar diterima berdasarkan Purchase Order.',
             'steps' => [
                 'Pilih PO dan nomor surat jalan.',
                 'Masukkan kuantitas fisik serta lot yang diterima.',
                 'Harga diambil dari PO; periksa seluruh item sebelum menyimpan.',
-                'LPB tersimpan akan menambah stok, membuat layer, dan memposting jurnal persediaan–GRNI.',
+                'Penerimaan barang tersimpan akan menambah stok, membuat layer, dan memposting jurnal persediaan–GRNI.',
             ],
             'note' =>
-                'LPB yang sudah diposting terkunci. Koreksi tidak dilakukan dengan mengubah jurnal secara langsung.',
+                'Penerimaan barang yang sudah diposting terkunci. Koreksi tidak dilakukan dengan mengubah jurnal secara langsung.',
         ],
         'npk.' => [
             'title' => 'Panduan NPK',
@@ -109,9 +109,9 @@
         ],
         'invoice-lpb.' => [
             'title' => 'Panduan Invoice Supplier',
-            'intro' => 'Invoice supplier menggabungkan satu atau beberapa LPB dari supplier yang sama.',
+            'intro' => 'Invoice supplier menggabungkan satu atau beberapa penerimaan barang dari supplier yang sama.',
             'steps' => [
-                'Pilih seluruh LPB yang tercantum dalam invoice.',
+                'Pilih seluruh penerimaan barang yang tercantum dalam invoice.',
                 'Periksa PPN, diskon, ongkir, dan nilai tagihan.',
                 'Simpan invoice untuk memindahkan GRNI menjadi hutang supplier.',
                 'Catat pembayaran menggunakan akun yang ditandai sebagai Kas/Bank.',
@@ -209,7 +209,7 @@
                 'Buka kembali hanya dengan alasan koreksi yang dapat diaudit.',
             ],
             'note' =>
-                'LPB, NPK, invoice, pembayaran, opname, dan jurnal manual dalam periode terkunci akan ditolak oleh server.',
+                'Penerimaan barang, NPK, invoice, pembayaran, opname, dan jurnal manual dalam periode terkunci akan ditolak oleh server.',
         ],
         'tax-rate.' => [
             'title' => 'Panduan Tarif Pajak',

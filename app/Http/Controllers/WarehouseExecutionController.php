@@ -7,7 +7,7 @@ use App\Http\Requests\Wms\PutawayLpbRequest;
 use App\Http\Requests\Wms\StoreInventoryReservationRequest;
 use App\Http\Requests\Wms\WarehouseActionRequest;
 use App\Models\InventoryReservation;
-use App\Models\Lpb;
+use App\Models\PenerimaanBarang;
 use App\Models\PickingOrder;
 use App\Models\WarehouseLocation;
 use App\Services\ReplenishmentService;
@@ -17,7 +17,7 @@ use Illuminate\Http\RedirectResponse;
 
 class WarehouseExecutionController extends Controller
 {
-    public function inspect(InspectLpbRequest $request, Lpb $lpb, WarehouseExecutionService $service): RedirectResponse
+    public function inspect(InspectLpbRequest $request, PenerimaanBarang $lpb, WarehouseExecutionService $service): RedirectResponse
     {
         $this->ensureWarehouseAccess($request, (int) $lpb->gudang_id);
         $service->inspect($lpb, $request->validated('decisions'));
@@ -25,7 +25,7 @@ class WarehouseExecutionController extends Controller
         return back()->with('success', 'Pemeriksaan QC diselesaikan.');
     }
 
-    public function putaway(PutawayLpbRequest $request, Lpb $lpb, WarehouseExecutionService $service): RedirectResponse
+    public function putaway(PutawayLpbRequest $request, PenerimaanBarang $lpb, WarehouseExecutionService $service): RedirectResponse
     {
         $this->ensureWarehouseAccess($request, (int) $lpb->gudang_id);
         $location = WarehouseLocation::findOrFail($request->integer('warehouse_location_id'));

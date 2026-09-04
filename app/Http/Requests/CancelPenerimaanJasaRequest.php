@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class CancelServiceBapRequest extends FormRequest
+class CancelPenerimaanJasaRequest extends FormRequest
 {
     public function authorize(): bool
     {

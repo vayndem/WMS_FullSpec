@@ -2,14 +2,14 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Lpb;
+use App\Models\PenerimaanBarang;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreLpbDetailRequest extends FormRequest
+class StorePenerimaanBarangDetailRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('create', Lpb::class) ?? false;
+        return $this->user()?->can('create', PenerimaanBarang::class) ?? false;
     }
 
     public function rules(): array

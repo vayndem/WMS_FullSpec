@@ -8,7 +8,7 @@ use App\Http\Requests\Wms\ReverseInventoryDocumentRequest;
 use App\Http\Requests\Wms\StoreLandedCostRequest;
 use App\Models\InvoiceLpb;
 use App\Models\LandedCost;
-use App\Models\Lpb;
+use App\Models\PenerimaanBarang;
 use App\Models\Npk;
 use App\Models\ReturPembelian;
 use App\Services\DocumentNumberService;
@@ -54,7 +54,7 @@ class InventoryFinancialControlController extends Controller
         return back()->with('success', 'Landed cost diposting ke layer dan GL.');
     }
 
-    public function reverseLpb(ReverseInventoryDocumentRequest $request, Lpb $lpb, InventoryReversalService $service): RedirectResponse
+    public function reverseLpb(ReverseInventoryDocumentRequest $request, PenerimaanBarang $lpb, InventoryReversalService $service): RedirectResponse
     {
         $service->reverseLpb($lpb, $request->validated('reason'));
 
