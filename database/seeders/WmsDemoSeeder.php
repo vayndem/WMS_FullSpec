@@ -5,7 +5,7 @@ namespace Database\Seeders;
 use App\Models\Gudang;
 use App\Models\Bahan;
 use App\Models\BaganAkun;
-use App\Models\InventoryLayer;
+use App\Models\LayerPersediaan;
 use App\Models\Jurnal;
 use App\Models\KategoriBahan;
 use Illuminate\Database\Seeder;
@@ -36,7 +36,7 @@ class WmsDemoSeeder extends Seeder
                 ]
             );
 
-            InventoryLayer::updateOrCreate(
+            LayerPersediaan::updateOrCreate(
                 ['source_type' => 'DEMO_SEED', 'source_id' => $material->id],
                 [
                     'bahan_id' => $material->id,

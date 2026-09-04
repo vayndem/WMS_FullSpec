@@ -3,9 +3,9 @@
 namespace App\Services;
 
 use App\Models\BaganAkun;
-use App\Models\InventoryLayer;
+use App\Models\LayerPersediaan;
 use App\Models\Jurnal;
-use App\Models\LandedCost;
+use App\Models\BiayaTambahan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -14,18 +14,18 @@ class LandedCostService
 {
     public function __construct(private DocumentNumberService $numbers, private AccountingPeriodService $periods) {}
 
-    public function post(LandedCost $cost): Jurnal
+    public function post(BiayaTambahan $cost): Jurnal
     {
         $this->periods->assertOpen($cost->date, 'Landed cost');
         return DB::transaction(function () use ($cost) {
-            $cost = LandedCost::with('allocations.layer.bahan.tipeBarang')->lockForUpdate()->findOrFail($cost->id);
+            $cost = BiayaTambahan::with('allocations.layer.bahan.tipeBarang')->lockForUpdate()->findOrFail($cost->id);
             if ($cost->status !== 'DRAFT') throw new RuntimeException('Landed cost sudah diposting.');
             if ($cost->allocations->isEmpty()) throw new RuntimeException('Landed cost belum memiliki alokasi layer.');
             if (abs((float) $cost->allocations->sum('allocated_amount') - (float) $cost->total_amount) > .01) throw new RuntimeException('Total alokasi landed cost tidak sama dengan dokumen.');
 
             $debits = [];
             foreach ($cost->allocations as $allocation) {
-                $layer = InventoryLayer::lockForUpdate()->findOrFail($allocation->inventory_layer_id);
+                $layer = LayerPersediaan::lockForUpdate()->findOrFail($allocation->inventory_layer_id);
                 if ((float) $layer->remaining_quantity <= 0) throw new RuntimeException('Landed cost hanya dapat dialokasikan ke layer aktif.');
                 $increment = (float) $allocation->allocated_amount / (float) $layer->remaining_quantity;
                 $before = (float) $layer->unit_cost;
@@ -47,12 +47,12 @@ class LandedCostService
         });
     }
 
-    public function allocate(LandedCost $cost, array $layerIds): void
+    public function allocate(BiayaTambahan $cost, array $layerIds): void
     {
         DB::transaction(function () use ($cost, $layerIds) {
-            $cost = LandedCost::lockForUpdate()->findOrFail($cost->id);
+            $cost = BiayaTambahan::lockForUpdate()->findOrFail($cost->id);
             if ($cost->status !== 'DRAFT') throw new RuntimeException('Alokasi dokumen posted tidak dapat diubah.');
-            $layers = InventoryLayer::whereIn('id', $layerIds)->where('remaining_quantity', '>', 0)->get();
+            $layers = LayerPersediaan::whereIn('id', $layerIds)->where('remaining_quantity', '>', 0)->get();
             if ($layers->count() !== count(array_unique($layerIds))) throw new RuntimeException('Layer landed cost tidak valid.');
             $weights = $layers->mapWithKeys(fn ($layer) => [$layer->id => $cost->allocation_basis === 'QUANTITY' ? (float) $layer->remaining_quantity : (float) $layer->remaining_quantity * (float) $layer->unit_cost]);
             $totalWeight = (float) $weights->sum();

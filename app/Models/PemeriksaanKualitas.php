@@ -5,9 +5,10 @@ namespace App\Models;
 use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 
-class QualityInspection extends Model
+class PemeriksaanKualitas extends Model
 {
     use Auditable;
+    protected $table = 'wms_pemeriksaan_kualitas';
     protected $guarded = ['id'];
     protected $casts = ['inspected_at' => 'datetime'];
     public function lpb()
@@ -16,6 +17,6 @@ class QualityInspection extends Model
     }
     public function lines()
     {
-        return $this->hasMany(QualityInspectionLine::class);
+        return $this->hasMany(PemeriksaanKualitasDetail::class, 'quality_inspection_id');
     }
 }

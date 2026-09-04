@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Wms;
 
-class StoreInventoryLotRequest extends WarehouseOperationRequest
+class StoreLotPersediaanRequest extends WarehouseOperationRequest
 {
     public function rules(): array
     {

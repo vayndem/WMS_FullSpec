@@ -2,42 +2,42 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\Wms\StoreInventoryLotRequest;
-use App\Http\Requests\Wms\StoreInventorySerialRequest;
-use App\Http\Requests\Wms\StoreWarehouseLocationRequest;
-use App\Http\Requests\Wms\UpdateInventoryLotBlockRequest;
-use App\Models\InventoryLot;
-use App\Models\InventorySerial;
-use App\Models\WarehouseLocation;
+use App\Http\Requests\Wms\StoreLotPersediaanRequest;
+use App\Http\Requests\Wms\StoreSerialPersediaanRequest;
+use App\Http\Requests\Wms\StoreLokasiGudangRequest;
+use App\Http\Requests\Wms\UpdateLotPersediaanBlockRequest;
+use App\Models\LotPersediaan;
+use App\Models\SerialPersediaan;
+use App\Models\LokasiGudang;
 use Illuminate\Http\RedirectResponse;
 
 class WmsTraceabilityController extends Controller
 {
-    public function storeLocation(StoreWarehouseLocationRequest $request): RedirectResponse
+    public function storeLocation(StoreLokasiGudangRequest $request): RedirectResponse
     {
         $data = $request->validated();
         abort_unless($request->user()->isSuperAdmin() || $request->user()->isWarehouse() || $request->user()->canAccessGudang((int) $data['gudang_id']), 403);
 
-        WarehouseLocation::create($data);
+        LokasiGudang::create($data);
 
         return back()->with('success', 'Lokasi gudang dibuat.');
     }
 
-    public function storeLot(StoreInventoryLotRequest $request): RedirectResponse
+    public function storeLot(StoreLotPersediaanRequest $request): RedirectResponse
     {
-        InventoryLot::create($request->validated());
+        LotPersediaan::create($request->validated());
 
         return back()->with('success', 'Lot inventory dibuat.');
     }
 
-    public function storeSerial(StoreInventorySerialRequest $request): RedirectResponse
+    public function storeSerial(StoreSerialPersediaanRequest $request): RedirectResponse
     {
-        InventorySerial::create($request->validated());
+        SerialPersediaan::create($request->validated());
 
         return back()->with('success', 'Serial number ditambahkan ke lot.');
     }
 
-    public function updateLotBlock(UpdateInventoryLotBlockRequest $request, InventoryLot $lot): RedirectResponse
+    public function updateLotBlock(UpdateLotPersediaanBlockRequest $request, LotPersediaan $lot): RedirectResponse
     {
         $data = $request->validated();
         $lot->update([

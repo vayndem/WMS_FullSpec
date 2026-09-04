@@ -10,7 +10,7 @@ class DocumentOperationGuard
     public function claim(string $documentType, int $documentId, string $operation): void
     {
         $key = strtoupper("{$documentType}:{$documentId}:{$operation}");
-        $inserted = DB::table('document_operation_keys')->insertOrIgnore([
+        $inserted = DB::table('wms_kunci_operasi_dokumen')->insertOrIgnore([
             'operation_key' => $key,
             'document_type' => strtoupper($documentType),
             'document_id' => $documentId,

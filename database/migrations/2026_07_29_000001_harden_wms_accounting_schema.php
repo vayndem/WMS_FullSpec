@@ -38,7 +38,7 @@ return new class extends Migration
             $table->decimal('total_nilai', 18, 2)->default(0)->after('harga_satuan');
         });
 
-        Schema::create('inventory_layers', function (Blueprint $table) {
+        Schema::create('wms_layer_persediaan', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('bahan_id');
             $table->unsignedBigInteger('gudang_id')->nullable();
@@ -66,10 +66,10 @@ return new class extends Migration
             $table->timestamps();
             $table->unique(['npk_id', 'inventory_layer_id'], 'pemakaian_barang_alokasi_stok_unique');
             $table->foreign('npk_id')->references('id')->on('wms_pemakaian_barang')->onDelete('cascade');
-            $table->foreign('inventory_layer_id')->references('id')->on('inventory_layers')->onDelete('restrict');
+            $table->foreign('inventory_layer_id')->references('id')->on('wms_layer_persediaan')->onDelete('restrict');
         });
 
-        DB::table('inventory_layers')->insertUsing(
+        DB::table('wms_layer_persediaan')->insertUsing(
             ['bahan_id', 'gudang_id', 'source_type', 'source_id', 'transaction_date',
                 'initial_quantity', 'remaining_quantity', 'unit_cost', 'created_at', 'updated_at'],
             DB::table('wms_penerimaan_barang_detail')
@@ -144,7 +144,7 @@ return new class extends Migration
             $table->foreign('finance_user_id')->references('id')->on('users')->onDelete('restrict');
         });
         Schema::dropIfExists('wms_pemakaian_barang_alokasi_stok');
-        Schema::dropIfExists('inventory_layers');
+        Schema::dropIfExists('wms_layer_persediaan');
         Schema::table('wms_pemakaian_barang', fn (Blueprint $table) => $table->dropColumn(['harga_satuan', 'total_nilai']));
         Schema::table('wms_penerimaan_barang_detail', function (Blueprint $table) {
             $table->dropIndex('lpb_details_active_lot_index');

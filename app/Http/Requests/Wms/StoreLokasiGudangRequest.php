@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Wms;
 
-class StoreWarehouseLocationRequest extends WarehouseOperationRequest
+class StoreLokasiGudangRequest extends WarehouseOperationRequest
 {
     public function rules(): array
     {

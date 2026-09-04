@@ -120,8 +120,8 @@ return new class extends Migration
         Schema::create('alokasi_transfer_gudangs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('detail_transfer_gudang_id')->constrained('detail_transfer_gudangs')->cascadeOnDelete();
-            $table->foreignId('inventory_layer_asal_id')->constrained('inventory_layers')->restrictOnDelete();
-            $table->foreignId('inventory_layer_tujuan_id')->nullable()->constrained('inventory_layers')->restrictOnDelete();
+            $table->foreignId('inventory_layer_asal_id')->constrained('wms_layer_persediaan')->restrictOnDelete();
+            $table->foreignId('inventory_layer_tujuan_id')->nullable()->constrained('wms_layer_persediaan')->restrictOnDelete();
             $table->decimal('jumlah', 18, 6);
             $table->decimal('harga_satuan', 18, 4);
             $table->decimal('total_nilai', 18, 2);
@@ -186,7 +186,7 @@ return new class extends Migration
         );
 
         foreach (DB::table('stok_gudangs')->where('stok_tersedia', '>', 0)->get() as $stock) {
-            $value = (float) DB::table('inventory_layers')->where('gudang_id', $stock->gudang_id)
+            $value = (float) DB::table('wms_layer_persediaan')->where('gudang_id', $stock->gudang_id)
                 ->where('bahan_id', $stock->bahan_id)->selectRaw('COALESCE(SUM(remaining_quantity * unit_cost), 0) total')->value('total');
             $unitCost = (float) $stock->stok_tersedia > 0 ? $value / (float) $stock->stok_tersedia : 0;
             DB::table('mutasi_stoks')->insert([

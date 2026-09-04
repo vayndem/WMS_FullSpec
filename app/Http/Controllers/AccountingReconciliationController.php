@@ -18,7 +18,7 @@ class AccountingReconciliationController extends Controller
 
         $stock = DB::table('bahans')
             ->leftJoinSub(
-                DB::table('inventory_layers')->select('bahan_id')
+                DB::table('wms_layer_persediaan')->select('bahan_id')
                     ->selectRaw('SUM(remaining_quantity) layer_quantity')
                     ->selectRaw('SUM(remaining_quantity * unit_cost) inventory_value')
                     ->groupBy('bahan_id'),
@@ -115,7 +115,7 @@ class AccountingReconciliationController extends Controller
 
         if ($check === 'stock') {
             $rows = DB::table('bahans')->leftJoinSub(
-                DB::table('inventory_layers')->select('bahan_id')
+                DB::table('wms_layer_persediaan')->select('bahan_id')
                     ->selectRaw('SUM(remaining_quantity) layer_quantity')
                     ->selectRaw('SUM(remaining_quantity * unit_cost) inventory_value')->groupBy('bahan_id'),
                 'layers',

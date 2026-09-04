@@ -2,7 +2,7 @@
 
 namespace App\Models\Concerns;
 
-use App\Models\AuditLog;
+use App\Models\LogAudit;
 
 trait Auditable
 {
@@ -14,7 +14,7 @@ trait Auditable
                 $old = $event === 'updated' ? array_diff_key($model->getOriginal(), $hidden) : null;
                 $new = $event === 'deleted' ? null : array_diff_key($model->getAttributes(), $hidden);
 
-                AuditLog::create([
+                LogAudit::create([
                     'auditable_type' => $model::class,
                     'auditable_id' => $model->getKey(),
                     'event' => $event,

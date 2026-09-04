@@ -3,7 +3,7 @@
 namespace App\Exports;
 
 use App\Models\StokGudang;
-use App\Models\InventoryLayer;
+use App\Models\LayerPersediaan;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -20,7 +20,7 @@ class StockOpnameInventoryExport implements FromCollection, WithHeadings, WithMa
     {
         $query = StokGudang::with(['gudang', 'bahan.kategoriBahan'])->orderBy('gudang_id')->orderBy('bahan_id');
         if ($this->financial) {
-            $values = InventoryLayer::query()
+            $values = LayerPersediaan::query()
                 ->selectRaw('gudang_id, bahan_id, SUM(remaining_quantity * unit_cost) inventory_value, SUM(remaining_quantity) layer_quantity')
                 ->groupBy('gudang_id', 'bahan_id')
                 ->get()

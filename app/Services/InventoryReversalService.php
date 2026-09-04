@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\DocumentReversal;
+use App\Models\PembalikanDokumen;
 use App\Models\Bahan;
-use App\Models\InventoryLayer;
+use App\Models\LayerPersediaan;
 use App\Models\PenerimaanBarang;
 use App\Models\PenerimaanBarangDetail;
 use App\Models\PemakaianBarang;
@@ -23,7 +23,7 @@ class InventoryReversalService
         private AccountingPeriodService $periods,
     ) {}
 
-    public function reverseNpk(PemakaianBarang $npk, string $reason): DocumentReversal
+    public function reverseNpk(PemakaianBarang $npk, string $reason): PembalikanDokumen
     {
         $this->periods->assertOpen(now(), 'Reversal NPK');
         return DB::transaction(function () use ($npk, $reason) {
@@ -41,7 +41,7 @@ class InventoryReversalService
         });
     }
 
-    public function reverseLpb(PenerimaanBarang $lpb, string $reason): DocumentReversal
+    public function reverseLpb(PenerimaanBarang $lpb, string $reason): PembalikanDokumen
     {
         $this->periods->assertOpen(now(), 'Reversal LPB');
         return DB::transaction(function () use ($lpb, $reason) {
@@ -51,7 +51,7 @@ class InventoryReversalService
             if ($lpb->invoiceReceipts()->exists()) throw new RuntimeException('LPB sudah ditagih. Void invoice terlebih dahulu.');
 
             foreach ($lpb->details as $detail) {
-                $layer = InventoryLayer::where('source_type', 'LPB_DETAIL')->where('source_id', $detail->id)->lockForUpdate()->firstOrFail();
+                $layer = LayerPersediaan::where('source_type', 'LPB_DETAIL')->where('source_id', $detail->id)->lockForUpdate()->firstOrFail();
                 if (abs((float) $layer->initial_quantity - (float) $layer->remaining_quantity) > 0.000001) {
                     throw new RuntimeException("Stok LPB {$lpb->id_lpb} sudah digunakan dan tidak dapat dibalik langsung.");
                 }
@@ -74,7 +74,7 @@ class InventoryReversalService
         });
     }
 
-    public function reverseReturPembelian(ReturPembelian $retur, string $reason): DocumentReversal
+    public function reverseReturPembelian(ReturPembelian $retur, string $reason): PembalikanDokumen
     {
         $this->periods->assertOpen(now(), 'Reversal retur pembelian');
         return DB::transaction(function () use ($retur, $reason) {
@@ -85,7 +85,7 @@ class InventoryReversalService
 
             foreach ($retur->details as $detail) {
                 $lpbDetail = PenerimaanBarangDetail::lockForUpdate()->findOrFail($detail->lpb_detail_id);
-                $layer = InventoryLayer::where('source_type', 'LPB_DETAIL')->where('source_id', $lpbDetail->id)->lockForUpdate()->firstOrFail();
+                $layer = LayerPersediaan::where('source_type', 'LPB_DETAIL')->where('source_id', $lpbDetail->id)->lockForUpdate()->firstOrFail();
                 $layer->update(['remaining_quantity' => (float) $layer->remaining_quantity + (float) $detail->jumlah_retur]);
                 $lpbDetail->update([
                     'jumlah_retur' => max(0, (float) $lpbDetail->jumlah_retur - (float) $detail->jumlah_retur),
@@ -102,11 +102,11 @@ class InventoryReversalService
 
     private function assertNotReversed(string $type, int $id): void
     {
-        if (DocumentReversal::where('document_type', $type)->where('document_id', $id)->exists()) throw new RuntimeException('Dokumen sudah pernah dibalik.');
+        if (PembalikanDokumen::where('document_type', $type)->where('document_id', $id)->exists()) throw new RuntimeException('Dokumen sudah pernah dibalik.');
     }
 
-    private function record(string $type, int $id, string $reason, int $journalId): DocumentReversal
+    private function record(string $type, int $id, string $reason, int $journalId): PembalikanDokumen
     {
-        return DocumentReversal::create(['number' => $this->numbers->internal('RVS', 'DOC'), 'document_type' => $type, 'document_id' => $id, 'reason' => $reason, 'reversal_journal_id' => $journalId, 'created_by' => Auth::id(), 'posted_at' => now()]);
+        return PembalikanDokumen::create(['number' => $this->numbers->internal('RVS', 'DOC'), 'document_type' => $type, 'document_id' => $id, 'reason' => $reason, 'reversal_journal_id' => $journalId, 'created_by' => Auth::id(), 'posted_at' => now()]);
     }
 }

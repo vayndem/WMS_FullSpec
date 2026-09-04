@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\AlokasiTransferGudang;
 use App\Models\Gudang;
-use App\Models\InventoryLayer;
+use App\Models\LayerPersediaan;
 use App\Models\TransferGudang;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -42,7 +42,7 @@ class TransferGudangService
                         'harga_satuan' => $allocation['harga'],
                         'total_nilai' => round($allocation['jumlah'] * $allocation['harga'], 2),
                     ]);
-                    $layerTujuan = InventoryLayer::create([
+                    $layerTujuan = LayerPersediaan::create([
                         'bahan_id' => $detail->bahan_id,
                         'gudang_id' => $tujuan->id,
                         'source_type' => 'TRANSFER_ALLOCATION',
@@ -77,7 +77,7 @@ class TransferGudangService
                 $average = (float) $detail->jumlah_dikirim > 0 ? $sentValue / (float) $detail->jumlah_dikirim : 0;
                 $remaining = $quantity;
                 foreach ($allocations as $allocation) {
-                    $layer = InventoryLayer::lockForUpdate()->findOrFail($allocation->inventory_layer_tujuan_id);
+                    $layer = LayerPersediaan::lockForUpdate()->findOrFail($allocation->inventory_layer_tujuan_id);
                     $release = min($remaining, (float) $layer->remaining_quantity);
                     if ($release > 0) $layer->update(['remaining_quantity' => $release, 'initial_quantity' => $release, 'stock_status' => $tujuan->jenis === Gudang::CONSIDER ? 'QC_HOLD' : 'AVAILABLE']);
                     else $layer->update(['remaining_quantity' => 0, 'initial_quantity' => 0, 'stock_status' => 'TRANSFER_SHORTAGE']);

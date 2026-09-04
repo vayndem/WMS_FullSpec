@@ -19,8 +19,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\WmsAccountingService;
-use App\Models\InventoryLayer;
-use App\Models\InventoryLot;
+use App\Models\LayerPersediaan;
+use App\Models\LotPersediaan;
 use App\Services\DocumentNumberService;
 use App\Services\StokGudangService;
 
@@ -335,11 +335,11 @@ class PenerimaanBarangController extends Controller
                     'jumlah_tersisa'         => $item['jumlah_barang_diterima'],
                     'flag_dipakai'           => 1,
                 ]);
-                $lot = !empty($item['lot_number']) ? InventoryLot::firstOrCreate(
+                $lot = !empty($item['lot_number']) ? LotPersediaan::firstOrCreate(
                     ['bahan_id' => $item['id_bahan'], 'lot_number' => $item['lot_number']],
                     ['quality_status' => 'RELEASED']
                 ) : null;
-                InventoryLayer::create([
+                LayerPersediaan::create([
                     'bahan_id' => $item['id_bahan'],
                     'gudang_id' => $po->gudang_id,
                     'inventory_lot_id' => $lot?->id,

@@ -9,7 +9,7 @@ use App\Models\Bahan;
 use App\Models\BaganAkun;
 use App\Models\FakturPembelian;
 use App\Models\PembayaranFaktur;
-use App\Models\InventoryLayer;
+use App\Models\LayerPersediaan;
 use App\Models\Jurnal;
 use App\Models\KategoriBahan;
 use App\Models\PenerimaanBarang;
@@ -314,7 +314,7 @@ class WmsTransactionScenarioSeeder extends Seeder
             'jumlah_tersisa' => $quantity,
             'flag_dipakai' => 1,
         ]);
-        InventoryLayer::create([
+        LayerPersediaan::create([
             'bahan_id' => $material->id,
             'gudang_id' => $warehouse->id,
             'source_type' => 'LPB_DETAIL',
@@ -331,7 +331,7 @@ class WmsTransactionScenarioSeeder extends Seeder
     private function assertInvariants(): void
     {
         $material = Bahan::where('nama', '[DEMO] Tinta Alur Transaksi')->firstOrFail();
-        $layerQuantity = (float) InventoryLayer::where('bahan_id', $material->id)->sum('remaining_quantity');
+        $layerQuantity = (float) LayerPersediaan::where('bahan_id', $material->id)->sum('remaining_quantity');
         if (abs((float) $material->stok_onhand - $layerQuantity) > 0.01) {
             throw new RuntimeException("Seeder gagal: stok {$material->stok_onhand} tidak sama dengan layer {$layerQuantity}.");
         }

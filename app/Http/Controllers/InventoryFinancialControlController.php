@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Wms\InventoryFinancialActionRequest;
 use App\Http\Requests\Wms\MatchInvoiceRequest;
 use App\Http\Requests\Wms\ReverseInventoryDocumentRequest;
-use App\Http\Requests\Wms\StoreLandedCostRequest;
+use App\Http\Requests\Wms\StoreBiayaTambahanRequest;
 use App\Models\FakturPembelian;
-use App\Models\LandedCost;
+use App\Models\BiayaTambahan;
 use App\Models\PenerimaanBarang;
 use App\Models\PemakaianBarang;
 use App\Models\ReturPembelian;
@@ -30,10 +30,10 @@ class InventoryFinancialControlController extends Controller
         return back()->with('success', 'Three-way matching diperbarui.');
     }
 
-    public function storeLandedCost(StoreLandedCostRequest $request, LandedCostService $service, DocumentNumberService $numbers): RedirectResponse
+    public function storeLandedCost(StoreBiayaTambahanRequest $request, LandedCostService $service, DocumentNumberService $numbers): RedirectResponse
     {
         $data = $request->validated();
-        $cost = LandedCost::create([
+        $cost = BiayaTambahan::create([
             'number' => $numbers->internal('LDC', 'INV'),
             'date' => $data['date'],
             'description' => $data['description'],
@@ -47,7 +47,7 @@ class InventoryFinancialControlController extends Controller
         return back()->with('success', 'Draft landed cost dan alokasinya dibuat.');
     }
 
-    public function postLandedCost(InventoryFinancialActionRequest $request, LandedCost $landedCost, LandedCostService $service): RedirectResponse
+    public function postLandedCost(InventoryFinancialActionRequest $request, BiayaTambahan $landedCost, LandedCostService $service): RedirectResponse
     {
         $service->post($landedCost);
 

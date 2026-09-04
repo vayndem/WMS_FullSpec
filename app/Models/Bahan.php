@@ -32,7 +32,7 @@ class Bahan extends Model
 
     public function inventoryLayers(): HasMany
     {
-        return $this->hasMany(InventoryLayer::class, 'bahan_id');
+        return $this->hasMany(LayerPersediaan::class, 'bahan_id');
     }
 
     public function stokGudangs(): HasMany

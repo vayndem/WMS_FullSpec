@@ -5,7 +5,7 @@ namespace Database\Seeders;
 use App\Models\Bahan;
 use App\Models\BaganAkun;
 use App\Models\Gudang;
-use App\Models\InventoryLayer;
+use App\Models\LayerPersediaan;
 use App\Models\FakturPembelian;
 use App\Models\PembayaranFaktur;
 use App\Models\Jurnal;
@@ -170,7 +170,7 @@ class FinancialStatementDemoSeeder extends Seeder
             'jumlah_tersisa' => $quantity,
             'flag_dipakai' => 1,
         ]);
-        InventoryLayer::create([
+        LayerPersediaan::create([
             'bahan_id' => $material->id,
             'gudang_id' => $warehouse->id,
             'source_type' => 'LPB_DETAIL',

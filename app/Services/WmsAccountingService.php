@@ -10,7 +10,7 @@ use App\Models\PenerimaanBarang;
 use App\Models\PenerimaanBarangDetail;
 use App\Models\PemakaianBarang;
 use App\Models\PemakaianBarangAlokasiStok;
-use App\Models\InventoryLayer;
+use App\Models\LayerPersediaan;
 use App\Models\BaganAkun;
 use App\Models\ReturPembelian;
 use App\Models\KategoriJasa;
@@ -87,7 +87,7 @@ class WmsAccountingService
     public function consumeStock(PemakaianBarang $npk): void
     {
         $quantity = (float) $npk->jumlah_stok > 0 ? (float) $npk->jumlah_stok : (float) $npk->jumlah;
-        $layers = InventoryLayer::query()
+        $layers = LayerPersediaan::query()
             ->where('bahan_id', $npk->id_barang)
             ->when($npk->id_gudang_asal, fn($query) => $query->where('gudang_id', $npk->id_gudang_asal))
             ->where('stock_status', 'AVAILABLE')
@@ -144,7 +144,7 @@ class WmsAccountingService
     public function restoreStock(PemakaianBarang $npk, bool $deleteJournal = true): void
     {
         foreach ($npk->allocations()->lockForUpdate()->get() as $allocation) {
-            $layer = InventoryLayer::lockForUpdate()->findOrFail($allocation->inventory_layer_id);
+            $layer = LayerPersediaan::lockForUpdate()->findOrFail($allocation->inventory_layer_id);
             $layer->update([
                 'remaining_quantity' => (float) $layer->remaining_quantity + (float) $allocation->quantity,
             ]);

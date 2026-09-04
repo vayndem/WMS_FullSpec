@@ -16,7 +16,7 @@ use App\Services\AccountingPeriodService;
 use App\Services\DocumentNumberService;
 use App\Services\StokGudangService;
 use App\Services\WarehouseExecutionService;
-use App\Models\InventoryReservation;
+use App\Models\ReservasiPersediaan;
 
 class PemakaianBarangController extends Controller
 {
@@ -157,7 +157,7 @@ class PemakaianBarangController extends Controller
         $bahans = Bahan::with('stokGudangs')->orderBy('nama', 'asc')->get();
         $gudangs = $this->availableWarehouses(request()->user(), 'npk');
         $documentNumber = $this->numbers->external('NPK');
-        $reservations = InventoryReservation::with(['bahan', 'gudang'])->whereIn('gudang_id', request()->user()->accessibleGudangIds('npk'))->whereIn('status', ['ACTIVE', 'PICKED'])->get();
+        $reservations = ReservasiPersediaan::with(['bahan', 'gudang'])->whereIn('gudang_id', request()->user()->accessibleGudangIds('npk'))->whereIn('status', ['ACTIVE', 'PICKED'])->get();
 
         return view('pemakaian_barang.create', compact('bahans', 'gudangs', 'documentNumber', 'reservations'));
     }
@@ -183,7 +183,7 @@ class PemakaianBarangController extends Controller
             $npk = PemakaianBarang::create($validated);
 
             if ($isKeluar) {
-                if ($npk->inventory_reservation_id) $this->execution->consumeReservation(InventoryReservation::findOrFail($npk->inventory_reservation_id), (int) $npk->id_gudang_asal, (int) $npk->id_barang, (float) $npk->jumlah_stok);
+                if ($npk->inventory_reservation_id) $this->execution->consumeReservation(ReservasiPersediaan::findOrFail($npk->inventory_reservation_id), (int) $npk->id_gudang_asal, (int) $npk->id_barang, (float) $npk->jumlah_stok);
                 $this->stokGudang->saldo((int) $npk->id_gudang_asal, (int) $npk->id_barang);
                 $this->accounting->consumeStock($npk);
                 $this->stokGudang->keluar((int) $npk->id_gudang_asal, (int) $npk->id_barang, (float) $npk->jumlah_stok, (float) $npk->harga_satuan, 'PENGELUARAN', 'NPK', $npk->id, $npk->kode);
@@ -232,7 +232,7 @@ class PemakaianBarangController extends Controller
 
         $bahans = Bahan::with('stokGudangs')->orderBy('nama', 'asc')->get();
         $gudangs = $this->availableWarehouses(request()->user(), 'npk');
-        $reservations = InventoryReservation::with(['bahan', 'gudang'])->whereIn('gudang_id', request()->user()->accessibleGudangIds('npk'))->whereIn('status', ['ACTIVE', 'PICKED'])->get();
+        $reservations = ReservasiPersediaan::with(['bahan', 'gudang'])->whereIn('gudang_id', request()->user()->accessibleGudangIds('npk'))->whereIn('status', ['ACTIVE', 'PICKED'])->get();
 
         return view('pemakaian_barang.edit', compact('npk', 'bahans', 'gudangs', 'reservations'));
     }
@@ -260,7 +260,7 @@ class PemakaianBarangController extends Controller
             $npk->update($validated);
 
             if ($willClose) {
-                if ($npk->inventory_reservation_id) $this->execution->consumeReservation(InventoryReservation::findOrFail($npk->inventory_reservation_id), (int) $npk->id_gudang_asal, (int) $npk->id_barang, (float) $npk->jumlah_stok);
+                if ($npk->inventory_reservation_id) $this->execution->consumeReservation(ReservasiPersediaan::findOrFail($npk->inventory_reservation_id), (int) $npk->id_gudang_asal, (int) $npk->id_barang, (float) $npk->jumlah_stok);
                 $this->stokGudang->saldo((int) $npk->id_gudang_asal, (int) $npk->id_barang);
                 $this->accounting->consumeStock($npk);
                 $this->stokGudang->keluar((int) $npk->id_gudang_asal, (int) $npk->id_barang, (float) $npk->jumlah_stok, (float) $npk->harga_satuan, 'PENGELUARAN', 'NPK', $npk->id, $npk->kode);

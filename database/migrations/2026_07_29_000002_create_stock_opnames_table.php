@@ -63,7 +63,7 @@ return new class extends Migration
             $table->decimal('total_cost', 18, 2);
             $table->timestamps();
             $table->foreign('stock_opname_detail_id')->references('id')->on('wms_stock_opname_detail')->onDelete('cascade');
-            $table->foreign('inventory_layer_id')->references('id')->on('inventory_layers')->onDelete('restrict');
+            $table->foreign('inventory_layer_id')->references('id')->on('wms_layer_persediaan')->onDelete('restrict');
         });
 
         Schema::table('kategori_bahans', function (Blueprint $table) {

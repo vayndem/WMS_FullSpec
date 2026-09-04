@@ -4,12 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class LandedCostAllocation extends Model
+class BiayaTambahanAlokasi extends Model
 {
+    protected $table = 'wms_biaya_tambahan_alokasi';
     public $timestamps = false;
     protected $guarded = ['id'];
     public function layer()
     {
-        return $this->belongsTo(InventoryLayer::class, 'inventory_layer_id');
+        return $this->belongsTo(LayerPersediaan::class, 'inventory_layer_id');
     }
 }

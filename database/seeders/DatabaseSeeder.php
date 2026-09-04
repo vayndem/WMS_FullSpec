@@ -17,8 +17,8 @@ use App\Models\StokGudang;
 use App\Models\MutasiStok;
 use App\Models\User;
 use App\Models\PengaturanBahanGudang;
-use App\Models\WarehouseLocation;
-use App\Models\InventoryLot;
+use App\Models\LokasiGudang;
+use App\Models\LotPersediaan;
 use App\Services\DocumentNumberService;
 use App\Services\ThreeWayMatchService;
 use App\Models\FakturPembelian;
@@ -265,7 +265,7 @@ class DatabaseSeeder extends Seeder
 
     private function syncMultiWarehouseDemoData(): void
     {
-        $layerBalances = DB::table('inventory_layers')
+        $layerBalances = DB::table('wms_layer_persediaan')
             ->select('gudang_id', 'bahan_id', DB::raw('SUM(remaining_quantity) as quantity'))
             ->whereNotNull('gudang_id')->groupBy('gudang_id', 'bahan_id')->get();
 
@@ -327,7 +327,7 @@ class DatabaseSeeder extends Seeder
                 ['code' => 'QC-01', 'name' => 'Quality Hold', 'type' => 'QC'],
                 ['code' => 'STG-A-01', 'name' => 'Storage A-01', 'type' => 'STORAGE'],
             ] as $location) {
-                WarehouseLocation::updateOrCreate(['gudang_id' => $warehouse->id, 'code' => $location['code']], $location + ['active' => true]);
+                LokasiGudang::updateOrCreate(['gudang_id' => $warehouse->id, 'code' => $location['code']], $location + ['active' => true]);
             }
         }
 
@@ -339,14 +339,14 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        foreach (DB::table('inventory_layers')->where('remaining_quantity', '>', 0)->get() as $layer) {
-            $lot = InventoryLot::updateOrCreate(
+        foreach (DB::table('wms_layer_persediaan')->where('remaining_quantity', '>', 0)->get() as $layer) {
+            $lot = LotPersediaan::updateOrCreate(
                 ['bahan_id' => $layer->bahan_id, 'lot_number' => 'DEMO-' . str_pad((string) $layer->id, 4, '0', STR_PAD_LEFT)],
                 ['quality_status' => 'RELEASED', 'manufactured_at' => today()->subMonth(), 'expires_at' => today()->addYear()]
             );
-            DB::table('inventory_layers')->where('id', $layer->id)->update([
+            DB::table('wms_layer_persediaan')->where('id', $layer->id)->update([
                 'inventory_lot_id' => $lot->id,
-                'warehouse_location_id' => WarehouseLocation::where('gudang_id', $layer->gudang_id)->where('type', 'STORAGE')->value('id'),
+                'warehouse_location_id' => LokasiGudang::where('gudang_id', $layer->gudang_id)->where('type', 'STORAGE')->value('id'),
             ]);
         }
     }

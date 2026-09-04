@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Bahan;
-use App\Models\InventoryLayer;
+use App\Models\LayerPersediaan;
 use App\Models\Jurnal;
 use App\Models\StockOpname;
 use App\Models\StockOpnameDetail;
@@ -96,7 +96,7 @@ class StockOpnameService
                     $this->line($lines, $detail->bahan->tipeBarang->coa_persediaan_id, 0, $value, "Pengurangan persediaan {$bahan->nama}");
                     $this->stokGudang->keluar($opname->warehouse_id, $bahan->id, abs($difference), $detail->unit_cost, 'OPNAME_KELUAR', 'STOCK_OPNAME', $opname->id, $opname->number);
                 } elseif ($difference > 0) {
-                    InventoryLayer::create([
+                    LayerPersediaan::create([
                         'bahan_id' => $bahan->id,
                         'gudang_id' => $opname->warehouse_id,
                         'source_type' => 'STOCK_OPNAME_DETAIL',
@@ -142,7 +142,7 @@ class StockOpnameService
 
     private function fifoValue(StockOpnameDetail $detail, float $quantity, int $warehouseId, bool $consume): float
     {
-        $layers = InventoryLayer::where('bahan_id', $detail->bahan_id)->where('gudang_id', $warehouseId)
+        $layers = LayerPersediaan::where('bahan_id', $detail->bahan_id)->where('gudang_id', $warehouseId)
             ->where('stock_status', 'AVAILABLE')
             ->whereDate('transaction_date', '<=', $detail->opname->cutoff_at)
             ->where('remaining_quantity', '>', 0)->orderBy('transaction_date')->orderBy('id')->lockForUpdate()->get();

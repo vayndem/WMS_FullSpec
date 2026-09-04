@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Bahan;
 use App\Models\Gudang;
-use App\Models\InventoryLayer;
+use App\Models\LayerPersediaan;
 use App\Models\KategoriBahan;
 use App\Models\StokGudang;
 use App\Http\Requests\UpdateBahanRequest;
@@ -25,7 +25,7 @@ class BahanController extends Controller
                 : 'Seluruh gudang';
 
             $financial = $request->user()->can('viewFinancials', Bahan::class);
-            $layerSummary = InventoryLayer::query()
+            $layerSummary = LayerPersediaan::query()
                 ->select('bahan_id')
                 ->selectRaw('COUNT(*) as layer_count')
                 ->selectRaw('SUM(remaining_quantity) as layer_quantity')
@@ -96,7 +96,7 @@ class BahanController extends Controller
 
         $bahan->load(['kategoriBahan', 'gudang', 'tipeBarang', 'stokGudangs.gudang']);
         $financial = request()->user()->can('viewFinancials', Bahan::class);
-        $layers = InventoryLayer::query()->with('gudang')->where('bahan_id', $bahan->id)
+        $layers = LayerPersediaan::query()->with('gudang')->where('bahan_id', $bahan->id)
             ->orderByDesc('transaction_date')->orderByDesc('id')
             ->get($financial
                 ? ['id', 'gudang_id', 'source_type', 'source_id', 'transaction_date', 'initial_quantity', 'remaining_quantity', 'unit_cost']

@@ -5,11 +5,11 @@ namespace Tests\Feature;
 use App\Models\Bahan;
 use App\Models\FakturPembelian;
 use App\Models\PembayaranFaktur;
-use App\Models\InventoryLayer;
+use App\Models\LayerPersediaan;
 use App\Models\BaganAkun;
-use App\Models\LandedCost;
+use App\Models\BiayaTambahan;
 use App\Models\PenerimaanBarang;
-use App\Models\InventoryReservation;
+use App\Models\ReservasiPersediaan;
 use App\Models\Gudang;
 use App\Models\TransferGudang;
 use App\Models\PemakaianBarang;
@@ -103,9 +103,9 @@ class WmsControlFrameworkTest extends TestCase
     {
         $user = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);
         Auth::login($user);
-        $layer = InventoryLayer::where('remaining_quantity', '>', 0)->firstOrFail();
+        $layer = LayerPersediaan::where('remaining_quantity', '>', 0)->firstOrFail();
         $credit = BaganAkun::where('is_active', true)->where('is_postable', true)->where('kategori_akun', 'LIABILITAS')->where('posisi_normal', 'KREDIT')->firstOrFail();
-        $cost = LandedCost::create(['number' => 'TEST-LDC-001', 'date' => today(), 'description' => 'Integration landed cost', 'allocation_basis' => 'VALUE', 'total_amount' => 1000, 'credit_coa_id' => $credit->id, 'created_by' => $user->id]);
+        $cost = BiayaTambahan::create(['number' => 'TEST-LDC-001', 'date' => today(), 'description' => 'Integration landed cost', 'allocation_basis' => 'VALUE', 'total_amount' => 1000, 'credit_coa_id' => $credit->id, 'created_by' => $user->id]);
         $before = (float) $layer->unit_cost;
 
         app(LandedCostService::class)->allocate($cost, [$layer->id]);
@@ -145,7 +145,7 @@ class WmsControlFrameworkTest extends TestCase
 
         $this->assertSame(PenerimaanBarang::REVERSED, $lpb->fresh()->status);
         $this->assertSame($before - (float) $detail->jumlah_barang_diterima, (float) $balance->fresh()->stok_tersedia);
-        $this->assertDatabaseHas('document_reversals', ['document_type' => 'LPB', 'document_id' => $lpb->id]);
+        $this->assertDatabaseHas('wms_pembalikan_dokumen', ['document_type' => 'LPB', 'document_id' => $lpb->id]);
     }
 
     public function test_quantity_and_value_reconciliation_are_balanced(): void
@@ -358,7 +358,7 @@ class WmsControlFrameworkTest extends TestCase
         $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
         $lpb = PenerimaanBarang::where('document_type', 'GOODS')->whereDoesntHave('invoiceReceipts')->where('status', PenerimaanBarang::POSTED)->firstOrFail();
         $detail = $lpb->details()->where('jumlah_tersisa', '>', 0)->firstOrFail();
-        $layer = InventoryLayer::where('source_type', 'LPB_DETAIL')->where('source_id', $detail->id)->firstOrFail();
+        $layer = LayerPersediaan::where('source_type', 'LPB_DETAIL')->where('source_id', $detail->id)->firstOrFail();
         $balance = StokGudang::where('gudang_id', $lpb->gudang_id)->where('bahan_id', $detail->id_bahan)->firstOrFail();
         $kategori = $detail->kategori;
 
@@ -411,6 +411,6 @@ class WmsControlFrameworkTest extends TestCase
         $this->assertSame(ReturPembelian::REVERSED, $retur->fresh()->status);
         $this->assertSame($stockBefore, (float) $balance->fresh()->stok_tersedia);
         $this->assertSame($layerBefore, (float) $layer->fresh()->remaining_quantity);
-        $this->assertDatabaseHas('document_reversals', ['document_type' => 'RETUR_PEMBELIAN', 'document_id' => $retur->id]);
+        $this->assertDatabaseHas('wms_pembalikan_dokumen', ['document_type' => 'RETUR_PEMBELIAN', 'document_id' => $retur->id]);
     }
 }

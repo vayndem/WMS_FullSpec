@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Gudang;
-use App\Models\InventoryLayer;
+use App\Models\LayerPersediaan;
 use App\Models\PemeriksaanConsider;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -36,11 +36,11 @@ class PemeriksaanConsiderService
                     $good = min($remainingGood, $allocation['jumlah']);
                     $damaged = $allocation['jumlah'] - $good;
                     if ($good > 0) {
-                        InventoryLayer::create(['bahan_id' => $detail->bahan_id, 'gudang_id' => $baik->id, 'source_type' => 'CONSIDER_BAIK_' . $detail->id, 'source_id' => $allocation['layer']->id, 'transaction_date' => $pemeriksaan->tanggal, 'initial_quantity' => $good, 'remaining_quantity' => $good, 'unit_cost' => $allocation['harga']]);
+                        LayerPersediaan::create(['bahan_id' => $detail->bahan_id, 'gudang_id' => $baik->id, 'source_type' => 'CONSIDER_BAIK_' . $detail->id, 'source_id' => $allocation['layer']->id, 'transaction_date' => $pemeriksaan->tanggal, 'initial_quantity' => $good, 'remaining_quantity' => $good, 'unit_cost' => $allocation['harga']]);
                         $this->stok->masuk($baik->id, $detail->bahan_id, $good, $allocation['harga'], 'PEMERIKSAAN_BAIK', 'PEMERIKSAAN_CONSIDER', $pemeriksaan->id, $pemeriksaan->nomor_pemeriksaan);
                     }
                     if ($damaged > 0) {
-                        InventoryLayer::create(['bahan_id' => $detail->bahan_id, 'gudang_id' => $rusak->id, 'source_type' => 'CONSIDER_RUSAK_' . $detail->id, 'source_id' => $allocation['layer']->id, 'transaction_date' => $pemeriksaan->tanggal, 'initial_quantity' => $damaged, 'remaining_quantity' => $damaged, 'unit_cost' => $allocation['harga']]);
+                        LayerPersediaan::create(['bahan_id' => $detail->bahan_id, 'gudang_id' => $rusak->id, 'source_type' => 'CONSIDER_RUSAK_' . $detail->id, 'source_id' => $allocation['layer']->id, 'transaction_date' => $pemeriksaan->tanggal, 'initial_quantity' => $damaged, 'remaining_quantity' => $damaged, 'unit_cost' => $allocation['harga']]);
                         $this->stok->masuk($rusak->id, $detail->bahan_id, $damaged, $allocation['harga'], 'RUSAK_MASUK', 'PEMERIKSAAN_CONSIDER', $pemeriksaan->id, $pemeriksaan->nomor_pemeriksaan);
                     }
                     $remainingGood -= $good;

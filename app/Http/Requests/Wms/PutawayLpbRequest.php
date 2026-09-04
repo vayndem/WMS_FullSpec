@@ -6,6 +6,6 @@ class PutawayLpbRequest extends WarehouseOperationRequest
 {
     public function rules(): array
     {
-        return ['warehouse_location_id' => ['required', 'integer', 'exists:warehouse_locations,id']];
+        return ['warehouse_location_id' => ['required', 'integer', 'exists:wms_lokasi_gudang,id']];
     }
 }

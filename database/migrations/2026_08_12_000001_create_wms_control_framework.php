@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('audit_logs', function (Blueprint $table) {
+        Schema::create('wms_log_audit', function (Blueprint $table) {
             $table->id();
             $table->string('auditable_type');
             $table->unsignedBigInteger('auditable_id');
@@ -22,7 +22,7 @@ return new class extends Migration
             $table->index(['auditable_type', 'auditable_id']);
         });
 
-        Schema::create('document_operation_keys', function (Blueprint $table) {
+        Schema::create('wms_kunci_operasi_dokumen', function (Blueprint $table) {
             $table->id();
             $table->string('operation_key', 120)->unique();
             $table->string('document_type', 50);
@@ -32,7 +32,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('document_reversals', function (Blueprint $table) {
+        Schema::create('wms_pembalikan_dokumen', function (Blueprint $table) {
             $table->id();
             $table->string('number', 50)->unique();
             $table->string('document_type', 50);
@@ -46,7 +46,7 @@ return new class extends Migration
             $table->unique(['document_type', 'document_id']);
         });
 
-        Schema::create('warehouse_locations', function (Blueprint $table) {
+        Schema::create('wms_lokasi_gudang', function (Blueprint $table) {
             $table->id();
             $table->foreignId('gudang_id')->constrained('gudangs')->cascadeOnDelete();
             $table->string('code', 50);
@@ -62,7 +62,7 @@ return new class extends Migration
             $table->unique(['gudang_id', 'code']);
         });
 
-        Schema::create('inventory_lots', function (Blueprint $table) {
+        Schema::create('wms_lot_persediaan', function (Blueprint $table) {
             $table->id();
             $table->foreignId('bahan_id')->constrained('bahans')->restrictOnDelete();
             $table->string('lot_number', 100);
@@ -76,17 +76,17 @@ return new class extends Migration
             $table->index('expires_at');
         });
 
-        Schema::create('inventory_serials', function (Blueprint $table) {
+        Schema::create('wms_serial_persediaan', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('inventory_lot_id')->constrained('inventory_lots')->cascadeOnDelete();
+            $table->foreignId('inventory_lot_id')->constrained('wms_lot_persediaan')->cascadeOnDelete();
             $table->string('serial_number', 120)->unique();
             $table->string('status', 30)->default('AVAILABLE');
             $table->timestamps();
         });
 
-        Schema::table('inventory_layers', function (Blueprint $table) {
-            $table->foreignId('warehouse_location_id')->nullable()->after('gudang_id')->constrained('warehouse_locations')->nullOnDelete();
-            $table->foreignId('inventory_lot_id')->nullable()->after('warehouse_location_id')->constrained('inventory_lots')->restrictOnDelete();
+        Schema::table('wms_layer_persediaan', function (Blueprint $table) {
+            $table->foreignId('warehouse_location_id')->nullable()->after('gudang_id')->constrained('wms_lokasi_gudang')->nullOnDelete();
+            $table->foreignId('inventory_lot_id')->nullable()->after('warehouse_location_id')->constrained('wms_lot_persediaan')->restrictOnDelete();
             $table->string('stock_status', 30)->default('AVAILABLE')->after('inventory_lot_id');
             $table->index(['gudang_id', 'bahan_id', 'stock_status'], 'layers_stock_lookup');
         });
@@ -97,7 +97,7 @@ return new class extends Migration
             $table->timestamp('putaway_at')->nullable();
         });
 
-        Schema::create('quality_inspections', function (Blueprint $table) {
+        Schema::create('wms_pemeriksaan_kualitas', function (Blueprint $table) {
             $table->id();
             $table->string('number', 50)->unique();
             $table->foreignId('lpb_id')->constrained('wms_penerimaan_barang')->restrictOnDelete();
@@ -108,9 +108,9 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('quality_inspection_lines', function (Blueprint $table) {
+        Schema::create('wms_pemeriksaan_kualitas_detail', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('quality_inspection_id')->constrained('quality_inspections')->cascadeOnDelete();
+            $table->foreignId('quality_inspection_id')->constrained('wms_pemeriksaan_kualitas')->cascadeOnDelete();
             $table->foreignId('lpb_detail_id')->constrained('wms_penerimaan_barang_detail')->restrictOnDelete();
             $table->decimal('quantity_received', 18, 6);
             $table->decimal('quantity_accepted', 18, 6)->default(0);
@@ -127,7 +127,7 @@ return new class extends Migration
             $table->timestamp('matched_at')->nullable();
         });
 
-        Schema::create('landed_costs', function (Blueprint $table) {
+        Schema::create('wms_biaya_tambahan', function (Blueprint $table) {
             $table->id();
             $table->string('number', 50)->unique();
             $table->date('date');
@@ -143,15 +143,15 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('landed_cost_allocations', function (Blueprint $table) {
+        Schema::create('wms_biaya_tambahan_alokasi', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('landed_cost_id')->constrained('landed_costs')->cascadeOnDelete();
-            $table->foreignId('inventory_layer_id')->constrained('inventory_layers')->restrictOnDelete();
+            $table->foreignId('landed_cost_id')->constrained('wms_biaya_tambahan')->cascadeOnDelete();
+            $table->foreignId('inventory_layer_id')->constrained('wms_layer_persediaan')->restrictOnDelete();
             $table->decimal('base_value', 18, 6);
             $table->decimal('allocated_amount', 18, 2);
             $table->decimal('unit_cost_before', 18, 4);
             $table->decimal('unit_cost_after', 18, 4);
-            $table->unique(['landed_cost_id', 'inventory_layer_id']);
+            $table->unique(['landed_cost_id', 'inventory_layer_id'], 'biaya_tambahan_alokasi_layer_unique');
         });
 
         Schema::table('transfer_gudangs', function (Blueprint $table) {
@@ -169,7 +169,7 @@ return new class extends Migration
             $table->decimal('jumlah_selisih', 18, 6)->default(0);
         });
 
-        Schema::create('inventory_reservations', function (Blueprint $table) {
+        Schema::create('wms_reservasi_persediaan', function (Blueprint $table) {
             $table->id();
             $table->string('number', 50)->unique();
             $table->foreignId('gudang_id')->constrained('gudangs')->restrictOnDelete();
@@ -186,10 +186,10 @@ return new class extends Migration
         });
 
         Schema::table('wms_pemakaian_barang', function (Blueprint $table) {
-            $table->foreignId('inventory_reservation_id')->nullable()->constrained('inventory_reservations')->nullOnDelete();
+            $table->foreignId('inventory_reservation_id')->nullable()->constrained('wms_reservasi_persediaan')->nullOnDelete();
         });
 
-        Schema::create('picking_orders', function (Blueprint $table) {
+        Schema::create('wms_pesanan_pengambilan', function (Blueprint $table) {
             $table->id();
             $table->string('number', 50)->unique();
             $table->foreignId('gudang_id')->constrained('gudangs')->restrictOnDelete();
@@ -200,17 +200,17 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('picking_order_lines', function (Blueprint $table) {
+        Schema::create('wms_pesanan_pengambilan_detail', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('picking_order_id')->constrained('picking_orders')->cascadeOnDelete();
-            $table->foreignId('inventory_reservation_id')->constrained('inventory_reservations')->restrictOnDelete();
-            $table->foreignId('inventory_layer_id')->nullable()->constrained('inventory_layers')->restrictOnDelete();
-            $table->foreignId('warehouse_location_id')->nullable()->constrained('warehouse_locations')->nullOnDelete();
+            $table->foreignId('picking_order_id')->constrained('wms_pesanan_pengambilan')->cascadeOnDelete();
+            $table->foreignId('inventory_reservation_id')->constrained('wms_reservasi_persediaan')->restrictOnDelete();
+            $table->foreignId('inventory_layer_id')->nullable()->constrained('wms_layer_persediaan')->restrictOnDelete();
+            $table->foreignId('warehouse_location_id')->nullable()->constrained('wms_lokasi_gudang')->nullOnDelete();
             $table->decimal('quantity_requested', 18, 6);
             $table->decimal('quantity_picked', 18, 6)->default(0);
         });
 
-        Schema::create('replenishment_suggestions', function (Blueprint $table) {
+        Schema::create('wms_saran_pengisian_ulang', function (Blueprint $table) {
             $table->id();
             $table->foreignId('gudang_id')->constrained('gudangs')->cascadeOnDelete();
             $table->foreignId('bahan_id')->constrained('bahans')->cascadeOnDelete();
@@ -228,40 +228,40 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('replenishment_suggestions');
-        Schema::dropIfExists('picking_order_lines');
-        Schema::dropIfExists('picking_orders');
+        Schema::dropIfExists('wms_saran_pengisian_ulang');
+        Schema::dropIfExists('wms_pesanan_pengambilan_detail');
+        Schema::dropIfExists('wms_pesanan_pengambilan');
         Schema::table('wms_pemakaian_barang', fn (Blueprint $table) => $table->dropConstrainedForeignId('inventory_reservation_id'));
-        Schema::dropIfExists('inventory_reservations');
+        Schema::dropIfExists('wms_reservasi_persediaan');
         Schema::table('detail_transfer_gudangs', fn (Blueprint $table) => $table->dropColumn(['jumlah_dikirim', 'jumlah_diterima', 'jumlah_selisih']));
         Schema::table('transfer_gudangs', function (Blueprint $table) {
             $table->dropConstrainedForeignId('dikirim_oleh');
             $table->dropConstrainedForeignId('diterima_oleh');
             $table->dropColumn(['dikirim_pada', 'diterima_pada', 'nomor_surat_jalan', 'catatan_penerimaan']);
         });
-        Schema::dropIfExists('landed_cost_allocations');
-        Schema::dropIfExists('landed_costs');
+        Schema::dropIfExists('wms_biaya_tambahan_alokasi');
+        Schema::dropIfExists('wms_biaya_tambahan');
         Schema::table('wms_faktur_pembelian', function (Blueprint $table) {
             $table->dropConstrainedForeignId('matched_by');
             $table->dropColumn(['match_status', 'match_summary', 'matched_at']);
         });
-        Schema::dropIfExists('quality_inspection_lines');
-        Schema::dropIfExists('quality_inspections');
+        Schema::dropIfExists('wms_pemeriksaan_kualitas_detail');
+        Schema::dropIfExists('wms_pemeriksaan_kualitas');
         Schema::table('wms_penerimaan_barang', function (Blueprint $table) {
             $table->dropConstrainedForeignId('putaway_by');
             $table->dropColumn(['receiving_status', 'putaway_at']);
         });
-        Schema::table('inventory_layers', function (Blueprint $table) {
+        Schema::table('wms_layer_persediaan', function (Blueprint $table) {
             $table->dropIndex('layers_stock_lookup');
             $table->dropConstrainedForeignId('warehouse_location_id');
             $table->dropConstrainedForeignId('inventory_lot_id');
             $table->dropColumn('stock_status');
         });
-        Schema::dropIfExists('inventory_serials');
-        Schema::dropIfExists('inventory_lots');
-        Schema::dropIfExists('warehouse_locations');
-        Schema::dropIfExists('document_reversals');
-        Schema::dropIfExists('document_operation_keys');
-        Schema::dropIfExists('audit_logs');
+        Schema::dropIfExists('wms_serial_persediaan');
+        Schema::dropIfExists('wms_lot_persediaan');
+        Schema::dropIfExists('wms_lokasi_gudang');
+        Schema::dropIfExists('wms_pembalikan_dokumen');
+        Schema::dropIfExists('wms_kunci_operasi_dokumen');
+        Schema::dropIfExists('wms_log_audit');
     }
 };

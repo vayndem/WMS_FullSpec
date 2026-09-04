@@ -5,17 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\Bahan;
 use App\Models\BaganAkun;
 use App\Models\Gudang;
-use App\Models\InventoryLayer;
-use App\Models\InventoryLot;
-use App\Models\InventoryReservation;
+use App\Models\LayerPersediaan;
+use App\Models\LotPersediaan;
+use App\Models\ReservasiPersediaan;
 use App\Models\FakturPembelian;
-use App\Models\LandedCost;
+use App\Models\BiayaTambahan;
 use App\Models\PenerimaanBarang;
 use App\Models\PemakaianBarang;
-use App\Models\PickingOrder;
-use App\Models\QualityInspection;
-use App\Models\ReplenishmentSuggestion;
-use App\Models\WarehouseLocation;
+use App\Models\PesananPengambilan;
+use App\Models\PemeriksaanKualitas;
+use App\Models\SaranPengisianUlang;
+use App\Models\LokasiGudang;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -31,14 +31,14 @@ class WmsControlController extends Controller
         $mayMatchInvoice = $user->can('matchSupplierInvoice');
 
         return view('wms_control.index', [
-            'locations' => WarehouseLocation::with('gudang')->whereIn('gudang_id', $warehouseIds)->orderBy('code')->limit(100)->get(),
-            'lots' => InventoryLot::with('bahan')->latest()->limit(100)->get(),
-            'reservations' => InventoryReservation::with(['gudang', 'bahan'])->whereIn('gudang_id', $warehouseIds)->latest()->limit(100)->get(),
-            'picks' => PickingOrder::with('lines')->whereIn('gudang_id', $warehouseIds)->latest()->limit(50)->get(),
-            'inspections' => QualityInspection::with('lpb')->latest()->limit(50)->get(),
-            'suggestions' => ReplenishmentSuggestion::whereIn('gudang_id', $warehouseIds)->where('status', 'OPEN')->orderByRaw("FIELD(priority, 'CRITICAL', 'HIGH', 'NORMAL')")->limit(100)->get(),
-            'landedCosts' => $mayControlFinance ? LandedCost::latest()->limit(50)->get() : collect(),
-            'layers' => $mayControlFinance ? InventoryLayer::with(['bahan', 'gudang'])->where('remaining_quantity', '>', 0)->latest()->limit(200)->get() : collect(),
+            'locations' => LokasiGudang::with('gudang')->whereIn('gudang_id', $warehouseIds)->orderBy('code')->limit(100)->get(),
+            'lots' => LotPersediaan::with('bahan')->latest()->limit(100)->get(),
+            'reservations' => ReservasiPersediaan::with(['gudang', 'bahan'])->whereIn('gudang_id', $warehouseIds)->latest()->limit(100)->get(),
+            'picks' => PesananPengambilan::with('lines')->whereIn('gudang_id', $warehouseIds)->latest()->limit(50)->get(),
+            'inspections' => PemeriksaanKualitas::with('lpb')->latest()->limit(50)->get(),
+            'suggestions' => SaranPengisianUlang::whereIn('gudang_id', $warehouseIds)->where('status', 'OPEN')->orderByRaw("FIELD(priority, 'CRITICAL', 'HIGH', 'NORMAL')")->limit(100)->get(),
+            'landedCosts' => $mayControlFinance ? BiayaTambahan::latest()->limit(50)->get() : collect(),
+            'layers' => $mayControlFinance ? LayerPersediaan::with(['bahan', 'gudang'])->where('remaining_quantity', '>', 0)->latest()->limit(200)->get() : collect(),
             'gudangs' => Gudang::whereIn('id', $warehouseIds)->where('aktif', true)->orderBy('nama')->get(),
             'bahans' => Bahan::orderBy('nama')->get(),
             'pendingLpbs' => PenerimaanBarang::with('details.bahan')->whereIn('gudang_id', $warehouseIds)->whereIn('status', [PenerimaanBarang::DRAFT, PenerimaanBarang::POSTED])->where(fn ($query) => $query->whereNull('document_type')->orWhere('document_type', '!=', 'SERVICE_BAP'))->where('receiving_status', '!=', 'PUTAWAY')->latest()->limit(30)->get(),

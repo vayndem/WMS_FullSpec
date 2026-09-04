@@ -4,12 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Wms\InspectLpbRequest;
 use App\Http\Requests\Wms\PutawayLpbRequest;
-use App\Http\Requests\Wms\StoreInventoryReservationRequest;
+use App\Http\Requests\Wms\StoreReservasiPersediaanRequest;
 use App\Http\Requests\Wms\WarehouseActionRequest;
-use App\Models\InventoryReservation;
+use App\Models\ReservasiPersediaan;
 use App\Models\PenerimaanBarang;
-use App\Models\PickingOrder;
-use App\Models\WarehouseLocation;
+use App\Models\PesananPengambilan;
+use App\Models\LokasiGudang;
 use App\Services\ReplenishmentService;
 use App\Services\WarehouseExecutionService;
 use Illuminate\Foundation\Http\FormRequest;
@@ -28,14 +28,14 @@ class WarehouseExecutionController extends Controller
     public function putaway(PutawayLpbRequest $request, PenerimaanBarang $lpb, WarehouseExecutionService $service): RedirectResponse
     {
         $this->ensureWarehouseAccess($request, (int) $lpb->gudang_id);
-        $location = WarehouseLocation::findOrFail($request->integer('warehouse_location_id'));
+        $location = LokasiGudang::findOrFail($request->integer('warehouse_location_id'));
         abort_unless((int) $location->gudang_id === (int) $lpb->gudang_id, 422, 'Lokasi putaway harus berada di gudang penerimaan.');
         $service->putaway($lpb, $location);
 
         return back()->with('success', 'Putaway LPB selesai.');
     }
 
-    public function reserve(StoreInventoryReservationRequest $request, WarehouseExecutionService $service): RedirectResponse
+    public function reserve(StoreReservasiPersediaanRequest $request, WarehouseExecutionService $service): RedirectResponse
     {
         $data = $request->validated();
         $this->ensureWarehouseAccess($request, (int) $data['gudang_id']);
@@ -44,7 +44,7 @@ class WarehouseExecutionController extends Controller
         return back()->with('success', 'Stok berhasil direservasi.');
     }
 
-    public function releaseReservation(WarehouseActionRequest $request, InventoryReservation $reservation, WarehouseExecutionService $service): RedirectResponse
+    public function releaseReservation(WarehouseActionRequest $request, ReservasiPersediaan $reservation, WarehouseExecutionService $service): RedirectResponse
     {
         $this->ensureWarehouseAccess($request, (int) $reservation->gudang_id);
         $service->release($reservation);
@@ -52,7 +52,7 @@ class WarehouseExecutionController extends Controller
         return back()->with('success', 'Reservasi dilepas.');
     }
 
-    public function createPick(WarehouseActionRequest $request, InventoryReservation $reservation, WarehouseExecutionService $service): RedirectResponse
+    public function createPick(WarehouseActionRequest $request, ReservasiPersediaan $reservation, WarehouseExecutionService $service): RedirectResponse
     {
         $this->ensureWarehouseAccess($request, (int) $reservation->gudang_id);
         $service->createPick($reservation);
@@ -60,7 +60,7 @@ class WarehouseExecutionController extends Controller
         return back()->with('success', 'Picking order FEFO/FIFO dibuat.');
     }
 
-    public function completePick(WarehouseActionRequest $request, PickingOrder $pickingOrder, WarehouseExecutionService $service): RedirectResponse
+    public function completePick(WarehouseActionRequest $request, PesananPengambilan $pickingOrder, WarehouseExecutionService $service): RedirectResponse
     {
         $this->ensureWarehouseAccess($request, (int) $pickingOrder->gudang_id);
         $service->completePick($pickingOrder);

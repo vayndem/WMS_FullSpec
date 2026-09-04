@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreReturPembelianRequest;
-use App\Models\InventoryLayer;
+use App\Models\LayerPersediaan;
 use App\Models\PenerimaanBarang;
 use App\Models\PenerimaanBarangDetail;
 use App\Models\ReturPembelian;
@@ -110,7 +110,7 @@ class ReturPembelianController extends Controller
                 $lpbDetail = PenerimaanBarangDetail::lockForUpdate()->findOrFail($line['lpb_detail_id']);
                 abort_if($lpbDetail->id_lpb !== $lpb->id_lpb, 422, 'Baris LPB yang dipilih tidak sesuai dengan LPB ini.');
 
-                $layer = InventoryLayer::where('source_type', 'LPB_DETAIL')->where('source_id', $lpbDetail->id)->lockForUpdate()->firstOrFail();
+                $layer = LayerPersediaan::where('source_type', 'LPB_DETAIL')->where('source_id', $lpbDetail->id)->lockForUpdate()->firstOrFail();
                 $jumlahRetur = (float) $line['jumlah_retur'];
                 abort_if(
                     $jumlahRetur > (float) $layer->remaining_quantity + 0.000001,

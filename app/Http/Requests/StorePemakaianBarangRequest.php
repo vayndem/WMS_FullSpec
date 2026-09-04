@@ -21,7 +21,7 @@ class StorePemakaianBarangRequest extends FormRequest
             'id_barang'        => 'required|exists:bahans,id',
             'id_gudang_asal'   => 'required|exists:gudangs,id',
             'id_gudang_tujuan' => 'nullable|exists:gudangs,id',
-            'inventory_reservation_id' => 'nullable|exists:inventory_reservations,id',
+            'inventory_reservation_id' => 'nullable|exists:wms_reservasi_persediaan,id',
             'jumlah'           => 'required|numeric|gt:0',
             'status'           => 'required|in:DRAFT,POSTED',
             'keterangan'       => 'nullable|string',

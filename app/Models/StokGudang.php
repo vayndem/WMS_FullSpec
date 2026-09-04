@@ -24,7 +24,7 @@ class StokGudang extends Model
     }
     public function getStokDapatDipakaiAttribute(): float
     {
-        $usable = InventoryLayer::where('gudang_id', $this->gudang_id)->where('bahan_id', $this->bahan_id)
+        $usable = LayerPersediaan::where('gudang_id', $this->gudang_id)->where('bahan_id', $this->bahan_id)
             ->where('stock_status', 'AVAILABLE')->where('remaining_quantity', '>', 0)
             ->where(function ($query) {
                 $query->whereNull('inventory_lot_id')->orWhereHas('lot', fn ($lot) => $lot

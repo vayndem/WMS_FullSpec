@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Bahan;
-use App\Models\InventoryLayer;
+use App\Models\LayerPersediaan;
 use App\Models\MutasiStok;
 use App\Models\StokGudang;
 use Illuminate\Support\Facades\Auth;
@@ -68,7 +68,7 @@ class StokGudangService
 
     public function ambilLayer(int $gudangId, int $bahanId, float $jumlah, $tanggal, array $statuses = ['AVAILABLE']): array
     {
-        $layers = InventoryLayer::where('gudang_id', $gudangId)->where('bahan_id', $bahanId)
+        $layers = LayerPersediaan::where('gudang_id', $gudangId)->where('bahan_id', $bahanId)
             ->whereIn('stock_status', $statuses)
             ->where(function ($query) {
                 $query->whereNull('inventory_lot_id')->orWhereHas('lot', fn ($lot) => $lot

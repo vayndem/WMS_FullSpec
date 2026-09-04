@@ -5,9 +5,11 @@ namespace App\Models;
 use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 
-class InventoryLayer extends Model
+class LayerPersediaan extends Model
 {
     use Auditable;
+
+    protected $table = 'wms_layer_persediaan';
 
     protected $fillable = [
         'bahan_id',
@@ -42,10 +44,10 @@ class InventoryLayer extends Model
 
     public function location()
     {
-        return $this->belongsTo(WarehouseLocation::class, 'warehouse_location_id');
+        return $this->belongsTo(LokasiGudang::class, 'warehouse_location_id');
     }
     public function lot()
     {
-        return $this->belongsTo(InventoryLot::class, 'inventory_lot_id');
+        return $this->belongsTo(LotPersediaan::class, 'inventory_lot_id');
     }
 }

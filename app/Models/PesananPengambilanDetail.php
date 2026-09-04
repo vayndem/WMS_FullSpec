@@ -4,8 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class PickingOrderLine extends Model
+class PesananPengambilanDetail extends Model
 {
+    protected $table = 'wms_pesanan_pengambilan_detail';
     public $timestamps = false;
     protected $guarded = ['id'];
 }

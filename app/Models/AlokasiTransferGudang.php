@@ -14,10 +14,10 @@ class AlokasiTransferGudang extends Model
     }
     public function layerAsal()
     {
-        return $this->belongsTo(InventoryLayer::class, 'inventory_layer_asal_id');
+        return $this->belongsTo(LayerPersediaan::class, 'inventory_layer_asal_id');
     }
     public function layerTujuan()
     {
-        return $this->belongsTo(InventoryLayer::class, 'inventory_layer_tujuan_id');
+        return $this->belongsTo(LayerPersediaan::class, 'inventory_layer_tujuan_id');
     }
 }

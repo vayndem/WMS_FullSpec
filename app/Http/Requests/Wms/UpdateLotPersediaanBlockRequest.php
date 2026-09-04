@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Wms;
 
-class UpdateInventoryLotBlockRequest extends WarehouseOperationRequest
+class UpdateLotPersediaanBlockRequest extends WarehouseOperationRequest
 {
     protected function prepareForValidation(): void
     {

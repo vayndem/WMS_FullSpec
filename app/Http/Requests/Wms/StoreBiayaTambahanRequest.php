@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Wms;
 
-class StoreLandedCostRequest extends InventoryFinancialControlRequest
+class StoreBiayaTambahanRequest extends InventoryFinancialControlRequest
 {
     public function rules(): array
     {
@@ -13,7 +13,7 @@ class StoreLandedCostRequest extends InventoryFinancialControlRequest
             'total_amount' => ['required', 'numeric', 'gt:0'],
             'credit_coa_id' => ['required', 'integer', 'exists:wms_bagan_akun,id'],
             'layer_ids' => ['required', 'array', 'min:1'],
-            'layer_ids.*' => ['integer', 'distinct', 'exists:inventory_layers,id'],
+            'layer_ids.*' => ['integer', 'distinct', 'exists:wms_layer_persediaan,id'],
         ];
     }
 }
