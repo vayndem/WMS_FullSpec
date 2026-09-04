@@ -9,7 +9,7 @@ class ReturPembelianDetail extends Model
 {
     use HasFactory;
 
-    protected $table = 'retur_pembelian_details';
+    protected $table = 'wms_retur_pembelian_detail';
 
     protected $fillable = [
         'retur_pembelian_id',

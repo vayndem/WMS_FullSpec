@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('retur_pembelians', function (Blueprint $table) {
+        Schema::create('wms_retur_pembelian', function (Blueprint $table) {
             $table->id();
             $table->string('no_retur', 100)->unique();
             $table->unsignedBigInteger('lpb_id');
@@ -25,7 +25,7 @@ return new class extends Migration
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
         });
 
-        Schema::create('retur_pembelian_details', function (Blueprint $table) {
+        Schema::create('wms_retur_pembelian_detail', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('retur_pembelian_id');
             $table->unsignedBigInteger('lpb_detail_id');
@@ -34,14 +34,14 @@ return new class extends Migration
             $table->decimal('total_harga', 18, 2);
             $table->timestamps();
 
-            $table->foreign('retur_pembelian_id')->references('id')->on('retur_pembelians')->onDelete('cascade');
+            $table->foreign('retur_pembelian_id')->references('id')->on('wms_retur_pembelian')->onDelete('cascade');
             $table->foreign('lpb_detail_id')->references('id')->on('wms_penerimaan_barang_detail')->onDelete('restrict');
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('retur_pembelian_details');
-        Schema::dropIfExists('retur_pembelians');
+        Schema::dropIfExists('wms_retur_pembelian_detail');
+        Schema::dropIfExists('wms_retur_pembelian');
     }
 };

@@ -15,7 +15,7 @@ class StoreReturPembelianRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'no_retur'                    => ['required', 'string', 'max:100', 'unique:retur_pembelians,no_retur'],
+            'no_retur'                    => ['required', 'string', 'max:100', 'unique:wms_retur_pembelian,no_retur'],
             'lpb_id'                       => ['required', 'integer', 'exists:wms_penerimaan_barang,id'],
             'tanggal'                      => ['required', 'date'],
             'alasan'                       => ['required', 'string', 'max:1000'],

@@ -12,7 +12,7 @@ class ReturPembelian extends Model
     public const POSTED = 'POSTED';
     public const REVERSED = 'REVERSED';
 
-    protected $table = 'retur_pembelians';
+    protected $table = 'wms_retur_pembelian';
 
     protected $fillable = [
         'no_retur',
