@@ -4,12 +4,12 @@ namespace Tests\Unit;
 
 use App\Models\User;
 use App\Models\PenerimaanBarang;
-use App\Models\Npk;
+use App\Models\PemakaianBarang;
 use App\Models\MaterialRequest;
 use App\Models\PenerimaanJasa;
 use App\Models\StockOpname;
 use App\Policies\PenerimaanBarangPolicy;
-use App\Policies\NpkPolicy;
+use App\Policies\PemakaianBarangPolicy;
 use App\Policies\MaterialRequestPolicy;
 use App\Policies\PenerimaanJasaPolicy;
 use App\Policies\StockOpnamePolicy;
@@ -34,7 +34,7 @@ class WarehouseRolePolicyTest extends TestCase
         $this->assertTrue((new MaterialRequestPolicy())->viewAny($user));
         $this->assertTrue((new MaterialRequestPolicy())->create($user));
         $this->assertTrue((new PenerimaanBarangPolicy())->create($user));
-        $this->assertTrue((new NpkPolicy())->create($user));
+        $this->assertTrue((new PemakaianBarangPolicy())->create($user));
         $this->assertTrue((new PenerimaanJasaPolicy())->create($user));
         $this->assertTrue((new StockOpnamePolicy())->create($user));
     }
@@ -43,7 +43,7 @@ class WarehouseRolePolicyTest extends TestCase
     {
         $user = $this->warehouse();
 
-        $this->assertFalse((new NpkPolicy())->viewFinancials($user));
+        $this->assertFalse((new PemakaianBarangPolicy())->viewFinancials($user));
         $this->assertFalse((new PenerimaanJasaPolicy())->viewFinancials($user));
         $this->assertFalse((new StockOpnamePolicy())->viewFinancials($user));
     }
@@ -63,9 +63,9 @@ class WarehouseRolePolicyTest extends TestCase
     {
         $user = $this->production();
 
-        $this->assertTrue((new NpkPolicy())->create($user));
+        $this->assertTrue((new PemakaianBarangPolicy())->create($user));
         $this->assertTrue((new StockOpnamePolicy())->create($user));
-        $this->assertFalse((new NpkPolicy())->viewFinancials($user));
+        $this->assertFalse((new PemakaianBarangPolicy())->viewFinancials($user));
         $this->assertFalse((new StockOpnamePolicy())->viewFinancials($user));
         $this->assertFalse((new PenerimaanBarangPolicy())->create($user));
         $this->assertFalse((new PenerimaanJasaPolicy())->create($user));

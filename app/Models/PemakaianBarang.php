@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Npk extends Model
+class PemakaianBarang extends Model
 {
     use HasFactory, Auditable;
 
@@ -15,7 +15,7 @@ class Npk extends Model
     public const POSTED = 'POSTED';
     public const REVERSED = 'REVERSED';
 
-    protected $table = 'npks';
+    protected $table = 'wms_pemakaian_barang';
     protected $guarded = ['id'];
 
     protected $casts = [
@@ -43,6 +43,6 @@ class Npk extends Model
 
     public function allocations()
     {
-        return $this->hasMany(NpkStockAllocation::class, 'npk_id');
+        return $this->hasMany(PemakaianBarangAlokasiStok::class, 'npk_id');
     }
 }

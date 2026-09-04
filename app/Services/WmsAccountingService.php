@@ -8,8 +8,8 @@ use App\Models\InvoicePayment;
 use App\Models\Jurnal;
 use App\Models\PenerimaanBarang;
 use App\Models\PenerimaanBarangDetail;
-use App\Models\Npk;
-use App\Models\NpkStockAllocation;
+use App\Models\PemakaianBarang;
+use App\Models\PemakaianBarangAlokasiStok;
 use App\Models\InventoryLayer;
 use App\Models\ChartOfAccount;
 use App\Models\ReturPembelian;
@@ -66,7 +66,7 @@ class WmsAccountingService
         return $this->post("RTV-{$retur->no_retur}", $retur->tanggal, 'RETUR_PEMBELIAN', $retur->id, "Retur pembelian {$retur->no_retur} atas LPB {$retur->lpb->id_lpb}", $lines);
     }
 
-    public function postNpk(Npk $npk): Jurnal
+    public function postNpk(PemakaianBarang $npk): Jurnal
     {
         $this->periods->assertOpen($npk->tanggal, 'NPK');
         $npk->loadMissing('barang.tipeBarang');
@@ -84,7 +84,7 @@ class WmsAccountingService
         ]);
     }
 
-    public function consumeStock(Npk $npk): void
+    public function consumeStock(PemakaianBarang $npk): void
     {
         $quantity = (float) $npk->jumlah_stok > 0 ? (float) $npk->jumlah_stok : (float) $npk->jumlah;
         $layers = InventoryLayer::query()
@@ -117,7 +117,7 @@ class WmsAccountingService
             $take = min($remaining, (float) $layer->remaining_quantity);
             $unitCost = (float) $layer->unit_cost;
             $cost = round($take * $unitCost, 2);
-            NpkStockAllocation::create([
+            PemakaianBarangAlokasiStok::create([
                 'npk_id' => $npk->id,
                 'inventory_layer_id' => $layer->id,
                 'quantity' => $take,
@@ -138,10 +138,10 @@ class WmsAccountingService
         }
 
         $effectiveUnitCost = $quantity > 0 ? round($totalCost / $quantity, 4) : 0;
-        $npk->update(['harga_satuan' => $effectiveUnitCost, 'total_nilai' => $totalCost, 'status' => Npk::POSTED]);
+        $npk->update(['harga_satuan' => $effectiveUnitCost, 'total_nilai' => $totalCost, 'status' => PemakaianBarang::POSTED]);
     }
 
-    public function restoreStock(Npk $npk, bool $deleteJournal = true): void
+    public function restoreStock(PemakaianBarang $npk, bool $deleteJournal = true): void
     {
         foreach ($npk->allocations()->lockForUpdate()->get() as $allocation) {
             $layer = InventoryLayer::lockForUpdate()->findOrFail($allocation->inventory_layer_id);

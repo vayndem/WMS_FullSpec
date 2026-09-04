@@ -4,7 +4,7 @@ use App\Http\Controllers\GudangController;
 use App\Http\Controllers\InventoryFinancialControlController;
 use App\Http\Controllers\PenerimaanBarangController;
 use App\Http\Controllers\MutasiStokController;
-use App\Http\Controllers\NpkController;
+use App\Http\Controllers\PemakaianBarangController;
 use App\Http\Controllers\PembagianGudangController;
 use App\Http\Controllers\PemeriksaanConsiderController;
 use App\Http\Controllers\PengaturanBahanGudangController;
@@ -44,8 +44,8 @@ Route::middleware('auth')->group(function () {
     Route::get('retur-pembelian/lpb-detail/{id_lpb}', [ReturPembelianController::class, 'getLpbDetail'])->name('retur-pembelian.get-lpb-detail');
     Route::resource('retur-pembelian', ReturPembelianController::class)->only(['index', 'create', 'store', 'show']);
 
-    Route::get('npk-report/pdf', [NpkController::class, 'reportPdf'])->name('npk.report.pdf');
-    Route::resource('npk', NpkController::class);
+    Route::get('pemakaian-barang-report/pdf', [PemakaianBarangController::class, 'reportPdf'])->name('pemakaian-barang.report.pdf');
+    Route::resource('pemakaian-barang', PemakaianBarangController::class)->parameters(['pemakaian-barang' => 'npk']);
 
     Route::get('stock-opname-report/pdf', [StockOpnameController::class, 'reportListPdf'])->name('stock-opname.report.pdf');
     Route::get('stock-opname-export/excel', [StockOpnameController::class, 'exportInventory'])->name('stock-opname.export.excel');
@@ -74,7 +74,7 @@ Route::middleware('auth')->group(function () {
         Route::post('landed-costs', [InventoryFinancialControlController::class, 'storeLandedCost'])->name('landed-costs.store');
         Route::post('landed-costs/{landedCost}/post', [InventoryFinancialControlController::class, 'postLandedCost'])->name('landed-costs.post');
         Route::post('penerimaan-barang/{lpb}/reverse', [InventoryFinancialControlController::class, 'reverseLpb'])->name('penerimaan-barang.reverse');
-        Route::post('npk/{npk}/reverse', [InventoryFinancialControlController::class, 'reverseNpk'])->name('npk.reverse');
+        Route::post('pemakaian-barang/{npk}/reverse', [InventoryFinancialControlController::class, 'reverseNpk'])->name('pemakaian-barang.reverse');
         Route::post('retur-pembelian/{returPembelian}/reverse', [InventoryFinancialControlController::class, 'reverseReturPembelian'])->name('retur-pembelian.reverse');
     });
 });

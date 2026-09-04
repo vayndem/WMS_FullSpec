@@ -11,7 +11,7 @@ use App\Models\InventoryReservation;
 use App\Models\InvoiceLpb;
 use App\Models\LandedCost;
 use App\Models\PenerimaanBarang;
-use App\Models\Npk;
+use App\Models\PemakaianBarang;
 use App\Models\PickingOrder;
 use App\Models\QualityInspection;
 use App\Models\ReplenishmentSuggestion;
@@ -45,7 +45,7 @@ class WmsControlController extends Controller
             'invoices' => $mayMatchInvoice ? InvoiceLpb::where('status', '!=', InvoiceLpb::VOID)->latest()->limit(30)->get() : collect(),
             'creditAccounts' => $mayControlFinance ? ChartOfAccount::where('is_active', true)->where('is_postable', true)->whereIn('kategori_akun', ['LIABILITAS', 'ASET'])->orderBy('kode_akun')->get() : collect(),
             'reversibleLpbs' => $mayControlFinance ? PenerimaanBarang::where('status', PenerimaanBarang::POSTED)->where(fn ($query) => $query->whereNull('document_type')->orWhere('document_type', '!=', 'SERVICE_BAP'))->whereDoesntHave('invoiceReceipts')->latest()->limit(20)->get() : collect(),
-            'reversibleNpks' => $mayControlFinance ? Npk::where('status', Npk::POSTED)->latest()->limit(20)->get() : collect(),
+            'reversibleNpks' => $mayControlFinance ? PemakaianBarang::where('status', PemakaianBarang::POSTED)->latest()->limit(20)->get() : collect(),
         ]);
     }
 }

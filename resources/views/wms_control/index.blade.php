@@ -339,17 +339,17 @@
                         @endforelse
                     </div>
                     <div>
-                        <h6 class="mb-2 font-semibold">NPK</h6>
+                        <h6 class="mb-2 font-semibold">Pemakaian Barang</h6>
                         @forelse($reversibleNpks as $d)
-                            <form method="POST" action="{{ route('wms-control.npk.reverse', $d) }}"
-                                @submit.prevent="submitOrConfirm($event, 'Pulihkan FIFO, stok, dan balik jurnal NPK?')" class="join mb-2 w-full">
+                            <form method="POST" action="{{ route('wms-control.pemakaian-barang.reverse', $d) }}"
+                                @submit.prevent="submitOrConfirm($event, 'Pulihkan FIFO, stok, dan balik jurnal pemakaian barang?')" class="join mb-2 w-full">
                                 @csrf
                                 <span class="join-item btn btn-disabled btn-outline">{{ $d->kode }}</span>
                                 <input name="reason" class="input input-bordered join-item flex-1" minlength="10" placeholder="Alasan reversal (wajib)" required>
                                 <button class="join-item btn btn-outline btn-error">Reverse</button>
                             </form>
                         @empty
-                            <small class="text-base-content/50">Tidak ada NPK yang eligible.</small>
+                            <small class="text-base-content/50">Tidak ada pemakaian barang yang eligible.</small>
                         @endforelse
                     </div>
                 </div>

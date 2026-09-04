@@ -35,7 +35,7 @@
                     </div>
                 </div>
                 <div class="mt-4 flex flex-wrap gap-6">
-                    @foreach (['aktif' => 'Aktif', 'boleh_penerimaan' => 'Boleh Penerimaan Barang', 'boleh_npk' => 'Boleh NPK', 'boleh_transfer' => 'Boleh Transfer', 'boleh_opname' => 'Boleh Opname'] as $f => $l)
+                    @foreach (['aktif' => 'Aktif', 'boleh_penerimaan' => 'Boleh Penerimaan Barang', 'boleh_npk' => 'Boleh Pemakaian Barang', 'boleh_transfer' => 'Boleh Transfer', 'boleh_opname' => 'Boleh Opname'] as $f => $l)
                         <label class="flex cursor-pointer items-center gap-2">
                             <input type="checkbox" name="{{ $f }}" value="1" class="checkbox" @checked(old($f, $gudang->exists ? $gudang->$f : true))>
                             <span>{{ $l }}</span>

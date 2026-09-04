@@ -31,7 +31,7 @@
             ];
         @endphp
         <div class="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-6">
-            @foreach ([['label' => 'Master Bahan', 'value' => $warehouseMetrics['total_materials'], 'icon' => 'boxes-stacked', 'color' => 'primary'], ['label' => 'Perlu Perhatian', 'value' => $warehouseMetrics['stock_attention'], 'icon' => 'triangle-exclamation', 'color' => 'warning'], ['label' => 'Penerimaan Hari Ini', 'value' => $warehouseMetrics['receipts_today'], 'icon' => 'box-open', 'color' => 'success'], ['label' => 'NPK Hari Ini', 'value' => $warehouseMetrics['issues_today'], 'icon' => 'arrow-right-from-bracket', 'color' => 'info'], ['label' => 'Opname Aktif', 'value' => $warehouseMetrics['open_opnames'], 'icon' => 'clipboard-check', 'color' => 'primary'], ['label' => 'Penerimaan Jasa Hari Ini', 'value' => $warehouseMetrics['service_baps_today'], 'icon' => 'screwdriver-wrench', 'color' => 'secondary']] as $metric)
+            @foreach ([['label' => 'Master Bahan', 'value' => $warehouseMetrics['total_materials'], 'icon' => 'boxes-stacked', 'color' => 'primary'], ['label' => 'Perlu Perhatian', 'value' => $warehouseMetrics['stock_attention'], 'icon' => 'triangle-exclamation', 'color' => 'warning'], ['label' => 'Penerimaan Hari Ini', 'value' => $warehouseMetrics['receipts_today'], 'icon' => 'box-open', 'color' => 'success'], ['label' => 'Pemakaian Hari Ini', 'value' => $warehouseMetrics['issues_today'], 'icon' => 'arrow-right-from-bracket', 'color' => 'info'], ['label' => 'Opname Aktif', 'value' => $warehouseMetrics['open_opnames'], 'icon' => 'clipboard-check', 'color' => 'primary'], ['label' => 'Penerimaan Jasa Hari Ini', 'value' => $warehouseMetrics['service_baps_today'], 'icon' => 'screwdriver-wrench', 'color' => 'secondary']] as $metric)
                 <div class="card border border-base-300 bg-base-100 shadow-sm">
                     <div class="card-body p-4">
                         <div class="flex items-start justify-between gap-2">
@@ -89,9 +89,9 @@
                 <div class="flex items-center justify-between border-b border-base-300 p-4">
                     <div>
                         <h5 class="font-bold">Pemakaian Terbaru</h5>
-                        <p class="text-sm text-base-content/50">Barang yang terakhir dikeluarkan melalui NPK</p>
+                        <p class="text-sm text-base-content/50">Barang yang terakhir dikeluarkan melalui pemakaian barang</p>
                     </div>
-                    <a href="{{ route('npk.index') }}" class="btn btn-sm btn-ghost border border-base-300">Lihat semua</a>
+                    <a href="{{ route('pemakaian-barang.index') }}" class="btn btn-sm btn-ghost border border-base-300">Lihat semua</a>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="table">
@@ -127,7 +127,7 @@
         'title' => 'Dashboard Gudang',
         'items' => [
             'Gunakan Penerimaan untuk mencatat penerimaan barang atau penerimaan jasa.',
-            'Gunakan NPK untuk mencatat barang yang dipakai atau dikeluarkan.',
+            'Gunakan Pemakaian Barang untuk mencatat barang yang dipakai atau dikeluarkan.',
             'Stock Opname digunakan untuk membandingkan stok sistem dengan hasil hitung fisik.',
             'Dashboard gudang hanya menampilkan kuantitas dan aktivitas, tanpa harga atau nilai uang.',
         ],

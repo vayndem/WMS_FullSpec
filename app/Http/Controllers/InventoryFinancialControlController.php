@@ -9,7 +9,7 @@ use App\Http\Requests\Wms\StoreLandedCostRequest;
 use App\Models\InvoiceLpb;
 use App\Models\LandedCost;
 use App\Models\PenerimaanBarang;
-use App\Models\Npk;
+use App\Models\PemakaianBarang;
 use App\Models\ReturPembelian;
 use App\Services\DocumentNumberService;
 use App\Services\InventoryReversalService;
@@ -61,7 +61,7 @@ class InventoryFinancialControlController extends Controller
         return back()->with('success', 'LPB dan jurnal berhasil dibalik.');
     }
 
-    public function reverseNpk(ReverseInventoryDocumentRequest $request, Npk $npk, InventoryReversalService $service): RedirectResponse
+    public function reverseNpk(ReverseInventoryDocumentRequest $request, PemakaianBarang $npk, InventoryReversalService $service): RedirectResponse
     {
         $service->reverseNpk($npk, $request->validated('reason'));
 

@@ -8,9 +8,9 @@
                 <p class="text-base-content/60">Ringkasan pemakaian, transfer, dan opname untuk gudang produksi.</p>
             </div>
             <div class="flex flex-wrap gap-2">
-                @can('create', App\Models\Npk::class)
-                    <a href="{{ route('npk.index', ['create' => 1]) }}" class="btn btn-primary">
-                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Buat NPK
+                @can('create', App\Models\PemakaianBarang::class)
+                    <a href="{{ route('pemakaian-barang.index', ['create' => 1]) }}" class="btn btn-primary">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Buat Pemakaian Barang
                     </a>
                 @endcan
                 @can('create', App\Models\TransferGudang::class)
@@ -30,7 +30,7 @@
             ];
         @endphp
         <div class="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
-            @foreach ([['label' => 'Gudang Tugas', 'value' => $productionMetrics['assigned_warehouses'], 'icon' => 'warehouse', 'color' => 'primary'], ['label' => 'NPK Hari Ini', 'value' => $productionMetrics['issues_today'], 'icon' => 'arrow-right-from-bracket', 'color' => 'info'], ['label' => 'Transfer Aktif', 'value' => $productionMetrics['transfers_in_progress'], 'icon' => 'right-left', 'color' => 'warning'], ['label' => 'Opname Aktif', 'value' => $productionMetrics['open_opnames'], 'icon' => 'clipboard-check', 'color' => 'success']] as $metric)
+            @foreach ([['label' => 'Gudang Tugas', 'value' => $productionMetrics['assigned_warehouses'], 'icon' => 'warehouse', 'color' => 'primary'], ['label' => 'Pemakaian Hari Ini', 'value' => $productionMetrics['issues_today'], 'icon' => 'arrow-right-from-bracket', 'color' => 'info'], ['label' => 'Transfer Aktif', 'value' => $productionMetrics['transfers_in_progress'], 'icon' => 'right-left', 'color' => 'warning'], ['label' => 'Opname Aktif', 'value' => $productionMetrics['open_opnames'], 'icon' => 'clipboard-check', 'color' => 'success']] as $metric)
                 <div class="card border border-base-300 bg-base-100 shadow-sm">
                     <div class="card-body p-4">
                         <div class="flex items-start justify-between gap-2">
@@ -87,10 +87,10 @@
             <div class="card border border-base-300 bg-base-100 shadow-sm">
                 <div class="flex items-center justify-between border-b border-base-300 p-4">
                     <div>
-                        <h5 class="font-bold">NPK Terbaru</h5>
+                        <h5 class="font-bold">Pemakaian Barang Terbaru</h5>
                         <p class="text-sm text-base-content/50">Pemakaian bahan dari gudang produksi</p>
                     </div>
-                    <a href="{{ route('npk.index') }}" class="btn btn-sm btn-ghost border border-base-300">Lihat semua</a>
+                    <a href="{{ route('pemakaian-barang.index') }}" class="btn btn-sm btn-ghost border border-base-300">Lihat semua</a>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="table">
@@ -126,7 +126,7 @@
         'title' => 'Dashboard Produksi',
         'items' => [
             'Transfer dari gudang utama ke gudang produksi dicatat melalui transfer gudang.',
-            'NPK dari gudang produksi menjadi titik mulai pengurangan stok dan pembebanan biaya.',
+            'Pemakaian barang dari gudang produksi menjadi titik mulai pengurangan stok dan pembebanan biaya.',
             'Stock opname tetap dilakukan per gudang agar saldo produksi tetap akurat.',
             'Dashboard produksi hanya menampilkan aktivitas gudang yang memang di-assign ke user ini.',
         ],

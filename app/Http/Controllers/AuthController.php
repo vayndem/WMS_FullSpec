@@ -11,7 +11,7 @@ use App\Models\PenerimaanBarang;
 use App\Models\InvoiceLpb;
 use App\Models\InvoicePayment;
 use App\Models\Bahan;
-use App\Models\Npk;
+use App\Models\PemakaianBarang;
 use App\Models\StockOpname;
 use App\Models\PenerimaanJasa;
 use Illuminate\Support\Facades\DB;
@@ -80,7 +80,7 @@ class AuthController extends Controller
                 'total_materials' => Bahan::count(),
                 'stock_attention' => Bahan::whereColumn('stok_onhand', '<=', 'planning')->count(),
                 'receipts_today' => PenerimaanBarang::whereDate('tanggal', today())->count(),
-                'issues_today' => Npk::whereDate('tanggal', today())->count(),
+                'issues_today' => PemakaianBarang::whereDate('tanggal', today())->count(),
                 'open_opnames' => StockOpname::whereIn('status', [
                     StockOpname::DRAFT,
                     StockOpname::REJECTED,
@@ -91,7 +91,7 @@ class AuthController extends Controller
             ],
             'recentReceipts' => PenerimaanBarang::with('pembelian.supplier')
                 ->latest('tanggal')->latest('id')->limit(5)->get(),
-            'recentIssues' => Npk::with('barang')
+            'recentIssues' => PemakaianBarang::with('barang')
                 ->latest('tanggal')->latest('id')->limit(5)->get(),
         ];
     }
@@ -103,7 +103,7 @@ class AuthController extends Controller
         return [
             'productionMetrics' => [
                 'assigned_warehouses' => count($user->accessibleGudangIds()),
-                'issues_today' => Npk::whereIn('id_gudang_asal', $warehouseIds)->whereDate('tanggal', today())->count(),
+                'issues_today' => PemakaianBarang::whereIn('id_gudang_asal', $warehouseIds)->whereDate('tanggal', today())->count(),
                 'transfers_in_progress' => DB::table('transfer_gudangs')
                     ->where(function ($query) use ($warehouseIds) {
                         $query->whereIn('gudang_asal_id', $warehouseIds)
@@ -119,7 +119,7 @@ class AuthController extends Controller
                         StockOpname::APPROVED,
                     ])->count(),
             ],
-            'recentIssues' => Npk::with(['barang', 'gudangAsal'])
+            'recentIssues' => PemakaianBarang::with(['barang', 'gudangAsal'])
                 ->whereIn('id_gudang_asal', $warehouseIds)
                 ->latest('tanggal')->latest('id')->limit(5)->get(),
             'recentTransfers' => DB::table('transfer_gudangs as tg')

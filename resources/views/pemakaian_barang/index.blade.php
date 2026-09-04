@@ -7,17 +7,17 @@
                 <h3 class="text-2xl font-bold">Daftar Pengeluaran Barang (NPK)</h3>
                 <p class="text-base-content/60">Kelola seluruh transaksi pengeluaran barang gudang</p>
             </div>
-            @can('create', App\Models\Npk::class)
-                <button type="button" class="btn btn-primary" onclick="openAjaxModal('{{ route('npk.create') }}')">
-                    <i class="fa-solid fa-plus"></i> Buat NPK Baru
+            @can('create', App\Models\PemakaianBarang::class)
+                <button type="button" class="btn btn-primary" onclick="openAjaxModal('{{ route('pemakaian-barang.create') }}')">
+                    <i class="fa-solid fa-plus"></i> Buat Pemakaian Barang Baru
                 </button>
             @endcan
         </div>
 
         <div class="card border border-base-300 bg-base-100 shadow-sm"
             x-data="wmsDataTable({
-                url: '{{ route('npk.index') }}',
-                reportUrl: '{{ route('npk.report.pdf') }}',
+                url: '{{ route('pemakaian-barang.index') }}',
+                reportUrl: '{{ route('pemakaian-barang.report.pdf') }}',
                 extraParams: { status: 'POSTED' },
                 columns: [
                     { data: 'kode' }, { data: 'kode_datapesanan' }, { data: 'tanggal' }, { data: 'nama_barang', name: 'barang.nama' }, { data: 'jumlah_display', name: 'jumlah' },
@@ -95,11 +95,11 @@
                                 <td class="text-center">
                                     <div class="flex items-center justify-center gap-1">
                                         <button type="button" x-show="row.can_update" class="btn btn-outline btn-info btn-sm"
-                                            @click="openAjaxModal(`{{ url('npk') }}/${row.id}/edit`)">
+                                            @click="openAjaxModal(`{{ url('pemakaian-barang') }}/${row.id}/edit`)">
                                             <i class="fa-solid fa-pen-to-square"></i>
                                         </button>
                                         <button type="button" x-show="row.can_delete" class="btn btn-outline btn-error btn-sm"
-                                            @click="AppAlert.confirm('Hapus draft pengeluaran barang ini?').then(r => { if (r.isConfirmed) fetch(`{{ url('npk') }}/${row.id}`, { method: 'DELETE', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } }).then(r => r.json()).then(d => { AppAlert.auto(d); fetchData(); }).catch(() => AppAlert.error('Gagal menghapus data.')) })">
+                                            @click="AppAlert.confirm('Hapus draft pengeluaran barang ini?').then(r => { if (r.isConfirmed) fetch(`{{ url('pemakaian-barang') }}/${row.id}`, { method: 'DELETE', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } }).then(r => r.json()).then(d => { AppAlert.auto(d); fetchData(); }).catch(() => AppAlert.error('Gagal menghapus data.')) })">
                                             <i class="fa-solid fa-trash"></i>
                                         </button>
                                         <span x-show="!row.can_update && !row.can_delete">-</span>

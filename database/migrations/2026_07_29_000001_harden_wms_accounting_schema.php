@@ -33,7 +33,7 @@ return new class extends Migration
             $table->index(['id_bahan', 'flag_dipakai'], 'lpb_details_active_lot_index');
         });
 
-        Schema::table('npks', function (Blueprint $table) {
+        Schema::table('wms_pemakaian_barang', function (Blueprint $table) {
             $table->decimal('harga_satuan', 18, 4)->default(0)->after('jumlah');
             $table->decimal('total_nilai', 18, 2)->default(0)->after('harga_satuan');
         });
@@ -56,7 +56,7 @@ return new class extends Migration
             $table->foreign('gudang_id')->references('id')->on('gudangs')->onDelete('restrict');
         });
 
-        Schema::create('npk_stock_allocations', function (Blueprint $table) {
+        Schema::create('wms_pemakaian_barang_alokasi_stok', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('npk_id');
             $table->unsignedBigInteger('inventory_layer_id');
@@ -64,8 +64,8 @@ return new class extends Migration
             $table->decimal('unit_cost', 18, 4);
             $table->decimal('total_cost', 18, 2);
             $table->timestamps();
-            $table->unique(['npk_id', 'inventory_layer_id']);
-            $table->foreign('npk_id')->references('id')->on('npks')->onDelete('cascade');
+            $table->unique(['npk_id', 'inventory_layer_id'], 'pemakaian_barang_alokasi_stok_unique');
+            $table->foreign('npk_id')->references('id')->on('wms_pemakaian_barang')->onDelete('cascade');
             $table->foreign('inventory_layer_id')->references('id')->on('inventory_layers')->onDelete('restrict');
         });
 
@@ -143,9 +143,9 @@ return new class extends Migration
             $table->dropColumn(['voided_by', 'voided_at', 'void_reason']);
             $table->foreign('finance_user_id')->references('id')->on('users')->onDelete('restrict');
         });
-        Schema::dropIfExists('npk_stock_allocations');
+        Schema::dropIfExists('wms_pemakaian_barang_alokasi_stok');
         Schema::dropIfExists('inventory_layers');
-        Schema::table('npks', fn (Blueprint $table) => $table->dropColumn(['harga_satuan', 'total_nilai']));
+        Schema::table('wms_pemakaian_barang', fn (Blueprint $table) => $table->dropColumn(['harga_satuan', 'total_nilai']));
         Schema::table('wms_penerimaan_barang_detail', function (Blueprint $table) {
             $table->dropIndex('lpb_details_active_lot_index');
             $table->dropColumn(['jumlah_tersisa', 'nilai_awal']);

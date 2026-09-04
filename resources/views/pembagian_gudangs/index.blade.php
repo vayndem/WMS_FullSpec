@@ -23,7 +23,7 @@
                     <button class="btn btn-primary">Simpan Pembagian</button>
                 </div>
                 <div class="mt-3 flex flex-wrap gap-6">
-                    @foreach (['boleh_menerima' => 'Terima', 'boleh_npk' => 'NPK', 'boleh_transfer' => 'Transfer', 'boleh_opname' => 'Opname'] as $f => $label)
+                    @foreach (['boleh_menerima' => 'Terima', 'boleh_npk' => 'Pemakaian Barang', 'boleh_transfer' => 'Transfer', 'boleh_opname' => 'Opname'] as $f => $label)
                         <label class="flex cursor-pointer items-center gap-2">
                             <input type="hidden" name="{{ $f }}" value="0">
                             <input class="checkbox" type="checkbox" name="{{ $f }}" value="1" checked>
@@ -52,7 +52,7 @@
                                 <td>
                                     {{ collect([
                                         'Terima' => $r->boleh_menerima,
-                                        'NPK' => $r->boleh_npk,
+                                        'Pemakaian Barang' => $r->boleh_npk,
                                         'Transfer' => $r->boleh_transfer,
                                         'Opname' => $r->boleh_opname,
                                     ])->filter()->keys()->join(', ') ?: '-' }}

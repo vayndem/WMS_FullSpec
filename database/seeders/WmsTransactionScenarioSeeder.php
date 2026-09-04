@@ -14,7 +14,7 @@ use App\Models\Jurnal;
 use App\Models\KategoriBahan;
 use App\Models\PenerimaanBarang;
 use App\Models\PenerimaanBarangDetail;
-use App\Models\Npk;
+use App\Models\PemakaianBarang;
 use App\Models\PesananPembelian;
 use App\Models\PesananPembelianDetail;
 use App\Models\MaterialRequest;
@@ -183,7 +183,7 @@ class WmsTransactionScenarioSeeder extends Seeder
             );
             $material->update(['stok_onhand' => 17, 'stok_onpurchase' => 3]);
 
-            $npk = Npk::create([
+            $npk = PemakaianBarang::create([
                 'kode' => $numbers->external('NPK', $date->copy()->addDays(10)),
                 'kode_datapesanan' => 'DEMO-JOB-001',
                 'tanggal' => $date->copy()->addDays(10),
@@ -192,7 +192,7 @@ class WmsTransactionScenarioSeeder extends Seeder
                 'jumlah' => 4,
                 'jumlah_terkirim' => 4,
                 'tgl_terkirim' => $date->copy()->addDays(10),
-                'status' => Npk::POSTED,
+                'status' => PemakaianBarang::POSTED,
                 'keterangan' => 'Pemakaian demo empat kilogram',
                 'id_user' => 5,
                 'operator' => 'Demo Gudang',

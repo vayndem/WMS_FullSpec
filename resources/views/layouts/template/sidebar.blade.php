@@ -286,9 +286,9 @@
                     </li>
                 @endif
 
-                @can('viewAny', App\Models\Npk::class)
-                    <li class="{{ request()->routeIs('npk.*') ? 'active' : '' }}">
-                        <a href="{{ route('npk.index') }}" class="svg-icon">
+                @can('viewAny', App\Models\PemakaianBarang::class)
+                    <li class="{{ request()->routeIs('pemakaian-barang.*') ? 'active' : '' }}">
+                        <a href="{{ route('pemakaian-barang.index') }}" class="svg-icon">
                             <i>
                                 <svg class="svg-icon" id="mm-npk" width="20" xmlns="http://www.w3.org/2000/svg"
                                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -296,7 +296,7 @@
                                         d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                                 </svg>
                             </i>
-                            <span class="ms-2">NPK</span>
+                            <span class="ms-2">Pemakaian Barang</span>
                         </a>
                     </li>
                 @endcan

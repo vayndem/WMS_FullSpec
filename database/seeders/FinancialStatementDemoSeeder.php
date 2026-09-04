@@ -12,7 +12,7 @@ use App\Models\Jurnal;
 use App\Models\KategoriBahan;
 use App\Models\PenerimaanBarang;
 use App\Models\PenerimaanBarangDetail;
-use App\Models\Npk;
+use App\Models\PemakaianBarang;
 use App\Models\PesananPembelian;
 use App\Models\PesananPembelianDetail;
 use App\Models\StockOpname;
@@ -262,8 +262,8 @@ class FinancialStatementDemoSeeder extends Seeder
         Carbon $date,
         float $quantity,
         string $job
-    ): Npk {
-        $npk = Npk::create([
+    ): PemakaianBarang {
+        $npk = PemakaianBarang::create([
             'kode' => $numbers->external('NPK', $date),
             'kode_datapesanan' => $job,
             'tanggal' => $date,
@@ -272,7 +272,7 @@ class FinancialStatementDemoSeeder extends Seeder
             'jumlah' => $quantity,
             'jumlah_terkirim' => $quantity,
             'tgl_terkirim' => $date,
-            'status' => Npk::POSTED,
+            'status' => PemakaianBarang::POSTED,
             'keterangan' => "Pemakaian demo laporan keuangan {$job}",
             'id_user' => 5,
             'operator' => 'Demo Gudang',

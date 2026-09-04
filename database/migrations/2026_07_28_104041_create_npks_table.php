@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('npks', function (Blueprint $table) {
+        Schema::create('wms_pemakaian_barang', function (Blueprint $table) {
             $table->id();
             $table->string('kode', 100);
             $table->string('kode_datapesanan', 100)->nullable();
@@ -34,6 +34,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('npks');
+        Schema::dropIfExists('wms_pemakaian_barang');
     }
 };

@@ -32,7 +32,7 @@
                         <option value="">Semua sumber</option>
                         <option value="MANUAL">Manual</option>
                         <option value="LPB">Penerimaan Barang</option>
-                        <option value="NPK">NPK</option>
+                        <option value="NPK">Pemakaian Barang</option>
                         <option value="INVOICE_SUPPLIER">Invoice Supplier</option>
                         <option value="PELUNASAN_HUTANG">Pelunasan Hutang</option>
                         <option value="REVERSAL">Reversal</option>

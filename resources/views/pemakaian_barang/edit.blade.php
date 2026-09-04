@@ -1,44 +1,42 @@
-<dialog id="modal-create-npk" class="modal">
+<dialog id="modal-edit-npk" class="modal">
     <div class="modal-box max-w-4xl p-0 overflow-hidden">
-        <div class="bg-primary px-6 py-4 text-primary-content">
-            <h3 class="text-lg font-bold"><i class="fa-solid fa-boxes-packing"></i> Buat Pengeluaran Barang (NPK) Baru
-            </h3>
+        <div class="bg-info px-6 py-4 text-info-content">
+            <h3 class="text-lg font-bold"><i class="fa-solid fa-pen-to-square"></i> Edit Pengeluaran Barang
+                ({{ $npk->kode }})</h3>
         </div>
-        <form action="{{ route('npk.store') }}" method="POST" @submit.prevent="submitAjaxForm($event)"
+        <form action="{{ route('pemakaian-barang.update', $npk->id) }}" method="POST" @submit.prevent="submitAjaxForm($event)"
             class="flex flex-col">
             @csrf
+            @method('PUT')
             <div class="grid grid-cols-1 gap-4 p-6 md:grid-cols-2">
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Kode NPK</span></label>
-                    <input type="text" name="kode" class="input input-bordered" value="{{ $documentNumber }}"
+                    <input type="text" name="kode" class="input input-bordered" value="{{ $npk->kode }}"
                         readonly>
-                    <span class="label-text-alt mt-1 text-base-content/50">Format: NPK + tanggal + nomor urut.</span>
+                    <span class="label-text-alt mt-1 text-base-content/50">Kode tidak dapat diubah.</span>
                 </div>
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Kode Pesanan</span></label>
                     <input type="text" name="kode_datapesanan" class="input input-bordered"
-                        placeholder="Masukkan kode pesanan (opsional)">
+                        value="{{ $npk->kode_datapesanan }}">
                 </div>
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Tanggal Transaksi <span
                                 class="text-error">*</span></span></label>
-                    <input type="date" name="tanggal" class="input input-bordered" value="{{ date('Y-m-d') }}"
+                    <input type="date" name="tanggal" class="input input-bordered" value="{{ $npk->tanggal->format('Y-m-d') }}"
                         required>
                 </div>
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Pilih Barang <span
                                 class="text-error">*</span></span></label>
-                    <select name="id_barang" id="npk_bahan" class="select select-bordered" required data-app-picker
-                        data-placeholder="Cari nama barang, kategori, atau satuan...">
+                    <select name="id_barang" id="npk_edit_bahan" class="select select-bordered" required data-app-picker
+                        data-placeholder="Cari barang...">
                         <option value="">-- Pilih Barang --</option>
                         @foreach ($bahans as $bahan)
                             <option value="{{ $bahan->id }}" data-unit="{{ $bahan->satuan }}"
                                 data-small-unit="{{ $bahan->hasSmallUnit() ? $bahan->satuan_kecil : '' }}"
                                 data-factor="{{ $bahan->hasSmallUnit() ? $bahan->berat_kecil : 1 }}"
-                                data-stocks='@json($bahan->stokGudangs->pluck('stok_tersedia', 'gudang_id'))'
-                                data-subtitle="{{ $bahan->kategoriBahan->katnama ?? 'Kategori belum ditentukan' }}"
-                                data-meta="Stok {{ number_format((float) $bahan->stok_onhand, 6, ',', '.') }} {{ $bahan->satuan }}{{ $bahan->hasSmallUnit() ? ' · 1 ' . $bahan->satuan . ' = ' . number_format((float) $bahan->berat_kecil, 6, ',', '.') . ' ' . $bahan->satuan_kecil : '' }}"
-                                data-search="{{ $bahan->satuan }} {{ $bahan->satuan_kecil }}">
+                                @selected($npk->id_barang == $bahan->id)>
                                 {{ $bahan->nama }}
                             </option>
                         @endforeach
@@ -46,16 +44,15 @@
                 </div>
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Gudang Asal</span></label>
-                    <select name="id_gudang_asal" id="npk_gudang" class="select select-bordered" data-app-picker
+                    <select name="id_gudang_asal" class="select select-bordered" data-app-picker
                         data-placeholder="Cari gudang asal...">
                         <option value="">-- Pilih Gudang Asal --</option>
                         @foreach ($gudangs as $gudang)
-                            <option value="{{ $gudang->id }}" data-subtitle="Lokasi sumber stok">{{ $gudang->nama }}
+                            <option value="{{ $gudang->id }}"
+                                {{ $npk->id_gudang_asal == $gudang->id ? 'selected' : '' }}>{{ $gudang->nama }}
                             </option>
                         @endforeach
                     </select>
-                    <span id="npk_stock_help" class="label-text-alt mt-1 text-base-content/50">Pilih gudang dan barang
-                        untuk melihat saldo.</span>
                 </div>
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Gudang Tujuan</span></label>
@@ -63,53 +60,56 @@
                         data-placeholder="Cari gudang tujuan...">
                         <option value="">-- Pilih Gudang Tujuan --</option>
                         @foreach ($gudangs as $gudang)
-                            <option value="{{ $gudang->id }}" data-subtitle="Lokasi tujuan pemakaian">
-                                {{ $gudang->nama }}</option>
+                            <option value="{{ $gudang->id }}"
+                                {{ $npk->id_gudang_tujuan == $gudang->id ? 'selected' : '' }}>{{ $gudang->nama }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Reservasi / Picking
                             (Opsional)</span></label>
-                    <select name="inventory_reservation_id" class="select select-bordered" data-app-picker
-                        data-placeholder="Pilih reservasi stok...">
+                    <select name="inventory_reservation_id" class="select select-bordered" data-app-picker>
                         <option value="">Tanpa reservasi</option>
                         @foreach ($reservations as $reservation)
-                            <option value="{{ $reservation->id }}">{{ $reservation->number }} ·
-                                {{ $reservation->gudang->nama }} · {{ $reservation->bahan->nama }} ·
-                                {{ $reservation->quantity }}</option>
+                            <option value="{{ $reservation->id }}"
+                                {{ $npk->inventory_reservation_id == $reservation->id ? 'selected' : '' }}>
+                                {{ $reservation->number }} · {{ $reservation->gudang->nama }} ·
+                                {{ $reservation->bahan->nama }} · {{ $reservation->quantity }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Jumlah Barang <span
                                 class="text-error">*</span></span></label>
-                    <input type="number" step="any" name="jumlah" class="input input-bordered" placeholder="0"
-                        required>
-                    <span id="npk_unit_help" class="label-text-alt mt-1 text-base-content/50">Pilih barang untuk melihat
-                        satuan NPK.</span>
+                    <input type="number" step="any" name="jumlah" class="input input-bordered"
+                        value="{{ $npk->jumlah }}" required>
+                    <span id="npk_edit_unit_help" class="label-text-alt mt-1 text-base-content/50"></span>
                 </div>
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Status Transaksi <span
                                 class="text-error">*</span></span></label>
                     <select name="status" class="select select-bordered" required>
-                        <option value="DRAFT">Draft (Belum Potong Stok & COA)</option>
-                        <option value="POSTED">Keluar (Potong Stok & Catat COA)</option>
+                        <option value="DRAFT" {{ $npk->status === \App\Models\PemakaianBarang::DRAFT ? 'selected' : '' }}>Draft
+                            (Belum Potong Stok & COA)</option>
+                        <option value="POSTED" {{ $npk->status === \App\Models\PemakaianBarang::POSTED ? 'selected' : '' }}>Keluar
+                            (Potong Stok & Catat COA)</option>
                     </select>
                 </div>
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Operator / Penanggung
                             Jawab</span></label>
-                    <input type="text" name="operator" class="input input-bordered" placeholder="Nama operator">
+                    <input type="text" name="operator" class="input input-bordered" value="{{ $npk->operator }}">
                 </div>
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Keterangan</span></label>
-                    <textarea name="keterangan" class="textarea textarea-bordered" rows="1" placeholder="Catatan tambahan"></textarea>
+                    <textarea name="keterangan" class="textarea textarea-bordered" rows="1">{{ $npk->keterangan }}</textarea>
                 </div>
             </div>
             <div class="flex justify-end gap-2 border-t border-base-300 bg-base-100 px-6 py-4">
                 <button type="button" class="btn btn-ghost" onclick="closeAjaxModal(this)">Batal</button>
-                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Simpan</button>
+                <button type="submit" class="btn btn-info"><i class="fa-solid fa-rotate"></i> Perbarui</button>
             </div>
         </form>
     </div>
@@ -117,9 +117,9 @@
 
 <script>
     (function() {
-        function refreshNpkUnit() {
-            const option = document.querySelector('#npk_bahan')?.selectedOptions[0];
-            const help = document.querySelector('#npk_unit_help');
+        function refreshEditNpkUnit() {
+            const option = document.querySelector('#npk_edit_bahan')?.selectedOptions[0];
+            const help = document.querySelector('#npk_edit_unit_help');
             if (!option || !help) return;
             const small = option.dataset.smallUnit;
             const base = option.dataset.unit || '';
@@ -128,21 +128,7 @@
                 `Input dalam ${small}. Konversi: 1 ${base} = ${factor.toLocaleString('id-ID')} ${small}.` :
                 `Input dalam satuan utama ${base}.`;
         }
-
-        function refreshNpkStock() {
-            const option = document.querySelector('#npk_bahan')?.selectedOptions[0];
-            const warehouse = document.querySelector('#npk_gudang')?.value;
-            const help = document.querySelector('#npk_stock_help');
-            if (!option || !warehouse || !help) return;
-            const stocks = JSON.parse(option.dataset.stocks || '{}');
-            help.textContent =
-                `Saldo gudang: ${Number(stocks[warehouse] || 0).toLocaleString('id-ID')} ${option.dataset.unit || ''}`;
-        }
-        document.querySelector('#npk_bahan')?.addEventListener('change', () => {
-            refreshNpkUnit();
-            refreshNpkStock();
-        });
-        document.querySelector('#npk_gudang')?.addEventListener('change', refreshNpkStock);
-        refreshNpkUnit();
+        document.querySelector('#npk_edit_bahan')?.addEventListener('change', refreshEditNpkUnit);
+        refreshEditNpkUnit();
     })();
 </script>

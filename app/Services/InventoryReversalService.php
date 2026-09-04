@@ -7,7 +7,7 @@ use App\Models\Bahan;
 use App\Models\InventoryLayer;
 use App\Models\PenerimaanBarang;
 use App\Models\PenerimaanBarangDetail;
-use App\Models\Npk;
+use App\Models\PemakaianBarang;
 use App\Models\PesananPembelianDetail;
 use App\Models\ReturPembelian;
 use Illuminate\Support\Facades\Auth;
@@ -23,20 +23,20 @@ class InventoryReversalService
         private AccountingPeriodService $periods,
     ) {}
 
-    public function reverseNpk(Npk $npk, string $reason): DocumentReversal
+    public function reverseNpk(PemakaianBarang $npk, string $reason): DocumentReversal
     {
         $this->periods->assertOpen(now(), 'Reversal NPK');
         return DB::transaction(function () use ($npk, $reason) {
-            $npk = Npk::lockForUpdate()->findOrFail($npk->id);
+            $npk = PemakaianBarang::lockForUpdate()->findOrFail($npk->id);
             $this->assertNotReversed('NPK', $npk->id);
-            if ($npk->status !== Npk::POSTED) throw new RuntimeException('Hanya NPK posted yang dapat dibalik.');
+            if ($npk->status !== PemakaianBarang::POSTED) throw new RuntimeException('Hanya NPK posted yang dapat dibalik.');
             $unitCost = (float) $npk->harga_satuan;
             $quantity = (float) $npk->jumlah_stok > 0 ? (float) $npk->jumlah_stok : (float) $npk->jumlah;
             if ($quantity <= 0) throw new RuntimeException('Jumlah NPK tidak valid untuk reversal.');
             $this->accounting->restoreStock($npk, false);
             $this->stock->masuk((int) $npk->id_gudang_asal, (int) $npk->id_barang, $quantity, $unitCost, 'REVERSAL_NPK', 'NPK', $npk->id, $reason);
             $journal = $this->accounting->reverseAutomaticJournal('NPK', $npk->id, "Reversal NPK {$npk->kode}: {$reason}");
-            $npk->update(['status' => Npk::REVERSED]);
+            $npk->update(['status' => PemakaianBarang::REVERSED]);
             return $this->record('NPK', $npk->id, $reason, $journal->id);
         });
     }

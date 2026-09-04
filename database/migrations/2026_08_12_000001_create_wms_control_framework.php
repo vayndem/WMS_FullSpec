@@ -185,7 +185,7 @@ return new class extends Migration
             $table->index(['gudang_id', 'bahan_id', 'status']);
         });
 
-        Schema::table('npks', function (Blueprint $table) {
+        Schema::table('wms_pemakaian_barang', function (Blueprint $table) {
             $table->foreignId('inventory_reservation_id')->nullable()->constrained('inventory_reservations')->nullOnDelete();
         });
 
@@ -231,7 +231,7 @@ return new class extends Migration
         Schema::dropIfExists('replenishment_suggestions');
         Schema::dropIfExists('picking_order_lines');
         Schema::dropIfExists('picking_orders');
-        Schema::table('npks', fn (Blueprint $table) => $table->dropConstrainedForeignId('inventory_reservation_id'));
+        Schema::table('wms_pemakaian_barang', fn (Blueprint $table) => $table->dropConstrainedForeignId('inventory_reservation_id'));
         Schema::dropIfExists('inventory_reservations');
         Schema::table('detail_transfer_gudangs', fn (Blueprint $table) => $table->dropColumn(['jumlah_dikirim', 'jumlah_diterima', 'jumlah_selisih']));
         Schema::table('transfer_gudangs', function (Blueprint $table) {

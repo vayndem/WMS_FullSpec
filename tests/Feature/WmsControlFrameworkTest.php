@@ -12,7 +12,7 @@ use App\Models\PenerimaanBarang;
 use App\Models\InventoryReservation;
 use App\Models\Gudang;
 use App\Models\TransferGudang;
-use App\Models\Npk;
+use App\Models\PemakaianBarang;
 use App\Models\ReturPembelian;
 use App\Models\StokGudang;
 use App\Models\Supplier;
@@ -120,14 +120,14 @@ class WmsControlFrameworkTest extends TestCase
     {
         $user = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);
         Auth::login($user);
-        $npk = Npk::where('status', Npk::POSTED)->firstOrFail();
+        $npk = PemakaianBarang::where('status', PemakaianBarang::POSTED)->firstOrFail();
         $material = Bahan::findOrFail($npk->id_barang);
         $before = (float) $material->stok_onhand;
         $quantity = (float) $npk->jumlah_stok > 0 ? (float) $npk->jumlah_stok : (float) $npk->jumlah;
 
         $reversal = app(InventoryReversalService::class)->reverseNpk($npk, 'Koreksi integration test reversal');
 
-        $this->assertSame(Npk::REVERSED, $npk->fresh()->status);
+        $this->assertSame(PemakaianBarang::REVERSED, $npk->fresh()->status);
         $this->assertSame($before + $quantity, (float) $material->fresh()->stok_onhand);
         $this->assertNotNull($reversal->reversal_journal_id);
     }

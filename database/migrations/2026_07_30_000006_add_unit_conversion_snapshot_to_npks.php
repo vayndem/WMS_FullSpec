@@ -9,22 +9,22 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('npks', function (Blueprint $table) {
+        Schema::table('wms_pemakaian_barang', function (Blueprint $table) {
             $table->decimal('jumlah_stok', 18, 6)->nullable()->after('jumlah')
                 ->comment('Kuantitas yang mengurangi stok dalam satuan utama bahan');
             $table->string('satuan_transaksi', 50)->nullable()->after('jumlah_stok')
                 ->comment('Snapshot satuan yang dipakai user saat membuat NPK');
         });
 
-        DB::table('npks')->whereNull('jumlah_stok')->update([
+        DB::table('wms_pemakaian_barang')->whereNull('jumlah_stok')->update([
             'jumlah_stok' => DB::raw('jumlah'),
-            'satuan_transaksi' => DB::raw('(SELECT satuan FROM bahans WHERE bahans.id = npks.id_barang)'),
+            'satuan_transaksi' => DB::raw('(SELECT satuan FROM bahans WHERE bahans.id = wms_pemakaian_barang.id_barang)'),
         ]);
     }
 
     public function down(): void
     {
-        Schema::table('npks', function (Blueprint $table) {
+        Schema::table('wms_pemakaian_barang', function (Blueprint $table) {
             $table->dropColumn(['jumlah_stok', 'satuan_transaksi']);
         });
     }

@@ -96,16 +96,16 @@
             'note' =>
                 'Penerimaan barang yang sudah diposting terkunci. Koreksi tidak dilakukan dengan mengubah jurnal secara langsung.',
         ],
-        'npk.' => [
-            'title' => 'Panduan NPK',
-            'intro' => 'NPK mencatat barang yang digunakan atau keluar dari gudang.',
+        'pemakaian-barang.' => [
+            'title' => 'Panduan Pemakaian Barang',
+            'intro' => 'Pemakaian Barang (NPK) mencatat barang yang digunakan atau keluar dari gudang.',
             'steps' => [
                 'Pilih barang dan gudang asal.',
                 'Masukkan jumlah pemakaian serta referensi pesanan.',
                 'Simpan draft bila belum final atau pilih keluar untuk posting.',
                 'Sistem menghitung harga rata-rata lima layer aktif dan mengurangi layer secara FIFO.',
             ],
-            'note' => 'NPK akan ditolak bila stok on hand atau layer persediaan tidak mencukupi.',
+            'note' => 'Pemakaian barang akan ditolak bila stok on hand atau layer persediaan tidak mencukupi.',
         ],
         'invoice-lpb.' => [
             'title' => 'Panduan Invoice Supplier',
@@ -209,7 +209,7 @@
                 'Buka kembali hanya dengan alasan koreksi yang dapat diaudit.',
             ],
             'note' =>
-                'Penerimaan barang, NPK, invoice, pembayaran, opname, dan jurnal manual dalam periode terkunci akan ditolak oleh server.',
+                'Penerimaan barang, pemakaian barang, invoice, pembayaran, opname, dan jurnal manual dalam periode terkunci akan ditolak oleh server.',
         ],
         'tax-rate.' => [
             'title' => 'Panduan Tarif Pajak',

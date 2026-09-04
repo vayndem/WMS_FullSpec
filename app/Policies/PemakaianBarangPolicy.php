@@ -3,9 +3,9 @@
 namespace App\Policies;
 
 use App\Models\User;
-use App\Models\Npk;
+use App\Models\PemakaianBarang;
 
-class NpkPolicy
+class PemakaianBarangPolicy
 {
     private function canViewNpk(User $user): bool
     {
@@ -17,12 +17,12 @@ class NpkPolicy
         return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING]);
     }
 
-    private function canEditNpk(Npk $npk): bool
+    private function canEditNpk(PemakaianBarang $npk): bool
     {
-        return $npk->status === Npk::DRAFT;
+        return $npk->status === PemakaianBarang::DRAFT;
     }
 
-    private function canAccessNpkWarehouse(User $user, Npk $npk): bool
+    private function canAccessNpkWarehouse(User $user, PemakaianBarang $npk): bool
     {
         if (!$user->isProduction()) {
             return true;
@@ -36,7 +36,7 @@ class NpkPolicy
         return $this->canViewNpk($user);
     }
 
-    public function view(User $user, Npk $npk): bool
+    public function view(User $user, PemakaianBarang $npk): bool
     {
         return $this->canViewNpk($user) && $this->canAccessNpkWarehouse($user, $npk);
     }
@@ -46,7 +46,7 @@ class NpkPolicy
         return $this->canViewNpk($user);
     }
 
-    public function update(User $user, Npk $npk): bool
+    public function update(User $user, PemakaianBarang $npk): bool
     {
         if (!$this->canViewNpk($user) || !$this->canAccessNpkWarehouse($user, $npk)) {
             return false;
@@ -55,7 +55,7 @@ class NpkPolicy
         return $this->canEditNpk($npk);
     }
 
-    public function delete(User $user, Npk $npk): bool
+    public function delete(User $user, PemakaianBarang $npk): bool
     {
         if (!$this->canViewNpk($user) || !$this->canAccessNpkWarehouse($user, $npk)) {
             return false;
