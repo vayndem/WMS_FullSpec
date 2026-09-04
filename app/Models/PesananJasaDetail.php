@@ -32,6 +32,6 @@ class PesananJasaDetail extends Model
     }
     public function bapDetails(): HasMany
     {
-        return $this->hasMany(PenerimaanJasaDetail::class);
+        return $this->hasMany(PenerimaanJasaDetail::class, 'service_po_detail_id');
     }
 }

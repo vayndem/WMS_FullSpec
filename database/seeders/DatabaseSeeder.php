@@ -21,7 +21,7 @@ use App\Models\WarehouseLocation;
 use App\Models\InventoryLot;
 use App\Services\DocumentNumberService;
 use App\Services\ThreeWayMatchService;
-use App\Models\InvoiceLpb;
+use App\Models\FakturPembelian;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -255,7 +255,7 @@ class DatabaseSeeder extends Seeder
         $accountingUser = User::where('type', User::ROLE_ACCOUNTING)->first();
         if ($accountingUser) {
             Auth::setUser($accountingUser);
-            foreach (InvoiceLpb::where('status', '!=', InvoiceLpb::VOID)->get() as $invoice) {
+            foreach (FakturPembelian::where('status', '!=', FakturPembelian::VOID)->get() as $invoice) {
                 app(ThreeWayMatchService::class)->evaluate($invoice);
             }
         }

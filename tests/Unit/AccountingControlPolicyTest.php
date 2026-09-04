@@ -12,8 +12,8 @@ use App\Policies\AccountingReconciliationPolicy;
 use App\Policies\JurnalPolicy;
 use App\Policies\TaxRatePolicy;
 use App\Policies\BahanPolicy;
-use App\Policies\InvoiceLpbPolicy;
-use App\Models\InvoiceLpb;
+use App\Policies\FakturPembelianPolicy;
+use App\Models\FakturPembelian;
 use PHPUnit\Framework\TestCase;
 
 class AccountingControlPolicyTest extends TestCase
@@ -70,9 +70,9 @@ class AccountingControlPolicyTest extends TestCase
 
     public function test_finance_can_pay_but_cannot_edit_invoice_header(): void
     {
-        $policy = new InvoiceLpbPolicy();
+        $policy = new FakturPembelianPolicy();
         $paymentUser = new User(['type' => User::ROLE_FINANCE]);
-        $invoice = new InvoiceLpb(['status' => InvoiceLpb::UNPAID, 'sisa_tagihan' => 100000]);
+        $invoice = new FakturPembelian(['status' => FakturPembelian::UNPAID, 'sisa_tagihan' => 100000]);
 
         $this->assertTrue($policy->pay($paymentUser, $invoice));
         $this->assertTrue($policy->voidPayment($paymentUser, $invoice));

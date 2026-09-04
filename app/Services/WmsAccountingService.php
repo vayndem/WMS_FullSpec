@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\AccountingSetting;
-use App\Models\InvoiceLpb;
-use App\Models\InvoicePayment;
+use App\Models\FakturPembelian;
+use App\Models\PembayaranFaktur;
 use App\Models\Jurnal;
 use App\Models\PenerimaanBarang;
 use App\Models\PenerimaanBarangDetail;
@@ -160,7 +160,7 @@ class WmsAccountingService
         if ($deleteJournal) $this->deleteAutomaticJournal('NPK', $npk->id);
     }
 
-    public function postInvoice(InvoiceLpb $invoice): Jurnal
+    public function postInvoice(FakturPembelian $invoice): Jurnal
     {
         $this->periods->assertOpen($invoice->tanggal, 'Invoice supplier');
         $invoice->loadMissing(['receipts.lpb.details.kategori', 'receipts.lpb.serviceDetails.servicePoDetail.category']);
@@ -198,7 +198,7 @@ class WmsAccountingService
         return $this->post("INV-{$invoice->no_invoice}", $invoice->tanggal, 'INVOICE_SUPPLIER', $invoice->id, "Invoice supplier {$invoice->no_invoice}", $lines);
     }
 
-    public function postPayment(InvoicePayment $payment): Jurnal
+    public function postPayment(PembayaranFaktur $payment): Jurnal
     {
         $this->periods->assertOpen($payment->tanggal_pembayaran, 'Pembayaran supplier');
         $payment->loadMissing('invoice', 'sumberUangMuka');

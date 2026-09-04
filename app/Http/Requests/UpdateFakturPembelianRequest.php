@@ -2,17 +2,18 @@
 
 namespace App\Http\Requests;
 
-use App\Models\InvoiceLpb;
-use App\Models\PenerimaanBarang;
+use App\Models\FakturPembelian;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Validator;
 
-class StoreInvoiceLpbRequest extends FormRequest
+class UpdateFakturPembelianRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('create', InvoiceLpb::class) ?? false;
+        $id = $this->route('faktur_pembelian') ?? $this->route('id');
+        $invoice = FakturPembelian::find($id);
+
+        return $invoice ? ($this->user()?->can('update', $invoice) ?? false) : false;
     }
 
     protected function prepareForValidation(): void
@@ -28,11 +29,13 @@ class StoreInvoiceLpbRequest extends FormRequest
 
     public function rules(): array
     {
+        $idTarget = $this->route('faktur_pembelian') ?? $this->route('id');
+
         return [
-            'no_invoice'              => 'required|string|max:100|unique:invoice_lpbs,no_invoice',
+            'no_invoice'              => 'required|string|max:100|unique:wms_faktur_pembelian,no_invoice,' . $idTarget,
+            'kode_supplier'           => 'required|exists:suppliers,id',
             'lpb_ids'                 => 'required|array|min:1',
             'lpb_ids.*'               => 'required|integer|distinct|exists:wms_penerimaan_barang,id',
-            'kode_supplier'           => 'required|exists:suppliers,id',
             'tanggal'                 => 'required|date',
             'tgl_deadline_pembayaran' => 'nullable|date',
             'is_ppn'                  => 'required|boolean',
@@ -45,33 +48,5 @@ class StoreInvoiceLpbRequest extends FormRequest
             'ongkir'                  => 'nullable|numeric|min:0',
             'note'                    => 'nullable|string',
         ];
-    }
-
-    public function after(): array
-    {
-        return [function (Validator $validator) {
-            if ($validator->errors()->isNotEmpty()) {
-                return;
-            }
-
-            $lpbs = PenerimaanBarang::query()
-                ->whereIn('id', $this->input('lpb_ids', []))
-                ->whereNull('no_invoice')
-                ->where('status', PenerimaanBarang::POSTED)
-                ->with('pembelian:id,no_po,supplier_id')
-                ->get();
-
-            $supplierIds = $lpbs->pluck('pembelian.supplier_id')->filter()->unique();
-            if (
-                $lpbs->count() !== count($this->input('lpb_ids', []))
-                || $supplierIds->count() !== 1
-                || (int) $supplierIds->first() !== (int) $this->input('kode_supplier')
-            ) {
-                $validator->errors()->add(
-                    'lpb_ids',
-                    'LPB/BAP harus tersedia dan seluruhnya berasal dari supplier yang dipilih.'
-                );
-            }
-        }];
     }
 }

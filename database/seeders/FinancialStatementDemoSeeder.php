@@ -6,8 +6,8 @@ use App\Models\Bahan;
 use App\Models\ChartOfAccount;
 use App\Models\Gudang;
 use App\Models\InventoryLayer;
-use App\Models\InvoiceLpb;
-use App\Models\InvoicePayment;
+use App\Models\FakturPembelian;
+use App\Models\PembayaranFaktur;
 use App\Models\Jurnal;
 use App\Models\KategoriBahan;
 use App\Models\PenerimaanBarang;
@@ -198,8 +198,8 @@ class FinancialStatementDemoSeeder extends Seeder
         ?int $coaSelisihId = null,
         float $selisih = 0,
         ?string $jenisSelisih = null
-    ): InvoiceLpb {
-        $invoice = InvoiceLpb::create([
+    ): FakturPembelian {
+        $invoice = FakturPembelian::create([
             'no_invoice' => $numbers->external('INV', $invoiceDate),
             'kode_supplier' => $lpb->pembelian->supplier_id,
             'tanggal' => $invoiceDate,
@@ -213,7 +213,7 @@ class FinancialStatementDemoSeeder extends Seeder
             'total_pembayaran' => 0,
             'sisa_tagihan' => $grandTotal,
             'note' => 'Invoice demo laporan keuangan',
-            'status' => InvoiceLpb::UNPAID,
+            'status' => FakturPembelian::UNPAID,
         ]);
         $invoice->receipts()->create(['lpb_id' => $lpb->id, 'amount' => $grandTotal]);
         $lpb->update(['no_invoice' => $invoice->no_invoice]);
@@ -222,7 +222,7 @@ class FinancialStatementDemoSeeder extends Seeder
         $cash = $grandTotal - $selisih;
         $calc = $allocation->calculate($invoice->sisa_tagihan, $cash, 0, $selisih, $jenisSelisih);
 
-        $payment = InvoicePayment::create([
+        $payment = PembayaranFaktur::create([
             'payment_number' => $numbers->financial('PY', $paymentDate),
             'invoice_lpb_id' => $invoice->id,
             'tanggal_pembayaran' => $paymentDate,
@@ -246,7 +246,7 @@ class FinancialStatementDemoSeeder extends Seeder
         $invoice->update([
             'total_pembayaran' => $totalPembayaran,
             'sisa_tagihan' => max(0, $invoice->grand_total - $totalPembayaran),
-            'status' => InvoiceLpb::paymentStatus((float) $invoice->grand_total, (float) $totalPembayaran),
+            'status' => FakturPembelian::paymentStatus((float) $invoice->grand_total, (float) $totalPembayaran),
             'pph' => $invoice->payments()->sum('potongan_pph23'),
         ]);
         $accounting->postPayment($payment);

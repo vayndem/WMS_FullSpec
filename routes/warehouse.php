@@ -70,7 +70,7 @@ Route::middleware('auth')->group(function () {
         Route::post('reservations/{reservation}/pick', [WarehouseExecutionController::class, 'createPick'])->name('reservations.pick');
         Route::post('picking-orders/{pickingOrder}/complete', [WarehouseExecutionController::class, 'completePick'])->name('picking-orders.complete');
         Route::post('replenishment', [WarehouseExecutionController::class, 'replenish'])->name('replenishment');
-        Route::post('invoices/{invoice}/match', [InventoryFinancialControlController::class, 'matchInvoice'])->name('invoices.match');
+        Route::post('faktur-pembelian/{invoice}/match', [InventoryFinancialControlController::class, 'matchInvoice'])->name('faktur-pembelian.match');
         Route::post('landed-costs', [InventoryFinancialControlController::class, 'storeLandedCost'])->name('landed-costs.store');
         Route::post('landed-costs/{landedCost}/post', [InventoryFinancialControlController::class, 'postLandedCost'])->name('landed-costs.post');
         Route::post('penerimaan-barang/{lpb}/reverse', [InventoryFinancialControlController::class, 'reverseLpb'])->name('penerimaan-barang.reverse');

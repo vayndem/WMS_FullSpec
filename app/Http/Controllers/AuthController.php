@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\MaterialRequest;
 use App\Models\PesananPembelian;
 use App\Models\PenerimaanBarang;
-use App\Models\InvoiceLpb;
-use App\Models\InvoicePayment;
+use App\Models\FakturPembelian;
+use App\Models\PembayaranFaktur;
 use App\Models\Bahan;
 use App\Models\PemakaianBarang;
 use App\Models\StockOpname;
@@ -165,8 +165,8 @@ class AuthController extends Controller
                 ->whereHas('details', fn($query) => $query->whereColumn('diterima', '<', 'jumlah'))
                 ->count(),
             'unbilled_receipts' => PenerimaanBarang::whereNull('no_invoice')->count(),
-            'unpaid_invoices' => InvoiceLpb::where('status', '!=', InvoiceLpb::VOID)->where('sisa_tagihan', '>', 0)->count(),
-            'overdue_invoices' => InvoiceLpb::where('status', '!=', InvoiceLpb::VOID)->where('sisa_tagihan', '>', 0)
+            'unpaid_invoices' => FakturPembelian::where('status', '!=', FakturPembelian::VOID)->where('sisa_tagihan', '>', 0)->count(),
+            'overdue_invoices' => FakturPembelian::where('status', '!=', FakturPembelian::VOID)->where('sisa_tagihan', '>', 0)
                 ->whereDate('tgl_deadline_pembayaran', '<', today())->count(),
             'stock_attention' => Bahan::whereColumn('stok_onhand', '<', 'planning')->count(),
         ];
@@ -182,7 +182,7 @@ class AuthController extends Controller
         $unbilledReceipts = PenerimaanBarang::with('pembelian.supplier')
             ->whereNull('no_invoice')->latest('tanggal')->limit(5)->get();
 
-        $dueInvoices = InvoiceLpb::with('supplier')->where('status', '!=', InvoiceLpb::VOID)
+        $dueInvoices = FakturPembelian::with('supplier')->where('status', '!=', FakturPembelian::VOID)
             ->where('sisa_tagihan', '>', 0)
             ->orderByRaw('tgl_deadline_pembayaran IS NULL')
             ->orderBy('tgl_deadline_pembayaran')->limit(5)->get();
@@ -192,29 +192,29 @@ class AuthController extends Controller
 
     private function paymentDashboardData(): array
     {
-        $activeInvoices = InvoiceLpb::query()->where('status', '!=', InvoiceLpb::VOID)->where('sisa_tagihan', '>', 0);
+        $activeInvoices = FakturPembelian::query()->where('status', '!=', FakturPembelian::VOID)->where('sisa_tagihan', '>', 0);
         $metrics = [
             'unpaid_count' => (clone $activeInvoices)->count(),
             'outstanding_value' => (float) (clone $activeInvoices)->sum('sisa_tagihan'),
             'overdue_count' => (clone $activeInvoices)->whereDate('tgl_deadline_pembayaran', '<', today())->count(),
             'due_soon_count' => (clone $activeInvoices)
                 ->whereBetween('tgl_deadline_pembayaran', [today(), today()->addDays(7)])->count(),
-            'paid_this_month' => (float) InvoicePayment::query()->where('status', InvoicePayment::POSTED)
+            'paid_this_month' => (float) PembayaranFaktur::query()->where('status', PembayaranFaktur::POSTED)
                 ->whereBetween('tanggal_pembayaran', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
                 ->sum('jumlah_pembayaran'),
-            'payments_this_month' => InvoicePayment::query()->where('status', InvoicePayment::POSTED)
+            'payments_this_month' => PembayaranFaktur::query()->where('status', PembayaranFaktur::POSTED)
                 ->whereBetween('tanggal_pembayaran', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
                 ->count(),
         ];
 
-        $priorityInvoices = InvoiceLpb::with('supplier')->where('status', '!=', InvoiceLpb::VOID)
+        $priorityInvoices = FakturPembelian::with('supplier')->where('status', '!=', FakturPembelian::VOID)
             ->where('sisa_tagihan', '>', 0)
             ->orderByRaw('tgl_deadline_pembayaran IS NULL')
             ->orderBy('tgl_deadline_pembayaran')
             ->limit(8)->get();
 
-        $recentPayments = InvoicePayment::with(['invoice.supplier', 'coaKasBank'])
-            ->where('status', InvoicePayment::POSTED)->latest('tanggal_pembayaran')->latest('id')->limit(8)->get();
+        $recentPayments = PembayaranFaktur::with(['invoice.supplier', 'coaKasBank'])
+            ->where('status', PembayaranFaktur::POSTED)->latest('tanggal_pembayaran')->latest('id')->limit(8)->get();
 
         return compact('metrics', 'priorityInvoices', 'recentPayments');
     }

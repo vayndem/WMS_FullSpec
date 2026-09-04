@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\InvoiceLpb;
-use App\Models\InvoicePayment;
+use App\Models\FakturPembelian;
+use App\Models\PembayaranFaktur;
 use App\Models\Jurnal;
-use App\Http\Requests\StoreInvoicePaymentRequest;
+use App\Http\Requests\StorePembayaranFakturRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Services\WmsAccountingService;
@@ -13,7 +13,7 @@ use App\Services\PaymentAllocationService;
 use App\Models\ChartOfAccount;
 use App\Services\DocumentNumberService;
 
-class InvoicePaymentController extends Controller
+class PembayaranFakturController extends Controller
 {
     public function __construct(
         private WmsAccountingService $accounting,
@@ -23,14 +23,14 @@ class InvoicePaymentController extends Controller
 
     public function availableAdvances(int $supplierId)
     {
-        $this->authorize('viewAny', InvoicePayment::class);
+        $this->authorize('viewAny', PembayaranFaktur::class);
 
-        $advances = InvoicePayment::with('invoice')
-            ->where('status', InvoicePayment::POSTED)
+        $advances = PembayaranFaktur::with('invoice')
+            ->where('status', PembayaranFaktur::POSTED)
             ->where('jenis_selisih', 'UANG_MUKA_SUPPLIER')
             ->whereHas('invoice', fn($query) => $query->where('kode_supplier', $supplierId))
             ->get()
-            ->map(fn(InvoicePayment $payment) => [
+            ->map(fn(PembayaranFaktur $payment) => [
                 'id'                 => $payment->id,
                 'payment_number'     => $payment->payment_number,
                 'tanggal_pembayaran' => optional($payment->tanggal_pembayaran)->format('Y-m-d'),
@@ -43,16 +43,16 @@ class InvoicePaymentController extends Controller
         return response()->json(['success' => true, 'data' => $advances]);
     }
 
-    public function store(StoreInvoicePaymentRequest $request)
+    public function store(StorePembayaranFakturRequest $request)
     {
-        $this->authorize('create', InvoicePayment::class);
+        $this->authorize('create', PembayaranFaktur::class);
 
         $validated = $request->validated();
         $user = Auth::user();
 
         $invoiceDetail = DB::transaction(function () use ($validated, $user) {
-            $invoice = InvoiceLpb::lockForUpdate()->findOrFail($validated['invoice_lpb_id']);
-            abort_if($invoice->status === InvoiceLpb::VOID || (float) $invoice->sisa_tagihan <= 0, 422, 'Invoice sudah batal atau tidak memiliki sisa tagihan.');
+            $invoice = FakturPembelian::lockForUpdate()->findOrFail($validated['invoice_lpb_id']);
+            abort_if($invoice->status === FakturPembelian::VOID || (float) $invoice->sisa_tagihan <= 0, 422, 'Invoice sudah batal atau tidak memiliki sisa tagihan.');
 
             $cashAndTax = (float) $validated['jumlah_pembayaran'] + (float) $validated['potongan_pph23'];
             $maximumPph = round((float) $invoice->dasar_pph * (float) $invoice->tarif_pph / 100, 2);
@@ -83,9 +83,9 @@ class InvoicePaymentController extends Controller
             $advanceSourceId = $validated['uang_muka_sumber_payment_id'] ?? null;
             $advanceUsed = $advanceSourceId ? round((float) $validated['uang_muka_dipakai'], 2) : 0.0;
             if ($advanceSourceId) {
-                $advanceSource = InvoicePayment::lockForUpdate()->with('invoice')->findOrFail($advanceSourceId);
+                $advanceSource = PembayaranFaktur::lockForUpdate()->with('invoice')->findOrFail($advanceSourceId);
                 abort_if(
-                    $advanceSource->status !== InvoicePayment::POSTED
+                    $advanceSource->status !== PembayaranFaktur::POSTED
                         || $advanceSource->jenis_selisih !== 'UANG_MUKA_SUPPLIER'
                         || !$advanceSource->invoice
                         || (int) $advanceSource->invoice->kode_supplier !== (int) $invoice->kode_supplier,
@@ -133,7 +133,7 @@ class InvoicePaymentController extends Controller
                 'Nominal selisih harus sama dengan kelebihan pembayaran yang menjadi uang muka supplier.'
             );
 
-            $payment = InvoicePayment::create([
+            $payment = PembayaranFaktur::create([
                 'payment_number'                   => $validated['payment_number'],
                 'invoice_lpb_id'                   => $invoice->id,
                 'tanggal_pembayaran'                => $validated['tanggal_pembayaran'],
@@ -157,7 +157,7 @@ class InvoicePaymentController extends Controller
             $totalBayarAkumulasi = $invoice->payments()->sum('total_transaksi_pengurang_hutang');
             $sisaTagihan = $invoice->grand_total - $totalBayarAkumulasi;
 
-            $statusCode = InvoiceLpb::paymentStatus((float) $invoice->grand_total, (float) $totalBayarAkumulasi);
+            $statusCode = FakturPembelian::paymentStatus((float) $invoice->grand_total, (float) $totalBayarAkumulasi);
             $sisaTagihan = max(0, $sisaTagihan);
 
             $invoice->update([
@@ -180,14 +180,14 @@ class InvoicePaymentController extends Controller
         ], 201);
     }
 
-    public function destroy(InvoicePayment $payment)
+    public function destroy(PembayaranFaktur $payment)
     {
         $payment->load('invoice');
         $invoice = $payment->invoice;
 
         $this->authorize('voidPayment', $invoice);
 
-        abort_if($payment->status === InvoicePayment::VOID, 422, 'Pembayaran ini sudah dibatalkan sebelumnya.');
+        abort_if($payment->status === PembayaranFaktur::VOID, 422, 'Pembayaran ini sudah dibatalkan sebelumnya.');
         abort_if(
             $payment->pemakaianUangMuka()->exists(),
             422,
@@ -201,7 +201,7 @@ class InvoicePaymentController extends Controller
                 'Pembatalan pembayaran invoice ' . $invoice->no_invoice
             );
             $payment->update([
-                'status' => InvoicePayment::VOID,
+                'status' => PembayaranFaktur::VOID,
                 'voided_by' => Auth::id(),
                 'voided_at' => now(),
                 'void_reason' => 'Dibatalkan melalui sistem',
@@ -210,7 +210,7 @@ class InvoicePaymentController extends Controller
             $totalBayarAkumulasi = $invoice->payments()->sum('total_transaksi_pengurang_hutang');
             $sisaTagihan = $invoice->grand_total - $totalBayarAkumulasi;
 
-            $statusCode = InvoiceLpb::paymentStatus((float) $invoice->grand_total, (float) $totalBayarAkumulasi);
+            $statusCode = FakturPembelian::paymentStatus((float) $invoice->grand_total, (float) $totalBayarAkumulasi);
             $sisaTagihan = max(0, $sisaTagihan);
 
             $invoice->update([

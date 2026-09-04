@@ -89,25 +89,25 @@ return new class extends Migration
                 ])
         );
 
-        Schema::create('invoice_lpb_receipts', function (Blueprint $table) {
+        Schema::create('wms_faktur_pembelian_penerimaan', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('invoice_lpb_id');
             $table->unsignedBigInteger('lpb_id');
             $table->decimal('amount', 18, 2)->default(0);
             $table->timestamps();
             $table->unique(['invoice_lpb_id', 'lpb_id']);
-            $table->foreign('invoice_lpb_id')->references('id')->on('invoice_lpbs')->onDelete('cascade');
+            $table->foreign('invoice_lpb_id')->references('id')->on('wms_faktur_pembelian')->onDelete('cascade');
             $table->foreign('lpb_id')->references('id')->on('wms_penerimaan_barang')->onDelete('restrict');
         });
 
-        Schema::table('invoice_lpbs', function (Blueprint $table) {
+        Schema::table('wms_faktur_pembelian', function (Blueprint $table) {
             $table->unsignedBigInteger('voided_by')->nullable()->after('status')
                 ->comment('ID user lokal yang membatalkan invoice');
             $table->timestamp('voided_at')->nullable()->after('voided_by');
             $table->text('void_reason')->nullable()->after('voided_at');
         });
 
-        Schema::table('invoice_payments', function (Blueprint $table) {
+        Schema::table('wms_pembayaran_faktur', function (Blueprint $table) {
             $table->dropForeign(['finance_user_id']);
             $table->unsignedBigInteger('voided_by')->nullable()->after('status')
                 ->comment('ID user lokal yang membatalkan pembayaran');
@@ -137,9 +137,9 @@ return new class extends Migration
             $table->dropForeign(['reversal_of_id']);
             $table->dropColumn(['status', 'created_by', 'posted_by', 'posted_at', 'reversal_of_id']);
         });
-        Schema::dropIfExists('invoice_lpb_receipts');
-        Schema::table('invoice_lpbs', fn (Blueprint $table) => $table->dropColumn(['voided_by', 'voided_at', 'void_reason']));
-        Schema::table('invoice_payments', function (Blueprint $table) {
+        Schema::dropIfExists('wms_faktur_pembelian_penerimaan');
+        Schema::table('wms_faktur_pembelian', fn (Blueprint $table) => $table->dropColumn(['voided_by', 'voided_at', 'void_reason']));
+        Schema::table('wms_pembayaran_faktur', function (Blueprint $table) {
             $table->dropColumn(['voided_by', 'voided_at', 'void_reason']);
             $table->foreign('finance_user_id')->references('id')->on('users')->onDelete('restrict');
         });

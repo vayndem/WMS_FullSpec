@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Bahan;
-use App\Models\InvoiceLpb;
-use App\Models\InvoicePayment;
+use App\Models\FakturPembelian;
+use App\Models\PembayaranFaktur;
 use App\Models\InventoryLayer;
 use App\Models\ChartOfAccount;
 use App\Models\LandedCost;
@@ -91,7 +91,7 @@ class WmsControlFrameworkTest extends TestCase
     {
         $user = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);
         Auth::login($user);
-        $invoice = InvoiceLpb::where('status', '!=', InvoiceLpb::VOID)->firstOrFail();
+        $invoice = FakturPembelian::where('status', '!=', FakturPembelian::VOID)->firstOrFail();
 
         $result = app(ThreeWayMatchService::class)->evaluate($invoice);
 
@@ -170,14 +170,14 @@ class WmsControlFrameworkTest extends TestCase
 
     public function test_void_payment_is_excluded_from_active_invoice_payments(): void
     {
-        $payment = InvoicePayment::where('status', InvoicePayment::POSTED)->firstOrFail();
+        $payment = PembayaranFaktur::where('status', PembayaranFaktur::POSTED)->firstOrFail();
         $invoice = $payment->invoice;
         $activeBefore = $invoice->payments()->count();
 
-        $payment->update(['status' => InvoicePayment::VOID]);
+        $payment->update(['status' => PembayaranFaktur::VOID]);
 
         $this->assertSame($activeBefore - 1, $invoice->payments()->count());
-        $this->assertSame(InvoicePayment::VOID, $payment->fresh()->status);
+        $this->assertSame(PembayaranFaktur::VOID, $payment->fresh()->status);
     }
 
     public function test_supplier_advance_can_be_generated_then_consumed_by_a_later_payment(): void
@@ -189,27 +189,27 @@ class WmsControlFrameworkTest extends TestCase
             'telp' => '0800000000',
             'pembayaran' => 'Transfer',
         ]);
-        $invoiceA = InvoiceLpb::create([
+        $invoiceA = FakturPembelian::create([
             'no_invoice' => 'ADV-TEST-INV-A',
             'kode_supplier' => $supplier->id,
             'tanggal' => today(),
             'grand_total' => 1000000,
             'sisa_tagihan' => 1000000,
-            'status' => InvoiceLpb::UNPAID,
+            'status' => FakturPembelian::UNPAID,
         ]);
-        $invoiceB = InvoiceLpb::create([
+        $invoiceB = FakturPembelian::create([
             'no_invoice' => 'ADV-TEST-INV-B',
             'kode_supplier' => $supplier->id,
             'tanggal' => today(),
             'grand_total' => 500000,
             'sisa_tagihan' => 500000,
-            'status' => InvoiceLpb::UNPAID,
+            'status' => FakturPembelian::UNPAID,
         ]);
         $kasUtama = ChartOfAccount::where('kode_akun', '1101')->firstOrFail();
         $uangMukaAccount = ChartOfAccount::where('kode_akun', '1401')->firstOrFail();
         $numbers = app(DocumentNumberService::class);
 
-        $responseA = $this->actingAs($finance)->postJson(route('invoice-payments.store'), [
+        $responseA = $this->actingAs($finance)->postJson(route('pembayaran-faktur.store'), [
             'payment_number' => $numbers->financial('PY'),
             'invoice_lpb_id' => $invoiceA->id,
             'tanggal_pembayaran' => today()->toDateString(),
@@ -221,20 +221,20 @@ class WmsControlFrameworkTest extends TestCase
             'coa_selisih_id' => $uangMukaAccount->id,
         ]);
         $responseA->assertCreated();
-        $paymentA = InvoicePayment::findOrFail($responseA->json('data.id'));
+        $paymentA = PembayaranFaktur::findOrFail($responseA->json('data.id'));
         $this->assertSame(200000.0, (float) $paymentA->kelebihan_pembayaran);
-        $this->assertSame(InvoiceLpb::PAID, $invoiceA->fresh()->status);
+        $this->assertSame(FakturPembelian::PAID, $invoiceA->fresh()->status);
         $this->assertSame(200000.0, $paymentA->sisaUangMuka());
 
         $advances = $this->actingAs($finance)
-            ->getJson(route('invoice-payments.available-advances', $supplier->id))
+            ->getJson(route('pembayaran-faktur.available-advances', $supplier->id))
             ->assertOk()
             ->json('data');
         $this->assertCount(1, $advances);
         $this->assertSame($paymentA->id, $advances[0]['id']);
         $this->assertSame(200000.0, (float) $advances[0]['sisa']);
 
-        $responseB = $this->actingAs($finance)->postJson(route('invoice-payments.store'), [
+        $responseB = $this->actingAs($finance)->postJson(route('pembayaran-faktur.store'), [
             'payment_number' => $numbers->financial('PY'),
             'invoice_lpb_id' => $invoiceB->id,
             'tanggal_pembayaran' => today()->toDateString(),
@@ -245,9 +245,9 @@ class WmsControlFrameworkTest extends TestCase
             'uang_muka_dipakai' => 200000,
         ]);
         $responseB->assertCreated();
-        $paymentB = InvoicePayment::findOrFail($responseB->json('data.id'));
+        $paymentB = PembayaranFaktur::findOrFail($responseB->json('data.id'));
         $this->assertSame(500000.0, (float) $paymentB->total_transaksi_pengurang_hutang);
-        $this->assertSame(InvoiceLpb::PAID, $invoiceB->fresh()->status);
+        $this->assertSame(FakturPembelian::PAID, $invoiceB->fresh()->status);
         $this->assertSame(0.0, $paymentA->sisaUangMuka());
 
         $journalB = $paymentB->fresh()->load('invoice');
@@ -255,16 +255,16 @@ class WmsControlFrameworkTest extends TestCase
         $this->assertEqualsWithDelta((float) $jurnal->total_debit, (float) $jurnal->total_kredit, 0.01);
         $this->assertTrue($jurnal->details->contains(fn ($line) => (int) $line->coa_id === $uangMukaAccount->id && (float) $line->kredit === 200000.0));
 
-        $this->actingAs($finance)->deleteJson(route('invoice-payments.destroy', $paymentA->id))
+        $this->actingAs($finance)->deleteJson(route('pembayaran-faktur.destroy', $paymentA->id))
             ->assertStatus(422);
 
-        $this->actingAs($finance)->deleteJson(route('invoice-payments.destroy', $paymentB->id))
+        $this->actingAs($finance)->deleteJson(route('pembayaran-faktur.destroy', $paymentB->id))
             ->assertOk();
-        $this->assertSame(InvoicePayment::VOID, $paymentB->fresh()->status);
+        $this->assertSame(PembayaranFaktur::VOID, $paymentB->fresh()->status);
 
-        $this->actingAs($finance)->deleteJson(route('invoice-payments.destroy', $paymentA->id))
+        $this->actingAs($finance)->deleteJson(route('pembayaran-faktur.destroy', $paymentA->id))
             ->assertOk();
-        $this->assertSame(InvoicePayment::VOID, $paymentA->fresh()->status);
+        $this->assertSame(PembayaranFaktur::VOID, $paymentA->fresh()->status);
     }
 
     public function test_supplier_advance_cannot_be_used_across_different_suppliers(): void
@@ -272,13 +272,13 @@ class WmsControlFrameworkTest extends TestCase
         $finance = User::factory()->create(['type' => User::ROLE_FINANCE]);
         $supplierOne = Supplier::create(['nama' => 'Supplier Satu', 'alamat' => 'Jl. Satu', 'telp' => '0800000001', 'pembayaran' => 'Transfer']);
         $supplierTwo = Supplier::create(['nama' => 'Supplier Dua', 'alamat' => 'Jl. Dua', 'telp' => '0800000002', 'pembayaran' => 'Transfer']);
-        $invoiceOne = InvoiceLpb::create(['no_invoice' => 'ADV-TEST-X1', 'kode_supplier' => $supplierOne->id, 'tanggal' => today(), 'grand_total' => 1000000, 'sisa_tagihan' => 1000000, 'status' => InvoiceLpb::UNPAID]);
-        $invoiceTwo = InvoiceLpb::create(['no_invoice' => 'ADV-TEST-X2', 'kode_supplier' => $supplierTwo->id, 'tanggal' => today(), 'grand_total' => 500000, 'sisa_tagihan' => 500000, 'status' => InvoiceLpb::UNPAID]);
+        $invoiceOne = FakturPembelian::create(['no_invoice' => 'ADV-TEST-X1', 'kode_supplier' => $supplierOne->id, 'tanggal' => today(), 'grand_total' => 1000000, 'sisa_tagihan' => 1000000, 'status' => FakturPembelian::UNPAID]);
+        $invoiceTwo = FakturPembelian::create(['no_invoice' => 'ADV-TEST-X2', 'kode_supplier' => $supplierTwo->id, 'tanggal' => today(), 'grand_total' => 500000, 'sisa_tagihan' => 500000, 'status' => FakturPembelian::UNPAID]);
         $kasUtama = ChartOfAccount::where('kode_akun', '1101')->firstOrFail();
         $uangMukaAccount = ChartOfAccount::where('kode_akun', '1401')->firstOrFail();
         $numbers = app(DocumentNumberService::class);
 
-        $responseOne = $this->actingAs($finance)->postJson(route('invoice-payments.store'), [
+        $responseOne = $this->actingAs($finance)->postJson(route('pembayaran-faktur.store'), [
             'payment_number' => $numbers->financial('PY'),
             'invoice_lpb_id' => $invoiceOne->id,
             'tanggal_pembayaran' => today()->toDateString(),
@@ -289,9 +289,9 @@ class WmsControlFrameworkTest extends TestCase
             'jenis_selisih' => 'UANG_MUKA_SUPPLIER',
             'coa_selisih_id' => $uangMukaAccount->id,
         ])->assertCreated();
-        $paymentOne = InvoicePayment::findOrFail($responseOne->json('data.id'));
+        $paymentOne = PembayaranFaktur::findOrFail($responseOne->json('data.id'));
 
-        $this->actingAs($finance)->postJson(route('invoice-payments.store'), [
+        $this->actingAs($finance)->postJson(route('pembayaran-faktur.store'), [
             'payment_number' => $numbers->financial('PY'),
             'invoice_lpb_id' => $invoiceTwo->id,
             'tanggal_pembayaran' => today()->toDateString(),
@@ -346,7 +346,7 @@ class WmsControlFrameworkTest extends TestCase
     {
         $accounting = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);
 
-        $create = $this->actingAs($accounting)->get(route('invoice-lpb.create'));
+        $create = $this->actingAs($accounting)->get(route('faktur-pembelian.create'));
         $create->assertOk();
         $create->assertSee('Pilih Supplier');
         $create->assertSee('Pilih LPB / BAP Supplier');

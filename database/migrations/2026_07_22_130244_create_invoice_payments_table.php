@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('invoice_payments', function (Blueprint $table) {
+        Schema::create('wms_pembayaran_faktur', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('invoice_lpb_id');
             $table->date('tanggal_pembayaran');
@@ -25,7 +25,7 @@ return new class extends Migration
             $table->enum('status', ['POSTED', 'VOID'])->default('POSTED');
             $table->timestamps();
 
-            $table->foreign('invoice_lpb_id')->references('id')->on('invoice_lpbs')->onDelete('cascade');
+            $table->foreign('invoice_lpb_id')->references('id')->on('wms_faktur_pembelian')->onDelete('cascade');
             $table->foreign('coa_kas_bank_id')->references('id')->on('chart_of_accounts')->onDelete('set null');
             $table->foreign('finance_user_id')->references('id')->on('users')->onDelete('restrict');
         });
@@ -33,6 +33,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('invoice_payments');
+        Schema::dropIfExists('wms_pembayaran_faktur');
     }
 };

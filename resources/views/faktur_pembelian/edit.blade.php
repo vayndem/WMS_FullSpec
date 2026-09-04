@@ -36,7 +36,7 @@
         <div class="bg-warning px-6 py-4 text-warning-content">
             <h3 class="text-lg font-bold"><i class="fa-solid fa-pen-to-square"></i> Edit Invoice LPB ({{ $invoice->no_invoice }})</h3>
         </div>
-        <form action="{{ route('invoice-lpb.update', $invoice->id) }}" method="POST" @submit.prevent="submit($event)"
+        <form action="{{ route('faktur-pembelian.update', $invoice->id) }}" method="POST" @submit.prevent="submit($event)"
             data-autosave data-autosave-key="invoice-lpb-edit-{{ $invoice->id }}" class="flex flex-col">
             @csrf
             @method('PUT')

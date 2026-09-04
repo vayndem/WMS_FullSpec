@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('invoice_lpbs', function (Blueprint $table) {
+        Schema::table('wms_faktur_pembelian', function (Blueprint $table) {
             $table->string('no_faktur_pajak', 30)->nullable()->after('ppn')
                 ->comment('Nomor Seri Faktur Pajak (NSFP) dari DJP, syarat kredit PPN Masukan. Wajib diisi bila jenis_pajak = PPN.');
         });
@@ -16,7 +16,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('invoice_lpbs', function (Blueprint $table) {
+        Schema::table('wms_faktur_pembelian', function (Blueprint $table) {
             $table->dropColumn('no_faktur_pajak');
         });
     }

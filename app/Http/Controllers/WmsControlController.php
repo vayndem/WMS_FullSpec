@@ -8,7 +8,7 @@ use App\Models\Gudang;
 use App\Models\InventoryLayer;
 use App\Models\InventoryLot;
 use App\Models\InventoryReservation;
-use App\Models\InvoiceLpb;
+use App\Models\FakturPembelian;
 use App\Models\LandedCost;
 use App\Models\PenerimaanBarang;
 use App\Models\PemakaianBarang;
@@ -42,7 +42,7 @@ class WmsControlController extends Controller
             'gudangs' => Gudang::whereIn('id', $warehouseIds)->where('aktif', true)->orderBy('nama')->get(),
             'bahans' => Bahan::orderBy('nama')->get(),
             'pendingLpbs' => PenerimaanBarang::with('details.bahan')->whereIn('gudang_id', $warehouseIds)->whereIn('status', [PenerimaanBarang::DRAFT, PenerimaanBarang::POSTED])->where(fn ($query) => $query->whereNull('document_type')->orWhere('document_type', '!=', 'SERVICE_BAP'))->where('receiving_status', '!=', 'PUTAWAY')->latest()->limit(30)->get(),
-            'invoices' => $mayMatchInvoice ? InvoiceLpb::where('status', '!=', InvoiceLpb::VOID)->latest()->limit(30)->get() : collect(),
+            'invoices' => $mayMatchInvoice ? FakturPembelian::where('status', '!=', FakturPembelian::VOID)->latest()->limit(30)->get() : collect(),
             'creditAccounts' => $mayControlFinance ? ChartOfAccount::where('is_active', true)->where('is_postable', true)->whereIn('kategori_akun', ['LIABILITAS', 'ASET'])->orderBy('kode_akun')->get() : collect(),
             'reversibleLpbs' => $mayControlFinance ? PenerimaanBarang::where('status', PenerimaanBarang::POSTED)->where(fn ($query) => $query->whereNull('document_type')->orWhere('document_type', '!=', 'SERVICE_BAP'))->whereDoesntHave('invoiceReceipts')->latest()->limit(20)->get() : collect(),
             'reversibleNpks' => $mayControlFinance ? PemakaianBarang::where('status', PemakaianBarang::POSTED)->latest()->limit(20)->get() : collect(),

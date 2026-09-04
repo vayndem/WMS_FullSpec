@@ -2,17 +2,17 @@
 
 namespace App\Http\Requests;
 
-use App\Models\InvoiceLpb;
-use App\Models\InvoicePayment;
+use App\Models\FakturPembelian;
+use App\Models\PembayaranFaktur;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
-class StoreInvoicePaymentRequest extends FormRequest
+class StorePembayaranFakturRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        $invoice = InvoiceLpb::find($this->input('invoice_lpb_id'));
+        $invoice = FakturPembelian::find($this->input('invoice_lpb_id'));
         return $invoice ? ($this->user()?->can('pay', $invoice) ?? false) : false;
     }
 
@@ -32,8 +32,8 @@ class StoreInvoicePaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'payment_number'              => ['required', 'string', 'max:30', 'regex:/^\d{2}-\d{2}-[A-Z]{2}-(?:I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)-\d{3}$/', 'unique:invoice_payments,payment_number'],
-            'invoice_lpb_id'               => 'required|integer|exists:invoice_lpbs,id',
+            'payment_number'              => ['required', 'string', 'max:30', 'regex:/^\d{2}-\d{2}-[A-Z]{2}-(?:I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)-\d{3}$/', 'unique:wms_pembayaran_faktur,payment_number'],
+            'invoice_lpb_id'               => 'required|integer|exists:wms_faktur_pembelian,id',
             'tanggal_pembayaran'           => 'required|date',
             'metode_pembayaran'            => 'required|string|max:150',
             'coa_kas_bank_id'              => ['required', 'integer', Rule::exists('chart_of_accounts', 'id')->where(
@@ -48,7 +48,7 @@ class StoreInvoicePaymentRequest extends FormRequest
             'coa_selisih_id'               => ['nullable', Rule::requiredIf(fn() => (float) $this->input('selisih_bayar', 0) > 0), 'integer', Rule::exists('chart_of_accounts', 'id')->where(
                 fn($query) => $query->where('is_active', 1)->where('is_postable', 1)
             )],
-            'uang_muka_sumber_payment_id'  => ['nullable', 'integer', 'exists:invoice_payments,id'],
+            'uang_muka_sumber_payment_id'  => ['nullable', 'integer', 'exists:wms_pembayaran_faktur,id'],
             'uang_muka_dipakai'            => [
                 'nullable', 'numeric', 'min:0',
                 Rule::requiredIf(fn() => filled($this->input('uang_muka_sumber_payment_id'))),
@@ -65,11 +65,11 @@ class StoreInvoicePaymentRequest extends FormRequest
                 return;
             }
 
-            $source = InvoicePayment::with('invoice')->find($sourceId);
-            $invoice = InvoiceLpb::find($this->input('invoice_lpb_id'));
+            $source = PembayaranFaktur::with('invoice')->find($sourceId);
+            $invoice = FakturPembelian::find($this->input('invoice_lpb_id'));
             $requested = (float) $this->input('uang_muka_dipakai', 0);
 
-            if (!$source || $source->status !== InvoicePayment::POSTED || $source->jenis_selisih !== 'UANG_MUKA_SUPPLIER') {
+            if (!$source || $source->status !== PembayaranFaktur::POSTED || $source->jenis_selisih !== 'UANG_MUKA_SUPPLIER') {
                 $validator->errors()->add('uang_muka_sumber_payment_id', 'Sumber uang muka tidak valid atau bukan pembayaran uang muka supplier yang aktif.');
                 return;
             }

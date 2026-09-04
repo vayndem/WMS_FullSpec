@@ -6,7 +6,7 @@ use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class InvoiceLpb extends Model
+class FakturPembelian extends Model
 {
     use HasFactory, Auditable;
 
@@ -15,7 +15,7 @@ class InvoiceLpb extends Model
     public const PAID = 'PAID';
     public const VOID = 'VOID';
 
-    protected $table = 'invoice_lpbs';
+    protected $table = 'wms_faktur_pembelian';
 
     protected $fillable = [
         'no_invoice',
@@ -75,18 +75,18 @@ class InvoiceLpb extends Model
 
     public function payments()
     {
-        return $this->hasMany(InvoicePayment::class)
-            ->where('status', InvoicePayment::POSTED);
+        return $this->hasMany(PembayaranFaktur::class, 'invoice_lpb_id')
+            ->where('status', PembayaranFaktur::POSTED);
     }
 
     public function receipts()
     {
-        return $this->hasMany(InvoiceLpbReceipt::class, 'invoice_lpb_id');
+        return $this->hasMany(FakturPembelianPenerimaan::class, 'invoice_lpb_id');
     }
 
     public function lpbs()
     {
-        return $this->belongsToMany(PenerimaanBarang::class, 'invoice_lpb_receipts', 'invoice_lpb_id', 'lpb_id')
+        return $this->belongsToMany(PenerimaanBarang::class, 'wms_faktur_pembelian_penerimaan', 'invoice_lpb_id', 'lpb_id')
             ->withPivot('amount')->withTimestamps();
     }
 

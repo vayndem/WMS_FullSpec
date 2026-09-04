@@ -31,7 +31,7 @@
             ];
         @endphp
         <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            @foreach ([['Request menunggu', $metrics['pending_requests'], 'Perlu diperiksa/approve', 'request.index', 'fa-file-circle-question', 'primary'], ['PO aktif', $metrics['open_purchase_orders'], $metrics['awaiting_receipt'] . ' belum diterima penuh', 'pembelian.index', 'fa-cart-shopping', 'info'], ['Penerimaan Barang belum ditagih', $metrics['unbilled_receipts'], 'Menunggu invoice supplier', 'penerimaan-barang.index', 'fa-box-open', 'warning'], ['Invoice belum lunas', $metrics['unpaid_invoices'], $metrics['overdue_invoices'] . ' melewati jatuh tempo', 'invoice-lpb.index', 'fa-file-invoice-dollar', $metrics['overdue_invoices'] ? 'danger' : 'success']] as [$label, $value, $note, $route, $icon, $color])
+            @foreach ([['Request menunggu', $metrics['pending_requests'], 'Perlu diperiksa/approve', 'request.index', 'fa-file-circle-question', 'primary'], ['PO aktif', $metrics['open_purchase_orders'], $metrics['awaiting_receipt'] . ' belum diterima penuh', 'pembelian.index', 'fa-cart-shopping', 'info'], ['Penerimaan Barang belum ditagih', $metrics['unbilled_receipts'], 'Menunggu invoice supplier', 'penerimaan-barang.index', 'fa-box-open', 'warning'], ['Invoice belum lunas', $metrics['unpaid_invoices'], $metrics['overdue_invoices'] . ' melewati jatuh tempo', 'faktur-pembelian.index', 'fa-file-invoice-dollar', $metrics['overdue_invoices'] ? 'danger' : 'success']] as [$label, $value, $note, $route, $icon, $color])
                 <a href="{{ route($route) }}" class="card border border-base-300 bg-base-100 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                     <div class="card-body p-4">
                         <div class="flex items-start justify-between gap-3">
@@ -165,12 +165,12 @@
                         <h5 class="font-bold">Jatuh Tempo Invoice</h5>
                         <p class="text-sm text-base-content/50">Prioritas pembayaran supplier</p>
                     </div>
-                    <a href="{{ route('invoice-lpb.index') }}" class="btn btn-sm btn-ghost">Lihat invoice</a>
+                    <a href="{{ route('faktur-pembelian.index') }}" class="btn btn-sm btn-ghost">Lihat invoice</a>
                 </div>
                 <div>
                     @forelse($dueInvoices as $invoice)
                         @php $overdue = $invoice->tgl_deadline_pembayaran && $invoice->tgl_deadline_pembayaran->isPast(); @endphp
-                        <a href="{{ route('invoice-lpb.index', ['invoice' => $invoice->id]) }}" class="block border-b border-base-300 px-4 py-3 last:border-b-0 hover:bg-base-200/50">
+                        <a href="{{ route('faktur-pembelian.index', ['invoice' => $invoice->id]) }}" class="block border-b border-base-300 px-4 py-3 last:border-b-0 hover:bg-base-200/50">
                             <div class="flex items-center justify-between gap-3">
                                 <div>
                                     <strong>{{ $invoice->no_invoice }}</strong>

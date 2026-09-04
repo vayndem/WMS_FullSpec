@@ -1,14 +1,14 @@
 <?php
 
-use App\Http\Controllers\InvoiceLpbController;
-use App\Http\Controllers\InvoicePaymentController;
+use App\Http\Controllers\FakturPembelianController;
+use App\Http\Controllers\PembayaranFakturController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
-    Route::get('invoice-lpb/lpb-detail/{id_lpb}', [InvoiceLpbController::class, 'getLpbDetail'])->name('invoice-lpb.get-lpb-detail');
-    Route::get('invoice-lpb-report/pdf', [InvoiceLpbController::class, 'reportPdf'])->name('invoice-lpb.report.pdf');
-    Route::resource('invoice-lpb', InvoiceLpbController::class);
-    Route::get('invoice-payments/available-advances/{supplier}', [InvoicePaymentController::class, 'availableAdvances'])->name('invoice-payments.available-advances');
-    Route::post('invoice-payments', [InvoicePaymentController::class, 'store'])->name('invoice-payments.store');
-    Route::delete('invoice-payments/{payment}', [InvoicePaymentController::class, 'destroy'])->name('invoice-payments.destroy');
+    Route::get('faktur-pembelian/lpb-detail/{id_lpb}', [FakturPembelianController::class, 'getLpbDetail'])->name('faktur-pembelian.get-lpb-detail');
+    Route::get('faktur-pembelian-report/pdf', [FakturPembelianController::class, 'reportPdf'])->name('faktur-pembelian.report.pdf');
+    Route::resource('faktur-pembelian', FakturPembelianController::class);
+    Route::get('pembayaran-faktur/available-advances/{supplier}', [PembayaranFakturController::class, 'availableAdvances'])->name('pembayaran-faktur.available-advances');
+    Route::post('pembayaran-faktur', [PembayaranFakturController::class, 'store'])->name('pembayaran-faktur.store');
+    Route::delete('pembayaran-faktur/{payment}', [PembayaranFakturController::class, 'destroy'])->name('pembayaran-faktur.destroy');
 });

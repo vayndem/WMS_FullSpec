@@ -63,7 +63,7 @@ class PenerimaanBarang extends Model
 
     public function invoiceReceipts()
     {
-        return $this->hasMany(InvoiceLpbReceipt::class, 'lpb_id');
+        return $this->hasMany(FakturPembelianPenerimaan::class, 'lpb_id');
     }
 
     public function serviceDetails()

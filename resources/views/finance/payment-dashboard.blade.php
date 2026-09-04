@@ -7,7 +7,7 @@
                 <h3 class="text-2xl font-bold">Selamat datang, {{ $user['name'] ?? 'Finance' }}</h3>
                 <p class="text-base-content/60">Kelola prioritas dan pencatatan pembayaran invoice supplier.</p>
             </div>
-            <a href="{{ route('invoice-lpb.index') }}" class="btn btn-primary">
+            <a href="{{ route('faktur-pembelian.index') }}" class="btn btn-primary">
                 <i class="fa-solid fa-money-check-dollar"></i> Buka Daftar Invoice
             </a>
         </div>
@@ -58,7 +58,7 @@
                         <h5 class="font-bold">Prioritas Pembayaran</h5>
                         <p class="text-sm text-base-content/50">Diurutkan dari jatuh tempo terdekat</p>
                     </div>
-                    <a href="{{ route('invoice-lpb.index') }}" class="btn btn-sm btn-ghost">Lihat semua</a>
+                    <a href="{{ route('faktur-pembelian.index') }}" class="btn btn-sm btn-ghost">Lihat semua</a>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="table">
@@ -88,7 +88,7 @@
                                     </td>
                                     <td class="text-end font-semibold">Rp {{ number_format((float) $invoice->sisa_tagihan, 2, ',', '.') }}</td>
                                     <td class="text-end">
-                                        <a href="{{ route('invoice-lpb.index', ['invoice' => $invoice->id]) }}" class="btn btn-success btn-sm">
+                                        <a href="{{ route('faktur-pembelian.index', ['invoice' => $invoice->id]) }}" class="btn btn-success btn-sm">
                                             <i class="fa-solid fa-money-bill-transfer"></i> Bayar
                                         </a>
                                     </td>

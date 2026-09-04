@@ -39,7 +39,7 @@ return new class extends Migration
             $table->unique(['tax_type', 'effective_from']);
         });
 
-        Schema::table('invoice_lpbs', function (Blueprint $table) {
+        Schema::table('wms_faktur_pembelian', function (Blueprint $table) {
             $table->string('jenis_pajak', 30)->default('PPN')->after('sub_total')
                 ->comment('Snapshot jenis pajak invoice: PPN atau NON_PPN');
             $table->decimal('dpp_ppn', 18, 2)->default(0)->after('jenis_pajak');
@@ -48,7 +48,7 @@ return new class extends Migration
             $table->decimal('tarif_pph', 8, 4)->default(0)->after('dasar_pph');
         });
 
-        Schema::table('invoice_payments', function (Blueprint $table) {
+        Schema::table('wms_pembayaran_faktur', function (Blueprint $table) {
             $table->string('jenis_selisih', 30)->nullable()->after('selisih_bayar')
                 ->comment('Jenis selisih pembayaran: PENDAPATAN_SELISIH, BEBAN_SELISIH, atau UANG_MUKA_SUPPLIER');
             $table->unsignedBigInteger('coa_selisih_id')->nullable()->after('jenis_selisih');
@@ -59,11 +59,11 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('invoice_payments', function (Blueprint $table) {
+        Schema::table('wms_pembayaran_faktur', function (Blueprint $table) {
             $table->dropForeign(['coa_selisih_id']);
             $table->dropColumn(['jenis_selisih', 'coa_selisih_id', 'kelebihan_pembayaran']);
         });
-        Schema::table('invoice_lpbs', fn (Blueprint $table) => $table->dropColumn([
+        Schema::table('wms_faktur_pembelian', fn (Blueprint $table) => $table->dropColumn([
             'jenis_pajak', 'dpp_ppn', 'tarif_ppn', 'dasar_pph', 'tarif_pph',
         ]));
         Schema::dropIfExists('accounting_period_locks');

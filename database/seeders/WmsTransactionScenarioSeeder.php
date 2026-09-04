@@ -7,8 +7,8 @@ use App\Models\Gudang;
 use App\Models\User;
 use App\Models\Bahan;
 use App\Models\ChartOfAccount;
-use App\Models\InvoiceLpb;
-use App\Models\InvoicePayment;
+use App\Models\FakturPembelian;
+use App\Models\PembayaranFaktur;
 use App\Models\InventoryLayer;
 use App\Models\Jurnal;
 use App\Models\KategoriBahan;
@@ -205,7 +205,7 @@ class WmsTransactionScenarioSeeder extends Seeder
             $ppnRate = TaxRate::rateFor('PPN', $date->copy()->addDays(12));
             $pphRate = TaxRate::rateFor('PPH23', $date->copy()->addDays(12));
             $ppn = round($subtotal * $ppnRate / 100, 2);
-            $invoice = InvoiceLpb::create([
+            $invoice = FakturPembelian::create([
                 'no_invoice' => 'DEMO-INV-001',
                 'kode_supplier' => $supplier->id,
                 'tanggal' => $date->copy()->addDays(12),
@@ -224,13 +224,13 @@ class WmsTransactionScenarioSeeder extends Seeder
                 'total_pembayaran' => 50000,
                 'sisa_tagihan' => $subtotal + $ppn - 50000,
                 'note' => 'Invoice demo terlambat dan sudah dibayar sebagian',
-                'status' => InvoiceLpb::PARTIALLY_PAID,
+                'status' => FakturPembelian::PARTIALLY_PAID,
             ]);
             $invoice->receipts()->create(['lpb_id' => $firstLpb->id, 'amount' => $subtotal]);
             $firstLpb->update(['no_invoice' => $invoice->no_invoice]);
             $accounting->postInvoice($invoice);
 
-            $payment = InvoicePayment::create([
+            $payment = PembayaranFaktur::create([
                 'payment_number' => $numbers->financial('PY', today()->subDay()),
                 'invoice_lpb_id' => $invoice->id,
                 'tanggal_pembayaran' => today()->subDay(),
@@ -342,7 +342,7 @@ class WmsTransactionScenarioSeeder extends Seeder
             throw new RuntimeException('Seeder gagal: terdapat jurnal yang tidak seimbang.');
         }
 
-        $invoice = InvoiceLpb::where('no_invoice', 'DEMO-INV-001')->firstOrFail();
+        $invoice = FakturPembelian::where('no_invoice', 'DEMO-INV-001')->firstOrFail();
         if (abs((float) $invoice->sisa_tagihan - ((float) $invoice->grand_total - (float) $invoice->total_pembayaran)) > 0.01) {
             throw new RuntimeException('Seeder gagal: sisa invoice tidak sesuai grand total dikurangi pembayaran.');
         }
@@ -352,8 +352,8 @@ class WmsTransactionScenarioSeeder extends Seeder
             ->whereIn('jurnals.status', ['POSTED', 'REVERSED'])->whereIn('jurnal_details.coa_id', $grniIds)
             ->selectRaw('COALESCE(SUM(kredit-debit),0) balance')->value('balance');
         $grniExpected = (float) DB::table('wms_penerimaan_barang_detail')->join('wms_penerimaan_barang', 'wms_penerimaan_barang.id_lpb', '=', 'wms_penerimaan_barang_detail.id_lpb')
-            ->leftJoin('invoice_lpb_receipts', 'invoice_lpb_receipts.lpb_id', '=', 'wms_penerimaan_barang.id')
-            ->whereNull('invoice_lpb_receipts.id')
+            ->leftJoin('wms_faktur_pembelian_penerimaan', 'wms_faktur_pembelian_penerimaan.lpb_id', '=', 'wms_penerimaan_barang.id')
+            ->whereNull('wms_faktur_pembelian_penerimaan.id')
             ->sum(DB::raw('wms_penerimaan_barang_detail.jumlah_barang_diterima * wms_penerimaan_barang_detail.harga'));
         if (abs($grniLedger - $grniExpected) > 0.01) {
             throw new RuntimeException("Seeder gagal: GRNI ledger {$grniLedger} tidak sama dengan LPB belum ditagih {$grniExpected}.");
@@ -363,7 +363,7 @@ class WmsTransactionScenarioSeeder extends Seeder
         $apLedger = (float) DB::table('jurnal_details')->join('jurnals', 'jurnals.id', '=', 'jurnal_details.jurnal_id')
             ->whereIn('jurnals.status', ['POSTED', 'REVERSED'])->where('jurnal_details.coa_id', $apId)
             ->selectRaw('COALESCE(SUM(kredit-debit),0) balance')->value('balance');
-        $invoiceOutstanding = (float) InvoiceLpb::where('status', '!=', InvoiceLpb::VOID)->sum('sisa_tagihan');
+        $invoiceOutstanding = (float) FakturPembelian::where('status', '!=', FakturPembelian::VOID)->sum('sisa_tagihan');
         if (abs($apLedger - $invoiceOutstanding) > 0.01) {
             throw new RuntimeException("Seeder gagal: hutang ledger {$apLedger} tidak sama dengan sisa invoice {$invoiceOutstanding}.");
         }

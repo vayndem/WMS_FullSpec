@@ -6,7 +6,7 @@ use App\Http\Requests\Wms\InventoryFinancialActionRequest;
 use App\Http\Requests\Wms\MatchInvoiceRequest;
 use App\Http\Requests\Wms\ReverseInventoryDocumentRequest;
 use App\Http\Requests\Wms\StoreLandedCostRequest;
-use App\Models\InvoiceLpb;
+use App\Models\FakturPembelian;
 use App\Models\LandedCost;
 use App\Models\PenerimaanBarang;
 use App\Models\PemakaianBarang;
@@ -19,7 +19,7 @@ use Illuminate\Http\RedirectResponse;
 
 class InventoryFinancialControlController extends Controller
 {
-    public function matchInvoice(MatchInvoiceRequest $request, InvoiceLpb $invoice, ThreeWayMatchService $service): RedirectResponse
+    public function matchInvoice(MatchInvoiceRequest $request, FakturPembelian $invoice, ThreeWayMatchService $service): RedirectResponse
     {
         $service->evaluate(
             $invoice,

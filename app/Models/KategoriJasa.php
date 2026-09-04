@@ -31,6 +31,6 @@ class KategoriJasa extends Model
     }
     public function poDetails(): HasMany
     {
-        return $this->hasMany(PesananJasaDetail::class);
+        return $this->hasMany(PesananJasaDetail::class, 'service_category_id');
     }
 }

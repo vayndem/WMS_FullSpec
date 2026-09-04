@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AccountingReconciliation;
 use App\Models\AccountingSetting;
 use App\Models\Jurnal;
-use App\Models\InvoiceLpb;
+use App\Models\FakturPembelian;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -37,7 +37,7 @@ class AccountingReconciliationController extends Controller
             ->selectRaw('SUM(CASE WHEN ABS(COALESCE(total_debit,0)-COALESCE(total_kredit,0)) <= 0.01 THEN 0 ELSE 1 END) invalid_rows')
             ->first();
 
-        $invoice = DB::table('invoice_lpbs')->where('status', '!=', InvoiceLpb::VOID)
+        $invoice = DB::table('wms_faktur_pembelian')->where('status', '!=', FakturPembelian::VOID)
             ->selectRaw('COUNT(*) total_rows')
             ->selectRaw('SUM(CASE WHEN ABS(COALESCE(sisa_tagihan,0) - GREATEST(COALESCE(grand_total,0)-COALESCE(total_pembayaran,0),0)) <= 0.01 THEN 0 ELSE 1 END) invalid_rows')
             ->selectRaw('SUM(COALESCE(sisa_tagihan,0)) outstanding')
@@ -45,8 +45,8 @@ class AccountingReconciliationController extends Controller
 
         $grniExpected = (float) DB::table('wms_penerimaan_barang_detail')
             ->join('wms_penerimaan_barang', 'wms_penerimaan_barang.id_lpb', '=', 'wms_penerimaan_barang_detail.id_lpb')
-            ->leftJoin('invoice_lpb_receipts', 'invoice_lpb_receipts.lpb_id', '=', 'wms_penerimaan_barang.id')
-            ->whereNull('invoice_lpb_receipts.id')
+            ->leftJoin('wms_faktur_pembelian_penerimaan', 'wms_faktur_pembelian_penerimaan.lpb_id', '=', 'wms_penerimaan_barang.id')
+            ->whereNull('wms_faktur_pembelian_penerimaan.id')
             ->sum(DB::raw('wms_penerimaan_barang_detail.jumlah_barang_diterima * wms_penerimaan_barang_detail.harga'));
         $grniAccounts = DB::table('kategori_bahans')->whereNotNull('coa_clearing_lpb_id')
             ->distinct()->pluck('coa_clearing_lpb_id');
@@ -130,13 +130,13 @@ class AccountingReconciliationController extends Controller
             $rows = Jurnal::query()->select('id', 'no_jurnal', 'tanggal', 'sumber_transaksi', 'status', 'total_debit', 'total_kredit')
                 ->selectRaw('total_debit-total_kredit difference')->latest('tanggal')->get();
         } elseif ($check === 'invoice' || $check === 'ap') {
-            $rows = DB::table('invoice_lpbs')->where('status', '!=', InvoiceLpb::VOID)
+            $rows = DB::table('wms_faktur_pembelian')->where('status', '!=', FakturPembelian::VOID)
                 ->select('id', 'no_invoice', 'tanggal', 'grand_total', 'total_pembayaran', 'sisa_tagihan', 'status')
                 ->selectRaw('sisa_tagihan-GREATEST(grand_total-total_pembayaran,0) difference')->orderByDesc('tanggal')->get();
         } else {
             $goods = DB::table('wms_penerimaan_barang')->join('wms_penerimaan_barang_detail', 'wms_penerimaan_barang_detail.id_lpb', '=', 'wms_penerimaan_barang.id_lpb')
-                ->leftJoin('invoice_lpb_receipts', 'invoice_lpb_receipts.lpb_id', '=', 'wms_penerimaan_barang.id')
-                ->whereNull('invoice_lpb_receipts.id')
+                ->leftJoin('wms_faktur_pembelian_penerimaan', 'wms_faktur_pembelian_penerimaan.lpb_id', '=', 'wms_penerimaan_barang.id')
+                ->whereNull('wms_faktur_pembelian_penerimaan.id')
                 ->select('wms_penerimaan_barang.id', 'wms_penerimaan_barang.id_lpb', 'wms_penerimaan_barang.tanggal', 'wms_penerimaan_barang.no_po')
                 ->selectRaw('SUM(wms_penerimaan_barang_detail.jumlah_barang_diterima * wms_penerimaan_barang_detail.harga) amount')
                 ->groupBy('wms_penerimaan_barang.id', 'wms_penerimaan_barang.id_lpb', 'wms_penerimaan_barang.tanggal', 'wms_penerimaan_barang.no_po')->get();

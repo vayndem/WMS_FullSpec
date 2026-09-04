@@ -2,12 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\InvoiceLpb;
+use App\Models\FakturPembelian;
 use Illuminate\Support\Facades\Auth;
 
 class ThreeWayMatchService
 {
-    public function evaluate(InvoiceLpb $invoice, float $priceTolerancePercent = 0.5, float $quantityTolerancePercent = 0): array
+    public function evaluate(FakturPembelian $invoice, float $priceTolerancePercent = 0.5, float $quantityTolerancePercent = 0): array
     {
         $invoice->loadMissing('receipts.lpb.details.bahan', 'receipts.lpb.serviceDetails.servicePoDetail', 'receipts.lpb.pembelian.details');
         $issues = [];

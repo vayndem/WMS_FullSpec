@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('invoice_lpbs', function (Blueprint $table) {
+        Schema::create('wms_faktur_pembelian', function (Blueprint $table) {
             $table->id();
             $table->string('no_invoice', 100)->unique();
             $table->unsignedBigInteger('kode_supplier')->index();
@@ -33,6 +33,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('invoice_lpbs');
+        Schema::dropIfExists('wms_faktur_pembelian');
     }
 };

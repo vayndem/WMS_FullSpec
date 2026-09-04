@@ -251,7 +251,7 @@
                 try {
                     const codes = this.lpbs.filter((item) => this.selectedLpbIds.includes(item.id)).map((item) => item.code);
                     const results = await Promise.all(codes.map((code) =>
-                        fetch(`{{ url('invoice-lpb/lpb-detail') }}/${code}`, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } }).then((r) => r.json())
+                        fetch(`{{ url('faktur-pembelian/lpb-detail') }}/${code}`, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } }).then((r) => r.json())
                     ));
                     let subTotal = 0;
                     const items = [];
@@ -279,7 +279,7 @@
                 this.submitting = true;
                 try {
                     const payload = { ...this.form, kode_supplier: this.supplierId, lpb_ids: this.selectedLpbIds, is_ppn: this.form.is_ppn ? 1 : 0 };
-                    const response = await fetch('{{ route('invoice-lpb.store') }}', {
+                    const response = await fetch('{{ route('faktur-pembelian.store') }}', {
                         method: 'POST',
                         headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload),

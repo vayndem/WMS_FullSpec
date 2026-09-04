@@ -7,8 +7,8 @@
                 <h3 class="text-2xl font-bold">Daftar Invoice LPB</h3>
                 <p class="text-base-content/60">Kelola data tagihan dan pelunasan penerimaan barang</p>
             </div>
-            @can('create', App\Models\InvoiceLpb::class)
-                <button type="button" class="btn btn-primary" onclick="openAjaxModal('{{ route('invoice-lpb.create') }}')">
+            @can('create', App\Models\FakturPembelian::class)
+                <button type="button" class="btn btn-primary" onclick="openAjaxModal('{{ route('faktur-pembelian.create') }}')">
                     <i class="fa-solid fa-plus"></i> Buat Invoice LPB
                 </button>
             @endcan
@@ -86,7 +86,7 @@
                                             <i class="fa-solid fa-eye"></i>
                                         </button>
                                         <button type="button" x-show="row.can_update" class="btn btn-outline btn-warning btn-sm" title="Edit Invoice"
-                                            @click="openAjaxModal(`{{ url('invoice-lpb') }}/${row.id}/edit`)">
+                                            @click="openAjaxModal(`{{ url('faktur-pembelian') }}/${row.id}/edit`)">
                                             <i class="fa-solid fa-pen-to-square"></i>
                                         </button>
                                         <button type="button" x-show="row.can_delete" class="btn btn-outline btn-error btn-sm" title="Hapus"
@@ -316,8 +316,8 @@
         function invoiceLpbList(config) {
             return {
                 ...wmsDataTable({
-                    url: '{{ route('invoice-lpb.index') }}',
-                    reportUrl: '{{ route('invoice-lpb.report.pdf') }}',
+                    url: '{{ route('faktur-pembelian.index') }}',
+                    reportUrl: '{{ route('faktur-pembelian.report.pdf') }}',
                     extraParams: { payment_status: 'UNPAID', focus: config.focusId || '' },
                     columns: [
                         { data: 'no_invoice' }, { data: 'tanggal' }, { data: 'supplier_nama' }, { data: 'tgl_deadline_pembayaran' },
@@ -382,7 +382,7 @@
 
                 async openShow(id) {
                     try {
-                        const response = await fetch(`{{ url('invoice-lpb') }}/${id}`, {
+                        const response = await fetch(`{{ url('faktur-pembelian') }}/${id}`, {
                             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                         });
                         const res = await response.json();
@@ -401,7 +401,7 @@
                     try {
                         const [coaRes, advanceRes] = await Promise.all([
                             fetch('{{ url('chart-of-accounts/kas-bank') }}', { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } }).then((r) => r.json()),
-                            fetch(`{{ url('invoice-payments/available-advances') }}/${this.invoice.kode_supplier}`, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } }).then((r) => r.json()),
+                            fetch(`{{ url('pembayaran-faktur/available-advances') }}/${this.invoice.kode_supplier}`, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } }).then((r) => r.json()),
                         ]);
                         this.coaKasBankOptions = coaRes.data || [];
                         this.coaPostableOptions = coaRes.postable || [];
@@ -421,7 +421,7 @@
                     this.paymentSubmitting = true;
                     try {
                         const payload = { ...this.payment, invoice_lpb_id: this.invoice.id, potongan_materai: this.payment.potongan_materai ? 10000 : 0 };
-                        const response = await fetch('{{ route('invoice-payments.store') }}', {
+                        const response = await fetch('{{ route('pembayaran-faktur.store') }}', {
                             method: 'POST',
                             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload),
@@ -444,7 +444,7 @@
                     const result = await window.AppAlert.confirm('Hapus invoice ini? Invoice yang sudah dibayar tidak dapat dihapus.');
                     if (!result.isConfirmed) return;
                     try {
-                        const response = await fetch(`{{ url('invoice-lpb') }}/${id}`, {
+                        const response = await fetch(`{{ url('faktur-pembelian') }}/${id}`, {
                             method: 'DELETE',
                             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                         });

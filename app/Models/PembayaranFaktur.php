@@ -5,14 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class InvoicePayment extends Model
+class PembayaranFaktur extends Model
 {
     use HasFactory;
 
     public const POSTED = 'POSTED';
     public const VOID = 'VOID';
 
-    protected $table = 'invoice_payments';
+    protected $table = 'wms_pembayaran_faktur';
 
     protected $fillable = [
         'payment_number',
@@ -54,7 +54,7 @@ class InvoicePayment extends Model
 
     public function invoice()
     {
-        return $this->belongsTo(InvoiceLpb::class, 'invoice_lpb_id');
+        return $this->belongsTo(FakturPembelian::class, 'invoice_lpb_id');
     }
 
     public function userFinance()

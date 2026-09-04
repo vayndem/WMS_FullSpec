@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\InvoiceLpb;
+use App\Models\FakturPembelian;
 use App\Models\PenerimaanBarang;
 use App\Models\Jurnal;
-use App\Http\Requests\StoreInvoiceLpbRequest;
-use App\Http\Requests\UpdateInvoiceLpbRequest;
-use App\Policies\InvoiceLpbPolicy;
+use App\Http\Requests\StoreFakturPembelianRequest;
+use App\Http\Requests\UpdateFakturPembelianRequest;
+use App\Policies\FakturPembelianPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -17,18 +17,18 @@ use App\Models\Supplier;
 use App\Services\DocumentNumberService;
 use App\Services\ThreeWayMatchService;
 
-class InvoiceLpbController extends Controller
+class FakturPembelianController extends Controller
 {
     public function __construct(private WmsAccountingService $accounting, private DocumentNumberService $numbers, private ThreeWayMatchService $matching) {}
     public function index(Request $request)
     {
-        $this->authorize('viewAny', InvoiceLpb::class);
+        $this->authorize('viewAny', FakturPembelian::class);
 
         if ($request->ajax()) {
             $paymentStatus = $request->input('payment_status');
-            $query = InvoiceLpb::with(['supplier'])
+            $query = FakturPembelian::with(['supplier'])
                 ->when(
-                    in_array((string) $paymentStatus, [InvoiceLpb::UNPAID, InvoiceLpb::PARTIALLY_PAID, InvoiceLpb::PAID], true),
+                    in_array((string) $paymentStatus, [FakturPembelian::UNPAID, FakturPembelian::PARTIALLY_PAID, FakturPembelian::PAID], true),
                     fn($query) => $query->where('status', $paymentStatus)
                 )
                 ->when($request->filled('focus'), fn($query) => $query->whereKey($request->integer('focus')));
@@ -58,16 +58,16 @@ class InvoiceLpbController extends Controller
         $paymentNumber = $request->user()->isFinance()
             ? $this->numbers->financial('PY')
             : null;
-        return view('invoice_lpb.index', compact('paymentNumber'));
+        return view('faktur_pembelian.index', compact('paymentNumber'));
     }
 
     public function reportPdf(Request $request)
     {
-        $this->authorize('viewAny', InvoiceLpb::class);
+        $this->authorize('viewAny', FakturPembelian::class);
 
         $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
         $search = trim((string) $request->input('search', ''));
-        $query = InvoiceLpb::with('supplier')->latest('tanggal');
+        $query = FakturPembelian::with('supplier')->latest('tanggal');
 
         if ($search !== '') {
             $query->where(fn($q) => $q->where('no_invoice', 'like', "%{$search}%")
@@ -100,7 +100,7 @@ class InvoiceLpbController extends Controller
         ]);
 
         return Pdf::loadView('reports.table-pdf', [
-            'title' => 'Daftar Invoice LPB',
+            'title' => 'Daftar Faktur Pembelian',
             'columns' => [
                 ['key' => 'no_invoice', 'label' => 'No Invoice', 'align' => 'left'],
                 ['key' => 'tanggal', 'label' => 'Tanggal', 'align' => 'left'],
@@ -119,17 +119,17 @@ class InvoiceLpbController extends Controller
 
     public function create()
     {
-        $this->authorize('create', InvoiceLpb::class);
+        $this->authorize('create', FakturPembelian::class);
         $lpbs = PenerimaanBarang::whereNull('no_invoice')->where('status', PenerimaanBarang::POSTED)
             ->with(['pembelian.supplier', 'details', 'serviceDetails'])->orderBy('id_lpb', 'desc')->get();
         $supplierIds = $lpbs->pluck('pembelian.supplier_id')->filter()->unique()->values();
         $suppliers = Supplier::whereIn('id', $supplierIds)->orderBy('nama')->get();
-        return view('invoice_lpb.create', compact('lpbs', 'suppliers'));
+        return view('faktur_pembelian.create', compact('lpbs', 'suppliers'));
     }
 
     public function getLpbDetail($id_lpb)
     {
-        $this->authorize('create', InvoiceLpb::class);
+        $this->authorize('create', FakturPembelian::class);
         $lpb = PenerimaanBarang::where('id_lpb', $id_lpb)
             ->whereNull('no_invoice')
             ->where('status', PenerimaanBarang::POSTED)
@@ -170,7 +170,7 @@ class InvoiceLpbController extends Controller
         ]);
     }
 
-    public function store(StoreInvoiceLpbRequest $request)
+    public function store(StoreFakturPembelianRequest $request)
     {
         $validated = $request->validated();
 
@@ -193,7 +193,7 @@ class InvoiceLpbController extends Controller
 
             $grandTotal = ($subTotal + $ppnNominal + $validated['ongkir']) - $validated['diskon'];
 
-            $createdInvoice = InvoiceLpb::create([
+            $createdInvoice = FakturPembelian::create([
                 'no_invoice'              => $validated['no_invoice'],
                 'kode_supplier'           => $validated['kode_supplier'],
                 'tanggal'                 => $validated['tanggal'],
@@ -213,7 +213,7 @@ class InvoiceLpbController extends Controller
                 'total_pembayaran'        => 0,
                 'sisa_tagihan'            => $grandTotal,
                 'note'                    => $validated['note'] ?? null,
-                'status'                  => InvoiceLpb::UNPAID,
+                'status'                  => FakturPembelian::UNPAID,
             ]);
 
             foreach ($lpbs as $lpb) {
@@ -234,14 +234,14 @@ class InvoiceLpbController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Invoice LPB berhasil dibuat dan dicatat ke Jurnal COA (Hutang Usaha).',
+            'message' => 'Faktur pembelian berhasil dibuat dan dicatat ke Jurnal COA (Hutang Usaha).',
             'data'    => $invoice
         ], 201);
     }
 
     public function show($id)
     {
-        $invoice = InvoiceLpb::with(['supplier', 'payments.userFinance', 'payments.coaKasBank', 'payments.coaSelisih', 'lpbs.details.bahan'])->findOrFail($id);
+        $invoice = FakturPembelian::with(['supplier', 'payments.userFinance', 'payments.coaKasBank', 'payments.coaSelisih', 'lpbs.details.bahan'])->findOrFail($id);
         $this->authorize('view', $invoice);
 
         return response()->json([
@@ -256,19 +256,19 @@ class InvoiceLpbController extends Controller
 
     public function edit($id)
     {
-        $invoice = InvoiceLpb::with('lpbs')->findOrFail($id);
+        $invoice = FakturPembelian::with('lpbs')->findOrFail($id);
         $this->authorize('update', $invoice);
 
         $lpbs = PenerimaanBarang::where('status', PenerimaanBarang::POSTED)
             ->where(fn($query) => $query->whereNull('no_invoice')->orWhereIn('id', $invoice->lpbs->pluck('id')))
             ->whereHas('pembelian', fn($query) => $query->where('supplier_id', $invoice->kode_supplier))
             ->with(['pembelian.supplier', 'serviceDetails'])->get();
-        return view('invoice_lpb.edit', compact('invoice', 'lpbs'));
+        return view('faktur_pembelian.edit', compact('invoice', 'lpbs'));
     }
 
-    public function update(UpdateInvoiceLpbRequest $request, $id)
+    public function update(UpdateFakturPembelianRequest $request, $id)
     {
-        $invoice = InvoiceLpb::findOrFail($id);
+        $invoice = FakturPembelian::findOrFail($id);
         $this->authorize('update', $invoice);
 
         $validated = $request->validated();
@@ -298,7 +298,7 @@ class InvoiceLpbController extends Controller
             $grandTotal = ($subTotal + $ppnNominal + $validated['ongkir']) - $validated['diskon'];
             $sisaTagihan = $grandTotal - $invoice->total_pembayaran;
 
-            $statusCode = InvoiceLpb::paymentStatus($grandTotal, (float) $invoice->total_pembayaran);
+            $statusCode = FakturPembelian::paymentStatus($grandTotal, (float) $invoice->total_pembayaran);
             $sisaTagihan = max(0, $sisaTagihan);
 
             $invoice->update([
@@ -337,13 +337,13 @@ class InvoiceLpbController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Invoice LPB berhasil diperbarui.'
+            'message' => 'Faktur pembelian berhasil diperbarui.'
         ]);
     }
 
     public function destroy($id)
     {
-        $invoice = InvoiceLpb::findOrFail($id);
+        $invoice = FakturPembelian::findOrFail($id);
         $this->authorize('delete', $invoice);
 
         DB::transaction(function () use ($invoice) {
@@ -365,17 +365,17 @@ class InvoiceLpbController extends Controller
                 'voided_by' => auth()->id(),
                 'voided_at' => now(),
                 'void_reason' => 'Dibatalkan melalui sistem',
-                'status' => InvoiceLpb::VOID,
+                'status' => FakturPembelian::VOID,
             ]);
         });
 
         return response()->json([
             'success' => true,
-            'message' => 'Invoice LPB berhasil dihapus.'
+            'message' => 'Faktur pembelian berhasil dihapus.'
         ]);
     }
 
-    private function syncJurnalInvoice(InvoiceLpb $invoice): void
+    private function syncJurnalInvoice(FakturPembelian $invoice): void
     {
         $this->accounting->postInvoice($invoice);
     }

@@ -221,7 +221,7 @@
                                     <td>{{ $i->match_status }}</td>
                                     <td>{{ count(data_get($i->match_summary, 'issues', [])) }}</td>
                                     <td>
-                                        <form method="POST" action="{{ route('wms-control.invoices.match', $i) }}">
+                                        <form method="POST" action="{{ route('wms-control.faktur-pembelian.match', $i) }}">
                                             @csrf
                                             <button class="btn btn-outline btn-primary btn-sm">Match ulang</button>
                                         </form>

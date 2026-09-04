@@ -107,19 +107,19 @@
             ],
             'note' => 'Pemakaian barang akan ditolak bila stok on hand atau layer persediaan tidak mencukupi.',
         ],
-        'invoice-lpb.' => [
-            'title' => 'Panduan Invoice Supplier',
-            'intro' => 'Invoice supplier menggabungkan satu atau beberapa penerimaan barang dari supplier yang sama.',
+        'faktur-pembelian.' => [
+            'title' => 'Panduan Faktur Pembelian',
+            'intro' => 'Faktur pembelian menggabungkan satu atau beberapa penerimaan barang dari supplier yang sama.',
             'steps' => [
-                'Pilih seluruh penerimaan barang yang tercantum dalam invoice.',
+                'Pilih seluruh penerimaan barang yang tercantum dalam faktur.',
                 'Periksa PPN, diskon, ongkir, dan nilai tagihan.',
-                'Simpan invoice untuk memindahkan GRNI menjadi hutang supplier.',
+                'Simpan faktur untuk memindahkan GRNI menjadi hutang supplier.',
                 'Catat pembayaran menggunakan akun yang ditandai sebagai Kas/Bank.',
             ],
             'note' =>
                 $userType === \App\Models\User::ROLE_FINANCE
-                    ? 'Anda hanya dapat mencatat atau membatalkan pembayaran. Header invoice dikelola Purchasing.'
-                    : 'PPh 23 diakui pada saat pembayaran, bukan saat invoice diterima.',
+                    ? 'Anda hanya dapat mencatat atau membatalkan pembayaran. Header faktur dikelola Purchasing.'
+                    : 'PPh 23 diakui pada saat pembayaran, bukan saat faktur diterima.',
         ],
         'chart-of-accounts.' => [
             'title' => 'Panduan Chart of Accounts',

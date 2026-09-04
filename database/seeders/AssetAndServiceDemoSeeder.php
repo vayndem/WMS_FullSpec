@@ -6,8 +6,8 @@ use App\Models\User;
 use App\Models\Aset;
 use App\Models\KategoriAset;
 use App\Models\ChartOfAccount;
-use App\Models\InvoiceLpb;
-use App\Models\InvoicePayment;
+use App\Models\FakturPembelian;
+use App\Models\PembayaranFaktur;
 use App\Models\PenerimaanJasa;
 use App\Models\KategoriJasa;
 use App\Models\PesananJasa;
@@ -129,7 +129,7 @@ class AssetAndServiceDemoSeeder extends Seeder
                     ['datapesanan_code' => 'DEMO-DP-002', 'percentage' => 40, 'amount' => 2400000],
                 ]);
 
-                $invoice = InvoiceLpb::create([
+                $invoice = FakturPembelian::create([
                     'no_invoice' => 'DEMO-SRV-INV-001',
                     'kode_supplier' => $supplier->id,
                     'tanggal' => today()->subDay(),
@@ -148,13 +148,13 @@ class AssetAndServiceDemoSeeder extends Seeder
                     'total_pembayaran' => 3000000,
                     'sisa_tagihan' => 5000000,
                     'note' => 'Invoice jasa demo untuk melihat alur penuh BAP -> Invoice -> Pembayaran',
-                    'status' => InvoiceLpb::PARTIALLY_PAID,
+                    'status' => FakturPembelian::PARTIALLY_PAID,
                 ]);
                 $invoice->receipts()->create(['lpb_id' => $bap->id, 'amount' => 8000000]);
                 $bap->update(['no_invoice' => $invoice->no_invoice]);
                 $accounting->postInvoice($invoice);
 
-                $partialPayment = InvoicePayment::create([
+                $partialPayment = PembayaranFaktur::create([
                     'payment_number' => $numbers->financial('PY', today()),
                     'invoice_lpb_id' => $invoice->id,
                     'tanggal_pembayaran' => today(),
@@ -217,7 +217,7 @@ class AssetAndServiceDemoSeeder extends Seeder
                     'department_cost_center' => 'Gudang',
                 ]);
 
-                $invoiceLunas = InvoiceLpb::create([
+                $invoiceLunas = FakturPembelian::create([
                     'no_invoice' => 'DEMO-SRV-INV-002',
                     'kode_supplier' => $supplier->id,
                     'tanggal' => today()->subDays(2),
@@ -236,13 +236,13 @@ class AssetAndServiceDemoSeeder extends Seeder
                     'total_pembayaran' => 1500000,
                     'sisa_tagihan' => 0,
                     'note' => 'Invoice jasa demo lunas penuh',
-                    'status' => InvoiceLpb::PAID,
+                    'status' => FakturPembelian::PAID,
                 ]);
                 $invoiceLunas->receipts()->create(['lpb_id' => $bapLunas->id, 'amount' => 1500000]);
                 $bapLunas->update(['no_invoice' => $invoiceLunas->no_invoice]);
                 $accounting->postInvoice($invoiceLunas);
 
-                $fullPayment = InvoicePayment::create([
+                $fullPayment = PembayaranFaktur::create([
                     'payment_number' => $numbers->financial('PY', today()->addDay()),
                     'invoice_lpb_id' => $invoiceLunas->id,
                     'tanggal_pembayaran' => today()->addDay(),

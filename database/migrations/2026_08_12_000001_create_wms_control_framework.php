@@ -120,7 +120,7 @@ return new class extends Migration
             $table->unique(['quality_inspection_id', 'lpb_detail_id'], 'quality_inspection_detail_unique');
         });
 
-        Schema::table('invoice_lpbs', function (Blueprint $table) {
+        Schema::table('wms_faktur_pembelian', function (Blueprint $table) {
             $table->string('match_status', 20)->default('PENDING')->after('status');
             $table->json('match_summary')->nullable();
             $table->foreignId('matched_by')->nullable()->constrained('users')->nullOnDelete();
@@ -241,7 +241,7 @@ return new class extends Migration
         });
         Schema::dropIfExists('landed_cost_allocations');
         Schema::dropIfExists('landed_costs');
-        Schema::table('invoice_lpbs', function (Blueprint $table) {
+        Schema::table('wms_faktur_pembelian', function (Blueprint $table) {
             $table->dropConstrainedForeignId('matched_by');
             $table->dropColumn(['match_status', 'match_summary', 'matched_at']);
         });
