@@ -211,7 +211,7 @@ Belum ada WIP manufacturing khusus. Sistem masih memakai pola pemakaian bahan la
 
 - LPB mengacu ke PO
 - posting LPB menambah `stok_gudangs`
-- posting LPB membuat `inventory_layers`
+- posting LPB membuat `wms_layer_persediaan`
 - jurnal LPB: debit persediaan, kredit GRNI
 
 ### 6.2 NPK
@@ -282,15 +282,17 @@ Dashboard produksi menampilkan:
 | Gudang | `stok_gudangs`, `pembagian_gudangs`, `pengaturan_bahan_gudangs`, `mutasi_stoks` |
 | Transfer | `transfer_gudangs`, `detail_transfer_gudangs`, `alokasi_transfer_gudangs` |
 | Consider | `pemeriksaan_considers`, `detail_pemeriksaan_considers` |
-| Procurement | `requests`, `request_details`, `pembelians`, `pembelian_details` |
-| Receipt | `lpbs`, `lpb_details` |
-| Issue | `npks`, `npk_stock_allocations`, `inventory_layers` |
-| AP | `invoice_lpbs`, `invoice_lpb_receipts`, `invoice_payments` |
-| Ledger | `chart_of_accounts`, `accounting_settings`, `jurnals`, `jurnal_details` |
+| Procurement | `requests`, `request_details`, `wms_pesanan_pembelian`, `wms_pesanan_pembelian_detail` |
+| Receipt | `wms_penerimaan_barang`, `wms_penerimaan_barang_detail` |
+| Issue | `wms_pemakaian_barang`, `wms_pemakaian_barang_alokasi_stok`, `wms_layer_persediaan` |
+| Retur | `wms_retur_pembelian`, `wms_retur_pembelian_detail` |
+| AP | `wms_faktur_pembelian`, `wms_faktur_pembelian_penerimaan`, `wms_pembayaran_faktur` |
+| Ledger | `wms_bagan_akun`, `accounting_settings`, `wms_jurnal`, `wms_jurnal_detail` |
 | Controls | `accounting_period_locks`, `tax_rates`, `document_sequences` |
-| Opname | `stock_opnames`, `stock_opname_details`, `stock_opname_allocations` |
-| Asset | `asset_categories`, `assets`, `asset_depreciations`, `asset_disposals` |
-| Service | `service_categories`, `service_po_details`, `service_bap_details`, `service_bap_allocations` |
+| Opname | `wms_stock_opname`, `wms_stock_opname_detail`, `wms_stock_opname_alokasi` |
+| Asset | `wms_kategori_asets`, `wms_asets`, `wms_penyusutan_asets`, `wms_pelepasan_asets` |
+| Service | `wms_kategori_jasa`, `wms_pesanan_jasa_detail`, `wms_penerimaan_jasa_detail`, `wms_penerimaan_jasa_alokasi` |
+| WMS control | `wms_log_audit`, `wms_kunci_operasi_dokumen`, `wms_pembalikan_dokumen`, `wms_lokasi_gudang`, `wms_lot_persediaan`, `wms_serial_persediaan`, `wms_reservasi_persediaan`, `wms_pesanan_pengambilan`, `wms_pesanan_pengambilan_detail`, `wms_pemeriksaan_kualitas`, `wms_pemeriksaan_kualitas_detail`, `wms_biaya_tambahan`, `wms_biaya_tambahan_alokasi`, `wms_saran_pengisian_ulang` |
 
 ### 8.2 Migration yang relevan dengan role
 
@@ -386,16 +388,16 @@ Daftar yang masih relevan:
 
 Framework kontrol baru mencakup:
 
-- `audit_logs` untuk histori perubahan dokumen kritis
-- `document_operation_keys` untuk idempotency
-- `document_reversals` untuk pembalikan LPB/NPK
-- `warehouse_locations`, `inventory_lots`, dan `inventory_serials`
+- `wms_log_audit` untuk histori perubahan dokumen kritis
+- `wms_kunci_operasi_dokumen` untuk idempotency
+- `wms_pembalikan_dokumen` untuk pembalikan LPB/NPK
+- `wms_lokasi_gudang`, `wms_lot_persediaan`, dan `wms_serial_persediaan`
 - status layer `AVAILABLE`, `QC_HOLD`, `IN_TRANSIT`, `REVERSED`, dan `TRANSFER_SHORTAGE`
-- `quality_inspections` dan putaway
-- `landed_costs` beserta alokasi ke layer
-- `inventory_reservations` dan `picking_orders`
-- `replenishment_suggestions`
-- three-way matching tersimpan pada invoice supplier
+- `wms_pemeriksaan_kualitas` dan putaway
+- `wms_biaya_tambahan` beserta alokasi ke layer
+- `wms_reservasi_persediaan` dan `wms_pesanan_pengambilan`
+- `wms_saran_pengisian_ulang`
+- three-way matching tersimpan pada faktur pembelian
 
 Urutan transfer standar adalah `DRAFT -> DIAJUKAN -> DIKIRIM -> DITERIMA`. Urutan receiving adalah `RECEIVED -> QC_COMPLETED/QC_COMPLETED_WITH_HOLD -> PUTAWAY`. Dokumen posted tidak boleh diedit; gunakan workflow reversal atau void sumber transaksi.
 

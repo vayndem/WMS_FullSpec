@@ -67,17 +67,17 @@ Perintah ini menjalankan strict PSR-4 Composer dan membandingkan casing class, i
 | Master | Bahan | Kategori, gudang, satuan utama/kecil, planning |
 | Procurement | Request | Pengajuan kebutuhan dan approval |
 | Procurement | PO Barang | Pembelian barang, realisasi request, histori revisi |
-| Warehouse | LPB | Penerimaan barang terhadap PO |
-| Warehouse | NPK | Pemakaian barang dan pengurangan layer FIFO |
+| Warehouse | Penerimaan Barang (LPB) | Penerimaan barang terhadap PO |
+| Warehouse | Pemakaian Barang (NPK) | Pemakaian barang dan pengurangan layer FIFO |
 | Warehouse | Multi Gudang | Saldo per gudang, transfer, mutasi, planning, Consider, Rusak |
 | Warehouse | Stock Opname | Hitung fisik, approval accounting, koreksi stok |
-| Finance | Invoice LPB | Penggabungan LPB/BAP menjadi tagihan supplier |
+| Finance | Faktur Pembelian | Penggabungan LPB/BAP menjadi tagihan supplier |
 | Finance | Pembayaran | Pembayaran parsial/penuh, PPh, biaya bank, materai |
-| Accounting | COA dan Mapping | Mapping persediaan, beban, GRNI, akun global |
+| Accounting | Bagan Akun (COA) dan Mapping | Mapping persediaan, beban, GRNI, akun global |
 | Accounting | Jurnal | Jurnal otomatis, jurnal manual, reversal |
 | Accounting | Kontrol | Kunci periode, tarif pajak, rekonsiliasi |
-| Asset | Asset Tetap | Perolehan, penyusutan, pelepasan |
-| Jasa | PO Jasa dan BAP | Jasa operasional/produksi dan progress BAP |
+| Asset | Aset Tetap | Perolehan, penyusutan, pelepasan |
+| Jasa | Pesanan Jasa dan Penerimaan Jasa (BAP) | Jasa operasional/produksi dan progress BAP |
 | WMS Control | Traceability | Bin, lot, serial, expiry, block/release |
 | WMS Control | Warehouse Execution | QC, putaway, reservation, FEFO/FIFO picking |
 | WMS Control | Financial Control | Three-way match, landed cost, controlled reversal |
