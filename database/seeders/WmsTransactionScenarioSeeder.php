@@ -15,8 +15,8 @@ use App\Models\KategoriBahan;
 use App\Models\PenerimaanBarang;
 use App\Models\PenerimaanBarangDetail;
 use App\Models\Npk;
-use App\Models\Pembelian;
-use App\Models\PembelianDetail;
+use App\Models\PesananPembelian;
+use App\Models\PesananPembelianDetail;
 use App\Models\MaterialRequest;
 use App\Models\RequestDetail;
 use App\Models\StockOpname;
@@ -38,7 +38,7 @@ class WmsTransactionScenarioSeeder extends Seeder
         $warehouseUser = User::where('email', 'warehouse@wms.local')->firstOrFail();
         Auth::setUser($purchasingUser);
 
-        if (Pembelian::where('notes', 'PO demo diterima parsial 17 dari 20 KG')->exists()) {
+        if (PesananPembelian::where('notes', 'PO demo diterima parsial 17 dari 20 KG')->exists()) {
             $this->command?->warn('Skenario transaksi DEMO sudah tersedia; tidak dibuat ulang.');
             $this->assertInvariants();
             return;
@@ -129,7 +129,7 @@ class WmsTransactionScenarioSeeder extends Seeder
                 'tipe_barang' => $category->id,
             ]);
 
-            $po = Pembelian::create([
+            $po = PesananPembelian::create([
                 'no_po' => $numbers->financial('PO', $date),
                 'tanggal' => $date,
                 'supplier_id' => $supplier->id,
@@ -143,12 +143,12 @@ class WmsTransactionScenarioSeeder extends Seeder
                 'total_ppn' => 22000,
                 'total_include' => 222000,
                 'grand_total' => 222000,
-                'status' => Pembelian::OPEN,
+                'status' => PesananPembelian::OPEN,
                 'term_pengiriman' => 'Bertahap',
                 'jenis' => 0,
                 'kunci' => 1,
             ]);
-            $poDetail = PembelianDetail::create([
+            $poDetail = PesananPembelianDetail::create([
                 'no_po' => $po->no_po,
                 'bahan_id' => $material->id,
                 'jumlah' => 20,
@@ -284,7 +284,7 @@ class WmsTransactionScenarioSeeder extends Seeder
         Bahan $material,
         KategoriBahan $category,
         Gudang $warehouse,
-        Pembelian $po,
+        PesananPembelian $po,
         $date,
         float $quantity,
         string $lot

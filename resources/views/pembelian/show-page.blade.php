@@ -31,8 +31,8 @@
                 </div>
                 <div>
                     <p class="mb-1 text-sm text-base-content/50">Status</p>
-                    <span class="badge {{ $pembelian->status === \App\Models\Pembelian::CLOSED ? 'badge-success' : 'badge-warning' }}">
-                        {{ $pembelian->status === \App\Models\Pembelian::CLOSED ? 'Selesai' : 'Aktif' }}
+                    <span class="badge {{ $pembelian->status === \App\Models\PesananPembelian::CLOSED ? 'badge-success' : 'badge-warning' }}">
+                        {{ $pembelian->status === \App\Models\PesananPembelian::CLOSED ? 'Selesai' : 'Aktif' }}
                     </span>
                 </div>
             </div>

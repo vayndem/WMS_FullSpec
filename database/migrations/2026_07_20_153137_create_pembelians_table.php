@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('pembelians', function (Blueprint $table) {
+        Schema::create('wms_pesanan_pembelian', function (Blueprint $table) {
             $table->id();
             $table->string('no_po', 22)->unique();
             $table->date('tanggal');
@@ -43,6 +43,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('pembelians');
+        Schema::dropIfExists('wms_pesanan_pembelian');
     }
 };

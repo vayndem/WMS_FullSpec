@@ -2,16 +2,16 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Pembelian;
+use App\Models\PesananPembelian;
 use App\Models\RequestDetail;
-use App\Models\PembelianDetail;
+use App\Models\PesananPembelianDetail;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StorePembelianRequest extends FormRequest
+class StorePesananPembelianRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('create', Pembelian::class) ?? false;
+        return $this->user()?->can('create', PesananPembelian::class) ?? false;
     }
 
     protected function prepareForValidation(): void
@@ -32,7 +32,7 @@ class StorePembelianRequest extends FormRequest
         $noPoTarget = $this->route('no_po') ?? $this->route('pembelian');
 
         return [
-            'no_po'                       => ['required', 'string', 'max:30', 'regex:/^\d{2}-\d{2}-[A-Z]{2}-(?:I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)-\d{3}$/', 'unique:pembelians,no_po'],
+            'no_po'                       => ['required', 'string', 'max:30', 'regex:/^\d{2}-\d{2}-[A-Z]{2}-(?:I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)-\d{3}$/', 'unique:wms_pesanan_pembelian,no_po'],
             'tanggal'                     => 'required|date',
             'supplier_id'                 => 'required|exists:suppliers,id',
             'gudang_id'                   => 'required|exists:gudangs,id',
@@ -66,7 +66,7 @@ class StorePembelianRequest extends FormRequest
                             if ($reqDetail) {
                                 $existingRealisasiThisPo = 0;
                                 if ($noPoTarget) {
-                                    $existingRealisasiThisPo = PembelianDetail::where('no_po', $noPoTarget)
+                                    $existingRealisasiThisPo = PesananPembelianDetail::where('no_po', $noPoTarget)
                                         ->where('request_detail_id', $reqDetailId)
                                         ->sum('jumlah');
                                 }

@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\PenerimaanBarang;
 use App\Models\PenerimaanBarangDetail;
-use App\Models\Pembelian;
-use App\Models\PembelianDetail;
+use App\Models\PesananPembelian;
+use App\Models\PesananPembelianDetail;
 use App\Models\Bahan;
 use App\Models\Jurnal;
 use App\Models\KategoriBahan;
@@ -216,8 +216,8 @@ class PenerimaanBarangController extends Controller
     {
         $this->authorize('create', PenerimaanBarang::class);
 
-        $pos = Pembelian::with(['supplier', 'details'])
-            ->where('status', Pembelian::OPEN)
+        $pos = PesananPembelian::with(['supplier', 'details'])
+            ->where('status', PesananPembelian::OPEN)
             ->orderBy('no_po', 'desc')
             ->get();
         $kategoris = KategoriBahan::all();
@@ -229,7 +229,7 @@ class PenerimaanBarangController extends Controller
     public function getPoDetail($no_po)
     {
         $this->authorize('create', PenerimaanBarang::class);
-        $po = Pembelian::where('no_po', $no_po)->with(['supplier', 'gudang', 'details.bahan'])->firstOrFail();
+        $po = PesananPembelian::where('no_po', $no_po)->with(['supplier', 'gudang', 'details.bahan'])->firstOrFail();
 
         $items = $po->details->map(function ($detail) {
             $selisih = $detail->jumlah - $detail->diterima;
@@ -260,7 +260,7 @@ class PenerimaanBarangController extends Controller
         $validated = $request->validated();
         $user = Auth::user();
 
-        $po = Pembelian::where('no_po', $validated['no_po'])->with('details')->firstOrFail();
+        $po = PesananPembelian::where('no_po', $validated['no_po'])->with('details')->firstOrFail();
 
         $overItems = [];
         foreach ($validated['details'] as $item) {
@@ -307,7 +307,7 @@ class PenerimaanBarangController extends Controller
             ]);
 
             foreach ($validated['details'] as $item) {
-                $poDetail = PembelianDetail::where('no_po', $validated['no_po'])
+                $poDetail = PesananPembelianDetail::where('no_po', $validated['no_po'])
                     ->where('bahan_id', $item['id_bahan'])
                     ->lockForUpdate()
                     ->firstOrFail();
@@ -423,7 +423,7 @@ class PenerimaanBarangController extends Controller
         $this->authorize('update', $lpbData);
 
         $validated = $request->validated();
-        $po = Pembelian::where('no_po', $lpbData->no_po)->with('details')->firstOrFail();
+        $po = PesananPembelian::where('no_po', $lpbData->no_po)->with('details')->firstOrFail();
 
         $overItems = [];
         foreach ($validated['details'] as $item) {
@@ -456,7 +456,7 @@ class PenerimaanBarangController extends Controller
             foreach ($lpbData->details as $oldDetail) {
                 Bahan::where('id', $oldDetail->id_bahan)->decrement('stok_onhand', $oldDetail->jumlah_barang_diterima);
 
-                $poDetail = PembelianDetail::where('no_po', $lpbData->no_po)
+                $poDetail = PesananPembelianDetail::where('no_po', $lpbData->no_po)
                     ->where('bahan_id', $oldDetail->id_bahan)
                     ->lockForUpdate()
                     ->first();
@@ -494,7 +494,7 @@ class PenerimaanBarangController extends Controller
 
                 Bahan::where('id', $item['id_bahan'])->increment('stok_onhand', $item['jumlah_barang_diterima']);
 
-                $poDetail = PembelianDetail::where('no_po', $lpbData->no_po)
+                $poDetail = PesananPembelianDetail::where('no_po', $lpbData->no_po)
                     ->where('bahan_id', $item['id_bahan'])
                     ->lockForUpdate()
                     ->first();
@@ -532,7 +532,7 @@ class PenerimaanBarangController extends Controller
             foreach ($lpbData->details as $detail) {
                 Bahan::where('id', $detail->id_bahan)->decrement('stok_onhand', $detail->jumlah_barang_diterima);
 
-                $poDetail = PembelianDetail::where('no_po', $lpbData->no_po)
+                $poDetail = PesananPembelianDetail::where('no_po', $lpbData->no_po)
                     ->where('bahan_id', $detail->id_bahan)
                     ->lockForUpdate()
                     ->first();
@@ -590,7 +590,7 @@ class PenerimaanBarangController extends Controller
 
             Bahan::where('id', $validated['id_bahan'])->increment('stok_onhand', $validated['jumlah_barang_diterima']);
 
-            $poDetail = PembelianDetail::where('no_po', $lpbData->no_po)
+            $poDetail = PesananPembelianDetail::where('no_po', $lpbData->no_po)
                 ->where('bahan_id', $validated['id_bahan'])
                 ->lockForUpdate()
                 ->first();
@@ -653,7 +653,7 @@ class PenerimaanBarangController extends Controller
                     Bahan::where('id', $detail->id_bahan)->decrement('stok_onhand', abs($diff));
                 }
 
-                $poDetail = PembelianDetail::where('no_po', $lpbData->no_po)
+                $poDetail = PesananPembelianDetail::where('no_po', $lpbData->no_po)
                     ->where('bahan_id', $detail->id_bahan)
                     ->lockForUpdate()
                     ->first();
@@ -700,7 +700,7 @@ class PenerimaanBarangController extends Controller
         DB::transaction(function () use ($lpbData, $detail) {
             Bahan::where('id', $detail->id_bahan)->decrement('stok_onhand', $detail->jumlah_barang_diterima);
 
-            $poDetail = PembelianDetail::where('no_po', $lpbData->no_po)
+            $poDetail = PesananPembelianDetail::where('no_po', $lpbData->no_po)
                 ->where('bahan_id', $detail->id_bahan)
                 ->lockForUpdate()
                 ->first();

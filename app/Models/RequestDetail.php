@@ -41,6 +41,6 @@ class RequestDetail extends Model
 
     public function pembelianDetails(): HasMany
     {
-        return $this->hasMany(PembelianDetail::class, 'request_detail_id');
+        return $this->hasMany(PesananPembelianDetail::class, 'request_detail_id');
     }
 }

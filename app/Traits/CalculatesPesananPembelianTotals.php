@@ -2,11 +2,11 @@
 
 namespace App\Traits;
 
-use App\Models\Pembelian;
+use App\Models\PesananPembelian;
 
-trait CalculatesPembelianTotals
+trait CalculatesPesananPembelianTotals
 {
-    public function recalculatePembelianTotals(Pembelian $pembelian): Pembelian
+    public function recalculatePembelianTotals(PesananPembelian $pembelian): PesananPembelian
     {
         $sumExclude = $pembelian->details()->sum('exclude');
         $sumPpn = $pembelian->details()->sum('ppn');

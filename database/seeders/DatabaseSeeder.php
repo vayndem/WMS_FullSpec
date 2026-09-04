@@ -276,9 +276,9 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        $ordered = DB::table('pembelian_details as d')->join('pembelians as p', 'p.no_po', '=', 'd.no_po')
+        $ordered = DB::table('wms_pesanan_pembelian_detail as d')->join('wms_pesanan_pembelian as p', 'p.no_po', '=', 'd.no_po')
             ->select('p.gudang_id', 'd.bahan_id', DB::raw('SUM(GREATEST(d.jumlah - d.diterima, 0)) as quantity'))
-            ->where('p.status', \App\Models\Pembelian::OPEN)->whereNotNull('p.gudang_id')->groupBy('p.gudang_id', 'd.bahan_id')->get();
+            ->where('p.status', \App\Models\PesananPembelian::OPEN)->whereNotNull('p.gudang_id')->groupBy('p.gudang_id', 'd.bahan_id')->get();
         foreach ($ordered as $row) {
             StokGudang::updateOrCreate(
                 ['gudang_id' => $row->gudang_id, 'bahan_id' => $row->bahan_id],

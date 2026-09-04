@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('pembelian_histories', function (Blueprint $table) {
+        Schema::create('wms_riwayat_pesanan_pembelian', function (Blueprint $table) {
             $table->id('id_history');
             $table->string('no_revisi', 50);
             $table->string('action', 10)->default('REVISION');
@@ -41,7 +41,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('pembelian_detail_histories', function (Blueprint $table) {
+        Schema::create('wms_riwayat_pesanan_pembelian_detail', function (Blueprint $table) {
             $table->id('id_history_detail');
             $table->string('no_revisi', 50);
             $table->unsignedBigInteger('pembelian_detail_id');
@@ -61,7 +61,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('pembelian_detail_histories');
-        Schema::dropIfExists('pembelian_histories');
+        Schema::dropIfExists('wms_riwayat_pesanan_pembelian_detail');
+        Schema::dropIfExists('wms_riwayat_pesanan_pembelian');
     }
 };

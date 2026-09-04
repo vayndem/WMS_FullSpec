@@ -7,14 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Pembelian extends Model
+class PesananPembelian extends Model
 {
     use HasFactory;
 
     public const OPEN = 'OPEN';
     public const CLOSED = 'CLOSED';
 
-    protected $table = 'pembelians';
+    protected $table = 'wms_pesanan_pembelian';
     protected $guarded = ['id'];
     protected $casts = ['tanggal' => 'date', 'kunci' => 'boolean'];
 
@@ -24,7 +24,7 @@ class Pembelian extends Model
         'totalexclude',
         'totalppn',
         'totalinclude',
-        'GrandTotalPembelian',
+        'GrandTotalPesananPembelian',
         'inputlabel'
     ];
 
@@ -53,7 +53,7 @@ class Pembelian extends Model
         return $this->attributes['total_include'] ?? 0;
     }
 
-    public function getGrandTotalPembelianAttribute()
+    public function getGrandTotalPesananPembelianAttribute()
     {
         return $this->attributes['grand_total'] ?? 0;
     }
@@ -65,7 +65,7 @@ class Pembelian extends Model
 
     public function details(): HasMany
     {
-        return $this->hasMany(PembelianDetail::class, 'no_po', 'no_po');
+        return $this->hasMany(PesananPembelianDetail::class, 'no_po', 'no_po');
     }
 
     public function lpbs(): HasMany

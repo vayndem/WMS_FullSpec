@@ -17,7 +17,7 @@ class StorePesananJasaRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'no_po' => ['required', 'string', 'max:30', 'regex:/^\d{2}-\d{2}-[A-Z]{2}-(?:I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)-\d{3}$/', Rule::unique('pembelians', 'no_po')->ignore($this->route('service_purchase'))],
+            'no_po' => ['required', 'string', 'max:30', 'regex:/^\d{2}-\d{2}-[A-Z]{2}-(?:I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)-\d{3}$/', Rule::unique('wms_pesanan_pembelian', 'no_po')->ignore($this->route('service_purchase'))],
             'tanggal' => 'required|date',
             'supplier_id' => 'required|exists:suppliers,id',
             'untuk_perhatian' => 'nullable|string|max:250',

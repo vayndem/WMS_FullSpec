@@ -20,7 +20,7 @@ class PesananJasaDetail extends Model
     ];
     public function purchaseOrder(): BelongsTo
     {
-        return $this->belongsTo(Pembelian::class, 'pembelian_id');
+        return $this->belongsTo(PesananPembelian::class, 'pembelian_id');
     }
     public function category(): BelongsTo
     {

@@ -97,7 +97,7 @@ return new class extends Migration
             $table->foreign('journal_id')->references('id')->on('jurnals')->restrictOnDelete();
         });
 
-        Schema::table('pembelians', function (Blueprint $table) {
+        Schema::table('wms_pesanan_pembelian', function (Blueprint $table) {
             $table->string('document_type', 20)->default('GOODS')->after('no_po')->index()
                 ->comment('Jenis PO: GOODS=PO barang, SERVICE=PO jasa');
         });
@@ -132,7 +132,7 @@ return new class extends Migration
             $table->decimal('subtotal', 18, 2);
             $table->decimal('accepted_amount', 18, 2)->default(0);
             $table->timestamps();
-            $table->foreign('pembelian_id')->references('id')->on('pembelians')->cascadeOnDelete();
+            $table->foreign('pembelian_id')->references('id')->on('wms_pesanan_pembelian')->cascadeOnDelete();
             $table->foreign('service_category_id')->references('id')->on('wms_kategori_jasa')->restrictOnDelete();
             $table->index(['pembelian_id', 'service_type']);
         });
@@ -180,7 +180,7 @@ return new class extends Migration
         ]));
         Schema::dropIfExists('wms_pesanan_jasa_detail');
         Schema::dropIfExists('wms_kategori_jasa');
-        Schema::table('pembelians', fn (Blueprint $table) => $table->dropColumn('document_type'));
+        Schema::table('wms_pesanan_pembelian', fn (Blueprint $table) => $table->dropColumn('document_type'));
         Schema::dropIfExists('wms_pelepasan_asets');
         Schema::dropIfExists('wms_penyusutan_asets');
         Schema::dropIfExists('wms_asets');

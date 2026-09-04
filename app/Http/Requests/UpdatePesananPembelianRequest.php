@@ -2,20 +2,20 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Pembelian;
+use App\Models\PesananPembelian;
 use App\Models\RequestDetail;
-use App\Models\PembelianDetail;
+use App\Models\PesananPembelianDetail;
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdatePembelianRequest extends FormRequest
+class UpdatePesananPembelianRequest extends FormRequest
 {
     public function authorize(): bool
     {
         $noPo = $this->route('no_po') ?? $this->route('pembelian');
 
-        $pembelian = $noPo instanceof Pembelian
+        $pembelian = $noPo instanceof PesananPembelian
             ? $noPo
-            : Pembelian::where('no_po', $noPo)->first();
+            : PesananPembelian::where('no_po', $noPo)->first();
 
         return $pembelian ? ($this->user()?->can('update', $pembelian) ?? false) : false;
     }
@@ -73,7 +73,7 @@ class UpdatePembelianRequest extends FormRequest
                             if ($reqDetail) {
                                 $existingRealisasiThisPo = 0;
                                 if ($noPoTarget) {
-                                    $existingRealisasiThisPo = PembelianDetail::where('no_po', $noPoTarget)
+                                    $existingRealisasiThisPo = PesananPembelianDetail::where('no_po', $noPoTarget)
                                         ->where('request_detail_id', $reqDetailId)
                                         ->sum('jumlah');
                                 }

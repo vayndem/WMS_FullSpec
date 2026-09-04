@@ -4,8 +4,8 @@ use App\Http\Controllers\BahanController;
 use App\Http\Controllers\DebitController;
 use App\Http\Controllers\KategoriBahanController;
 use App\Http\Controllers\KreditController;
-use App\Http\Controllers\PembelianController;
-use App\Http\Controllers\PembelianDetailController;
+use App\Http\Controllers\PesananPembelianController;
+use App\Http\Controllers\PesananPembelianDetailController;
 use App\Http\Controllers\MaterialRequestController;
 use App\Http\Controllers\RequestDetailController;
 use App\Http\Controllers\SupplierController;
@@ -24,21 +24,21 @@ Route::middleware('auth')->group(function () {
     Route::post('request/{request}/approve', [MaterialRequestController::class, 'processApprove'])->name('request.processApprove');
     Route::resource('requestdetail', RequestDetailController::class)->except(['create', 'edit']);
 
-    Route::get('pembeliandetail/{no_po}', [PembelianDetailController::class, 'index'])->name('pembeliandetail.index');
-    Route::post('pembeliandetail/{no_po}', [PembelianDetailController::class, 'store'])->name('pembeliandetail.store');
-    Route::put('pembeliandetail/{pembeliandetail}', [PembelianDetailController::class, 'update'])->name('pembeliandetail.update');
-    Route::delete('pembeliandetail/{pembeliandetail}', [PembelianDetailController::class, 'destroy'])->name('pembeliandetail.destroy');
+    Route::get('pembeliandetail/{no_po}', [PesananPembelianDetailController::class, 'index'])->name('pembeliandetail.index');
+    Route::post('pembeliandetail/{no_po}', [PesananPembelianDetailController::class, 'store'])->name('pembeliandetail.store');
+    Route::put('pembeliandetail/{pembeliandetail}', [PesananPembelianDetailController::class, 'update'])->name('pembeliandetail.update');
+    Route::delete('pembeliandetail/{pembeliandetail}', [PesananPembelianDetailController::class, 'destroy'])->name('pembeliandetail.destroy');
 
-    Route::get('pembelian', [PembelianController::class, 'index'])->name('pembelian.index');
-    Route::get('pembelian-report/pdf', [PembelianController::class, 'reportPdf'])->name('pembelian.report.pdf');
-    Route::post('pembelian', [PembelianController::class, 'store'])->name('pembelian.store');
-    Route::get('pembelian/{no_po}', [PembelianController::class, 'show'])->name('pembelian.show');
-    Route::put('pembelian/{no_po}', [PembelianController::class, 'update'])->name('pembelian.update');
-    Route::delete('pembelian/{no_po}', [PembelianController::class, 'destroy'])->name('pembelian.destroy');
-    Route::patch('pembelian/{no_po}/so-term', [PembelianController::class, 'updateSoTerm'])->name('pembelian.update-so-term');
-    Route::patch('pembelian/{no_po}/financials', [PembelianController::class, 'updateFinancials'])->name('pembelian.update-financials');
-    Route::patch('pembelian/{no_po}/close', [PembelianController::class, 'close'])->name('pembelian.close');
-    Route::post('pembelian/{no_po}/cetak', [PembelianController::class, 'cetak'])->name('pembelian.cetak');
+    Route::get('pembelian', [PesananPembelianController::class, 'index'])->name('pembelian.index');
+    Route::get('pembelian-report/pdf', [PesananPembelianController::class, 'reportPdf'])->name('pembelian.report.pdf');
+    Route::post('pembelian', [PesananPembelianController::class, 'store'])->name('pembelian.store');
+    Route::get('pembelian/{no_po}', [PesananPembelianController::class, 'show'])->name('pembelian.show');
+    Route::put('pembelian/{no_po}', [PesananPembelianController::class, 'update'])->name('pembelian.update');
+    Route::delete('pembelian/{no_po}', [PesananPembelianController::class, 'destroy'])->name('pembelian.destroy');
+    Route::patch('pembelian/{no_po}/so-term', [PesananPembelianController::class, 'updateSoTerm'])->name('pembelian.update-so-term');
+    Route::patch('pembelian/{no_po}/financials', [PesananPembelianController::class, 'updateFinancials'])->name('pembelian.update-financials');
+    Route::patch('pembelian/{no_po}/close', [PesananPembelianController::class, 'close'])->name('pembelian.close');
+    Route::post('pembelian/{no_po}/cetak', [PesananPembelianController::class, 'cetak'])->name('pembelian.cetak');
 
     Route::resource('kredit', KreditController::class)->except(['create', 'edit']);
     Route::resource('debit', DebitController::class)->except(['create', 'edit']);

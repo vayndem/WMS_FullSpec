@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class PembelianDetail extends Model
+class PesananPembelianDetail extends Model
 {
     use HasFactory;
 
-    protected $table = 'pembelian_details';
+    protected $table = 'wms_pesanan_pembelian_detail';
     protected $guarded = ['id'];
 
     protected $appends = ['id_bahan', 'id_permintaan'];
@@ -27,7 +27,7 @@ class PembelianDetail extends Model
 
     public function pembelian(): BelongsTo
     {
-        return $this->belongsTo(Pembelian::class, 'no_po', 'no_po');
+        return $this->belongsTo(PesananPembelian::class, 'no_po', 'no_po');
     }
 
     public function bahan(): BelongsTo

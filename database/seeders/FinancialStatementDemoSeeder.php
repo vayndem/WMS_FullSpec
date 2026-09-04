@@ -13,8 +13,8 @@ use App\Models\KategoriBahan;
 use App\Models\PenerimaanBarang;
 use App\Models\PenerimaanBarangDetail;
 use App\Models\Npk;
-use App\Models\Pembelian;
-use App\Models\PembelianDetail;
+use App\Models\PesananPembelian;
+use App\Models\PesananPembelianDetail;
 use App\Models\StockOpname;
 use App\Models\Supplier;
 use App\Models\User;
@@ -114,7 +114,7 @@ class FinancialStatementDemoSeeder extends Seeder
         float $price,
         string $lot
     ): array {
-        $po = Pembelian::create([
+        $po = PesananPembelian::create([
             'no_po' => $numbers->financial('PO', $date),
             'tanggal' => $date,
             'supplier_id' => $supplier->id,
@@ -127,12 +127,12 @@ class FinancialStatementDemoSeeder extends Seeder
             'total_ppn' => 0,
             'total_include' => $quantity * $price,
             'grand_total' => $quantity * $price,
-            'status' => Pembelian::OPEN,
+            'status' => PesananPembelian::OPEN,
             'term_pengiriman' => 'Sekaligus',
             'jenis' => 0,
             'kunci' => 1,
         ]);
-        PembelianDetail::create([
+        PesananPembelianDetail::create([
             'no_po' => $po->no_po,
             'bahan_id' => $material->id,
             'jumlah' => $quantity,

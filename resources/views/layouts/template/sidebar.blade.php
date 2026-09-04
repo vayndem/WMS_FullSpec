@@ -199,7 +199,7 @@
                     </li>
                 @endcan
 
-                @if (Auth::user()->can('viewAny', App\Models\Pembelian::class) ||
+                @if (Auth::user()->can('viewAny', App\Models\PesananPembelian::class) ||
                         Auth::user()->can('viewAny', App\Models\PesananJasa::class))
                     <li class="{{ request()->routeIs('pembelian.*', 'pesanan-jasa.*') ? 'active' : '' }}">
                         <a href="#transaksi" class="svg-icon"
@@ -218,7 +218,7 @@
                         </a>
                         <ul id="transaksi"
                             class="submenu {{ request()->routeIs('pembelian.*', 'pesanan-jasa.*') ? 'show' : '' }}">
-                            @can('viewAny', App\Models\Pembelian::class)
+                            @can('viewAny', App\Models\PesananPembelian::class)
                                 <li class="{{ request()->routeIs('pembelian.*') ? 'active' : '' }}">
                                     <a href="{{ route('pembelian.index') }}" class="svg-icon">
                                         <i>

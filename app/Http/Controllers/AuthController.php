@@ -6,7 +6,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\MaterialRequest;
-use App\Models\Pembelian;
+use App\Models\PesananPembelian;
 use App\Models\PenerimaanBarang;
 use App\Models\InvoiceLpb;
 use App\Models\InvoicePayment;
@@ -160,8 +160,8 @@ class AuthController extends Controller
                 ->where('requests.status', MaterialRequest::APPROVED)
                 ->whereRaw('COALESCE(request_details.realisasi, 0) < COALESCE(request_details.jumlah_acc, request_details.jumlah_minta)')
                 ->count(),
-            'open_purchase_orders' => Pembelian::where('status', Pembelian::OPEN)->count(),
-            'awaiting_receipt' => Pembelian::where('status', Pembelian::OPEN)
+            'open_purchase_orders' => PesananPembelian::where('status', PesananPembelian::OPEN)->count(),
+            'awaiting_receipt' => PesananPembelian::where('status', PesananPembelian::OPEN)
                 ->whereHas('details', fn($query) => $query->whereColumn('diterima', '<', 'jumlah'))
                 ->count(),
             'unbilled_receipts' => PenerimaanBarang::whereNull('no_invoice')->count(),
@@ -174,10 +174,10 @@ class AuthController extends Controller
         $pendingRequests = MaterialRequest::withCount('details')
             ->where('status', MaterialRequest::PENDING)->latest()->limit(5)->get();
 
-        $openPurchaseOrders = Pembelian::with('supplier')
+        $openPurchaseOrders = PesananPembelian::with('supplier')
             ->withSum('details as ordered_quantity', 'jumlah')
             ->withSum('details as received_quantity', 'diterima')
-            ->where('status', Pembelian::OPEN)->latest('tanggal')->limit(5)->get();
+            ->where('status', PesananPembelian::OPEN)->latest('tanggal')->limit(5)->get();
 
         $unbilledReceipts = PenerimaanBarang::with('pembelian.supplier')
             ->whereNull('no_invoice')->latest('tanggal')->limit(5)->get();

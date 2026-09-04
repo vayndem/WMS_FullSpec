@@ -2,24 +2,24 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Pembelian;
-use App\Models\PembelianDetail;
+use App\Models\PesananPembelian;
+use App\Models\PesananPembelianDetail;
 use App\Models\RequestDetail;
-use App\Http\Requests\StorePembelianDetailRequest;
-use App\Http\Requests\UpdatePembelianDetailRequest;
-use App\Traits\CalculatesPembelianTotals;
+use App\Http\Requests\StorePesananPembelianDetailRequest;
+use App\Http\Requests\UpdatePesananPembelianDetailRequest;
+use App\Traits\CalculatesPesananPembelianTotals;
 use Illuminate\Support\Facades\DB;
 
-class PembelianDetailController extends Controller
+class PesananPembelianDetailController extends Controller
 {
-    use CalculatesPembelianTotals;
+    use CalculatesPesananPembelianTotals;
 
     public function index($no_po)
     {
-        $pembelian = Pembelian::where('no_po', $no_po)->firstOrFail();
+        $pembelian = PesananPembelian::where('no_po', $no_po)->firstOrFail();
         $this->authorize('view', $pembelian);
 
-        $details = PembelianDetail::where('no_po', $no_po)->with('bahan')->get();
+        $details = PesananPembelianDetail::where('no_po', $no_po)->with('bahan')->get();
 
         return response()->json([
             'success' => true,
@@ -27,11 +27,11 @@ class PembelianDetailController extends Controller
         ]);
     }
 
-    public function store(StorePembelianDetailRequest $request, $no_po)
+    public function store(StorePesananPembelianDetailRequest $request, $no_po)
     {
-        $pembelian = Pembelian::where('no_po', $no_po)->firstOrFail();
+        $pembelian = PesananPembelian::where('no_po', $no_po)->firstOrFail();
 
-        $this->authorize('create', [PembelianDetail::class, $pembelian]);
+        $this->authorize('create', [PesananPembelianDetail::class, $pembelian]);
 
         $validated = $request->validated();
 
@@ -68,7 +68,7 @@ class PembelianDetailController extends Controller
         ], 201);
     }
 
-    public function update(UpdatePembelianDetailRequest $request, PembelianDetail $pembeliandetail)
+    public function update(UpdatePesananPembelianDetailRequest $request, PesananPembelianDetail $pembeliandetail)
     {
         $this->authorize('update', $pembeliandetail);
 
@@ -105,7 +105,7 @@ class PembelianDetailController extends Controller
         ]);
     }
 
-    public function destroy(PembelianDetail $pembeliandetail)
+    public function destroy(PesananPembelianDetail $pembeliandetail)
     {
         $this->authorize('delete', $pembeliandetail);
 

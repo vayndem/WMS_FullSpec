@@ -2,35 +2,35 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Pembelian;
+use App\Models\PesananPembelian;
 use App\Models\Bahan;
 use App\Models\Gudang;
 use App\Models\RequestDetail;
-use App\Http\Requests\StorePembelianRequest;
-use App\Http\Requests\UpdatePembelianRequest;
-use App\Policies\PembelianPolicy;
+use App\Http\Requests\StorePesananPembelianRequest;
+use App\Http\Requests\UpdatePesananPembelianRequest;
+use App\Policies\PesananPembelianPolicy;
 use App\Services\DocumentNumberService;
 use App\Services\StokGudangService;
-use App\Traits\CalculatesPembelianTotals;
+use App\Traits\CalculatesPesananPembelianTotals;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use TCPDF;
 use Barryvdh\DomPDF\Facade\Pdf;
 
-class PembelianController extends Controller
+class PesananPembelianController extends Controller
 {
     public function __construct(private DocumentNumberService $numbers, private StokGudangService $stokGudang) {}
-    use CalculatesPembelianTotals;
+    use CalculatesPesananPembelianTotals;
 
     public function index(Request $request)
     {
-        $this->authorize('viewAny', Pembelian::class);
+        $this->authorize('viewAny', PesananPembelian::class);
 
         if ($request->ajax()) {
             $bulan = $request->input('bulan');
             $tahun = $request->input('tahun');
 
-            $query = Pembelian::with(['supplier', 'details.bahan'])
+            $query = PesananPembelian::with(['supplier', 'details.bahan'])
                 ->when($bulan != '0' && !empty($bulan), function ($q) use ($bulan) {
                     return $q->whereMonth('tanggal', $bulan);
                 })
@@ -60,11 +60,11 @@ class PembelianController extends Controller
 
     public function reportPdf(Request $request)
     {
-        $this->authorize('viewAny', Pembelian::class);
+        $this->authorize('viewAny', PesananPembelian::class);
 
         $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
         $search = trim((string) $request->input('search', ''));
-        $query = Pembelian::with('supplier')
+        $query = PesananPembelian::with('supplier')
             ->when($request->filled('bulan') && $request->bulan !== '0', fn($q) => $q->whereMonth('tanggal', $request->bulan))
             ->when($request->filled('tahun'), fn($q) => $q->whereYear('tanggal', $request->tahun))
             ->latest('tanggal');
@@ -90,7 +90,7 @@ class PembelianController extends Controller
             'tanggal' => $row->tanggal,
             'nama' => $row->supplier->nama ?? '-',
             'grand_total' => 'Rp ' . number_format($row->grand_total, 0, ',', '.'),
-            'status' => $row->status === Pembelian::CLOSED ? 'Closed' : 'Open',
+            'status' => $row->status === PesananPembelian::CLOSED ? 'Closed' : 'Open',
         ]);
 
         return Pdf::loadView('reports.table-pdf', [
@@ -109,15 +109,15 @@ class PembelianController extends Controller
         ])->setPaper('a4', 'landscape')->stream('daftar-pembelian.pdf');
     }
 
-    public function store(StorePembelianRequest $request)
+    public function store(StorePesananPembelianRequest $request)
     {
         $validated = $request->validated();
 
         $pembelian = DB::transaction(function () use ($validated) {
             $noPo = $validated['no_po'];
-            $ppnPercent = $validated['is_ppn'] ? PembelianPolicy::PPN_RATE : 0;
+            $ppnPercent = $validated['is_ppn'] ? PesananPembelianPolicy::PPN_RATE : 0;
 
-            $pembelian = Pembelian::create([
+            $pembelian = PesananPembelian::create([
                 'no_po'           => $noPo,
                 'tanggal'         => $validated['tanggal'],
                 'supplier_id'     => $validated['supplier_id'],
@@ -176,7 +176,7 @@ class PembelianController extends Controller
 
     public function show(Request $request, $no_po)
     {
-        $pembelian = Pembelian::where('no_po', $no_po)->with(['supplier', 'gudang', 'details.bahan', 'details.requestDetail'])->firstOrFail();
+        $pembelian = PesananPembelian::where('no_po', $no_po)->with(['supplier', 'gudang', 'details.bahan', 'details.requestDetail'])->firstOrFail();
         $this->authorize('view', $pembelian);
 
         if (!$request->expectsJson() && !$request->ajax()) {
@@ -189,9 +189,9 @@ class PembelianController extends Controller
         ]);
     }
 
-    public function update(UpdatePembelianRequest $request, $no_po)
+    public function update(UpdatePesananPembelianRequest $request, $no_po)
     {
-        $pembelian = Pembelian::where('no_po', $no_po)->with('details')->firstOrFail();
+        $pembelian = PesananPembelian::where('no_po', $no_po)->with('details')->firstOrFail();
         $this->authorize('update', $pembelian);
 
         $validated = $request->validated();
@@ -211,7 +211,7 @@ class PembelianController extends Controller
                 }
             }
 
-            $ppnPercent = $validated['is_ppn'] ? PembelianPolicy::PPN_RATE : 0;
+            $ppnPercent = $validated['is_ppn'] ? PesananPembelianPolicy::PPN_RATE : 0;
 
             $pembelian->update([
                 'tanggal'         => $validated['tanggal'],
@@ -278,7 +278,7 @@ class PembelianController extends Controller
 
     public function destroy($no_po)
     {
-        $pembelian = Pembelian::where('no_po', $no_po)->with('details')->firstOrFail();
+        $pembelian = PesananPembelian::where('no_po', $no_po)->with('details')->firstOrFail();
         $this->authorize('delete', $pembelian);
 
         DB::transaction(function () use ($pembelian) {
@@ -312,10 +312,10 @@ class PembelianController extends Controller
 
     public function close(Request $request, $no_po)
     {
-        $pembelian = Pembelian::where('no_po', $no_po)->with('details')->firstOrFail();
+        $pembelian = PesananPembelian::where('no_po', $no_po)->with('details')->firstOrFail();
         $this->authorize('update', $pembelian);
 
-        if ($pembelian->status === Pembelian::CLOSED) {
+        if ($pembelian->status === PesananPembelian::CLOSED) {
             return response()->json([
                 'success' => false,
                 'message' => 'PO sudah dalam status tertutup (Closed).'
@@ -323,7 +323,7 @@ class PembelianController extends Controller
         }
 
         DB::transaction(function () use ($pembelian) {
-            $pembelian->update(['status' => Pembelian::CLOSED]);
+            $pembelian->update(['status' => PesananPembelian::CLOSED]);
 
             foreach ($pembelian->details as $detail) {
                 $selisih = $detail->jumlah - $detail->diterima;
@@ -342,7 +342,7 @@ class PembelianController extends Controller
 
     public function cetak($no_po)
     {
-        $pembelian = Pembelian::where('no_po', $no_po)->with(['supplier', 'details'])->firstOrFail();
+        $pembelian = PesananPembelian::where('no_po', $no_po)->with(['supplier', 'details'])->firstOrFail();
         $this->authorize('view', $pembelian);
 
         $pembelian->increment('cetak');
@@ -361,7 +361,7 @@ class PembelianController extends Controller
             ->header('Content-Type', 'application/pdf');
     }
 
-    private function archiveHistoryIfNeeded(Pembelian $pembelian): void
+    private function archiveHistoryIfNeeded(PesananPembelian $pembelian): void
     {
         if ($pembelian->cetak < 1) {
             return;

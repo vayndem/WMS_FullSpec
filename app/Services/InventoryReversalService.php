@@ -8,7 +8,7 @@ use App\Models\InventoryLayer;
 use App\Models\PenerimaanBarang;
 use App\Models\PenerimaanBarangDetail;
 use App\Models\Npk;
-use App\Models\PembelianDetail;
+use App\Models\PesananPembelianDetail;
 use App\Models\ReturPembelian;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -57,7 +57,7 @@ class InventoryReversalService
                 }
                 $this->stock->keluar((int) $lpb->gudang_id, (int) $detail->id_bahan, (float) $detail->jumlah_barang_diterima, (float) $detail->harga, 'REVERSAL_LPB', 'LPB', $lpb->id, $reason);
                 $layer->update(['remaining_quantity' => 0, 'stock_status' => 'REVERSED']);
-                $poLine = PembelianDetail::where('no_po', $lpb->no_po)->where('bahan_id', $detail->id_bahan)->lockForUpdate()->first();
+                $poLine = PesananPembelianDetail::where('no_po', $lpb->no_po)->where('bahan_id', $detail->id_bahan)->lockForUpdate()->first();
                 if ($poLine) {
                     $poLine->decrement('diterima', min((float) $poLine->diterima, (float) $detail->jumlah_barang_diterima));
                     $poLine->refresh();

@@ -2,16 +2,16 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Pembelian;
+use App\Models\PesananPembelian;
 use App\Models\RequestDetail;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StorePembelianDetailRequest extends FormRequest
+class StorePesananPembelianDetailRequest extends FormRequest
 {
     public function authorize(): bool
     {
         $noPo = $this->route('no_po');
-        $pembelian = $noPo instanceof Pembelian ? $noPo : Pembelian::where('no_po', $noPo)->first();
+        $pembelian = $noPo instanceof PesananPembelian ? $noPo : PesananPembelian::where('no_po', $noPo)->first();
 
         return $pembelian ? ($this->user()?->can('update', $pembelian) ?? false) : false;
     }

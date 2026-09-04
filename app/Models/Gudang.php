@@ -26,6 +26,6 @@ class Gudang extends Model
     public function stok() { return $this->hasMany(StokGudang::class); }
     public function pembagian() { return $this->hasMany(PembagianGudang::class); }
     public function pengaturanBahan() { return $this->hasMany(PengaturanBahanGudang::class); }
-    public function pembelians() { return $this->hasMany(Pembelian::class); }
+    public function pembelians() { return $this->hasMany(PesananPembelian::class); }
     public function lpbs() { return $this->hasMany(PenerimaanBarang::class); }
 }

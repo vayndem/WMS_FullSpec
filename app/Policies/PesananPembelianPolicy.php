@@ -2,10 +2,10 @@
 
 namespace App\Policies;
 
-use App\Models\Pembelian;
+use App\Models\PesananPembelian;
 use App\Models\User;
 
-class PembelianPolicy
+class PesananPembelianPolicy
 {
     public const PPN_RATE = 11.0;
 
@@ -19,7 +19,7 @@ class PembelianPolicy
         return $this->canManagePurchases($user);
     }
 
-    public function view(User $user, Pembelian $pembelian): bool
+    public function view(User $user, PesananPembelian $pembelian): bool
     {
         return $this->canManagePurchases($user);
     }
@@ -29,12 +29,12 @@ class PembelianPolicy
         return $this->canManagePurchases($user);
     }
 
-    public function update(User $user, Pembelian $pembelian): bool
+    public function update(User $user, PesananPembelian $pembelian): bool
     {
         return $this->canManagePurchases($user);
     }
 
-    public function delete(User $user, Pembelian $pembelian): bool
+    public function delete(User $user, PesananPembelian $pembelian): bool
     {
         return $this->canManagePurchases($user);
     }

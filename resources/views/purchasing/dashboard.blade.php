@@ -13,7 +13,7 @@
                         <i class="fa-solid fa-file-circle-plus"></i> Buat Request
                     </a>
                 @endcan
-                @can('create', App\Models\Pembelian::class)
+                @can('create', App\Models\PesananPembelian::class)
                     <a href="{{ route('pembelian.index', ['create' => 1]) }}" class="btn btn-primary">
                         <i class="fa-solid fa-cart-plus"></i> Buat Purchase Order
                     </a>

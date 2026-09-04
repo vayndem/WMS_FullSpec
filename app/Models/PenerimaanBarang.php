@@ -48,7 +48,7 @@ class PenerimaanBarang extends Model
 
     public function pembelian()
     {
-        return $this->belongsTo(Pembelian::class, 'no_po', 'no_po');
+        return $this->belongsTo(PesananPembelian::class, 'no_po', 'no_po');
     }
 
     public function user()

@@ -33,7 +33,7 @@ class StorePenerimaanJasaRequest extends FormRequest
         return [
             'id_lpb' => ['required', 'string', 'max:30', 'regex:/^[A-Z]{3}\d{9}$/', 'unique:wms_penerimaan_barang,id_lpb'],
             'tanggal' => 'required|date',
-            'no_po' => 'required|exists:pembelians,no_po',
+            'no_po' => 'required|exists:wms_pesanan_pembelian,no_po',
             'no_sj' => 'required|string|max:250',
             'items' => 'required|array|min:1',
             'items.*.service_po_detail_id' => 'required|distinct|exists:wms_pesanan_jasa_detail,id',

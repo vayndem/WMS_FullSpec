@@ -7,7 +7,7 @@
                 <h3 class="text-2xl font-bold">Daftar Transaksi Pembelian</h3>
                 <p class="text-base-content/60">Kelola seluruh riwayat dan pengajuan Purchase Order (PO)</p>
             </div>
-            @can('create', App\Models\Pembelian::class)
+            @can('create', App\Models\PesananPembelian::class)
                 <button type="button" class="btn btn-primary" onclick="Alpine.$data(pembelianDialog).openCreate()">
                     <i class="fa-solid fa-plus"></i> Tambah Pembelian
                 </button>

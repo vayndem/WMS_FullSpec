@@ -29,7 +29,7 @@ return new class extends Migration
             $table->tinyInteger('cetak_ulang')->default(0);
             $table->timestamps();
 
-            $table->foreign('no_po')->references('no_po')->on('pembelians')->onDelete('restrict');
+            $table->foreign('no_po')->references('no_po')->on('wms_pesanan_pembelian')->onDelete('restrict');
         });
     }
 

@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('pembelian_details', function (Blueprint $table) {
+        Schema::create('wms_pesanan_pembelian_detail', function (Blueprint $table) {
             $table->id();
             $table->string('no_po', 22);
             $table->unsignedBigInteger('bahan_id')->nullable();
@@ -22,7 +22,7 @@ return new class extends Migration
             $table->tinyInteger('jenis')->default(0);
             $table->timestamps();
 
-            $table->foreign('no_po')->references('no_po')->on('pembelians')->onDelete('cascade');
+            $table->foreign('no_po')->references('no_po')->on('wms_pesanan_pembelian')->onDelete('cascade');
             $table->foreign('bahan_id')->references('id')->on('bahans')->onDelete('set null');
             $table->foreign('request_detail_id')->references('id')->on('request_details')->onDelete('set null');
         });
@@ -30,6 +30,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('pembelian_details');
+        Schema::dropIfExists('wms_pesanan_pembelian_detail');
     }
 };
