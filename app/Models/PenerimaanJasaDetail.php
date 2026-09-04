@@ -17,7 +17,7 @@ class PenerimaanJasaDetail extends Model
     }
     public function servicePoDetail(): BelongsTo
     {
-        return $this->belongsTo(ServicePoDetail::class);
+        return $this->belongsTo(PesananJasaDetail::class);
     }
     public function kategori(): BelongsTo
     {

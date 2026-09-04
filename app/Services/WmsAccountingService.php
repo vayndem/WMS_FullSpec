@@ -13,7 +13,7 @@ use App\Models\NpkStockAllocation;
 use App\Models\InventoryLayer;
 use App\Models\ChartOfAccount;
 use App\Models\ReturPembelian;
-use App\Models\ServiceCategory;
+use App\Models\KategoriJasa;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -180,7 +180,7 @@ class WmsAccountingService
             if (!$category) {
                 throw new RuntimeException('Kategori jasa pada BAP tidak tersedia.');
             }
-            $expensePairs = $category->code === ServiceCategory::PRODUCTION
+            $expensePairs = $category->code === KategoriJasa::PRODUCTION
                 ? [['ASET', 'DEBIT']]
                 : [['BEBAN', 'DEBIT']];
             ChartOfAccount::assertUsable($category->expense_coa_id, $expensePairs, "beban/WIP jasa {$category->name}");

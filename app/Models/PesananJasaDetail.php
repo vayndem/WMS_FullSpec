@@ -6,8 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class ServicePoDetail extends Model
+class PesananJasaDetail extends Model
 {
+    protected $table = 'wms_pesanan_jasa_detail';
     public const OPERATIONAL = 'SERVICE_OPERATIONAL';
     public const PRODUCTION = 'SERVICE_PRODUCTION';
     protected $guarded = [];
@@ -23,7 +24,7 @@ class ServicePoDetail extends Model
     }
     public function category(): BelongsTo
     {
-        return $this->belongsTo(ServiceCategory::class, 'service_category_id');
+        return $this->belongsTo(KategoriJasa::class, 'service_category_id');
     }
     public function kategori(): BelongsTo
     {

@@ -75,7 +75,7 @@ class Pembelian extends Model
 
     public function serviceDetails(): HasMany
     {
-        return $this->hasMany(ServicePoDetail::class, 'pembelian_id');
+        return $this->hasMany(PesananJasaDetail::class, 'pembelian_id');
     }
 
     public function supplier(): BelongsTo

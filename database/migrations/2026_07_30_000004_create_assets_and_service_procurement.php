@@ -102,7 +102,7 @@ return new class extends Migration
                 ->comment('Jenis PO: GOODS=PO barang, SERVICE=PO jasa');
         });
 
-        Schema::create('service_categories', function (Blueprint $table) {
+        Schema::create('wms_kategori_jasa', function (Blueprint $table) {
             $table->id();
             $table->string('code', 30)->unique();
             $table->string('display_code', 10)->unique();
@@ -119,7 +119,7 @@ return new class extends Migration
             $table->foreign('grni_coa_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
         });
 
-        Schema::create('service_po_details', function (Blueprint $table) {
+        Schema::create('wms_pesanan_jasa_detail', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('pembelian_id');
             $table->unsignedBigInteger('service_category_id');
@@ -133,7 +133,7 @@ return new class extends Migration
             $table->decimal('accepted_amount', 18, 2)->default(0);
             $table->timestamps();
             $table->foreign('pembelian_id')->references('id')->on('pembelians')->cascadeOnDelete();
-            $table->foreign('service_category_id')->references('id')->on('service_categories')->restrictOnDelete();
+            $table->foreign('service_category_id')->references('id')->on('wms_kategori_jasa')->restrictOnDelete();
             $table->index(['pembelian_id', 'service_type']);
         });
 
@@ -156,7 +156,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->timestamps();
             $table->foreign('lpb_id')->references('id')->on('wms_penerimaan_barang')->cascadeOnDelete();
-            $table->foreign('service_po_detail_id')->references('id')->on('service_po_details')->restrictOnDelete();
+            $table->foreign('service_po_detail_id')->references('id')->on('wms_pesanan_jasa_detail')->restrictOnDelete();
         });
 
         Schema::create('wms_penerimaan_jasa_alokasi', function (Blueprint $table) {
@@ -178,8 +178,8 @@ return new class extends Migration
         Schema::table('wms_penerimaan_barang', fn (Blueprint $table) => $table->dropColumn([
             'document_type', 'cancelled_by', 'cancelled_at', 'cancellation_reason',
         ]));
-        Schema::dropIfExists('service_po_details');
-        Schema::dropIfExists('service_categories');
+        Schema::dropIfExists('wms_pesanan_jasa_detail');
+        Schema::dropIfExists('wms_kategori_jasa');
         Schema::table('pembelians', fn (Blueprint $table) => $table->dropColumn('document_type'));
         Schema::dropIfExists('wms_pelepasan_asets');
         Schema::dropIfExists('wms_penyusutan_asets');

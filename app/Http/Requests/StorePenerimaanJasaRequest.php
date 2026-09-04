@@ -3,7 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\PenerimaanJasa;
-use App\Models\ServicePoDetail;
+use App\Models\PesananJasaDetail;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -13,7 +13,7 @@ class StorePenerimaanJasaRequest extends FormRequest
     {
         $items = $this->input('items', []);
         foreach ($items as $index => $item) {
-            $detail = ServicePoDetail::find($item['service_po_detail_id'] ?? 0);
+            $detail = PesananJasaDetail::find($item['service_po_detail_id'] ?? 0);
             if ($detail) {
                 // BAP bukan progress parsial. Seluruh nilai detail PO menjadi
                 // snapshot pekerjaan yang dimulai dan baru diakui saat invoice.
@@ -36,7 +36,7 @@ class StorePenerimaanJasaRequest extends FormRequest
             'no_po' => 'required|exists:pembelians,no_po',
             'no_sj' => 'required|string|max:250',
             'items' => 'required|array|min:1',
-            'items.*.service_po_detail_id' => 'required|distinct|exists:service_po_details,id',
+            'items.*.service_po_detail_id' => 'required|distinct|exists:wms_pesanan_jasa_detail,id',
             'items.*.progress_percent' => 'required|numeric|in:100',
             'items.*.amount' => 'required|numeric|gt:0',
             'items.*.department_cost_center' => 'nullable|string|max:150',
@@ -49,7 +49,7 @@ class StorePenerimaanJasaRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator) {
-            $po = \App\Models\ServicePurchase::with('serviceDetails')
+            $po = \App\Models\PesananJasa::with('serviceDetails')
                 ->where('no_po', $this->input('no_po'))->first();
             $submittedIds = collect($this->input('items', []))
                 ->pluck('service_po_detail_id')->map(fn($id) => (int) $id)->sort()->values();
@@ -58,7 +58,7 @@ class StorePenerimaanJasaRequest extends FormRequest
                 $validator->errors()->add('items', 'BAP harus mencakup seluruh pekerjaan dalam satu PO Jasa.');
             }
             foreach ($this->input('items', []) as $i => $item) {
-                $detail = ServicePoDetail::with('category')->find($item['service_po_detail_id'] ?? 0);
+                $detail = PesananJasaDetail::with('category')->find($item['service_po_detail_id'] ?? 0);
                 if (!$detail) continue;
                 $expected = round((float)$detail->subtotal, 2);
                 if (!$detail->id_kategori) {

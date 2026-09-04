@@ -4,12 +4,12 @@ use App\Models\User;
 use App\Models\Aset;
 use App\Models\KategoriAset;
 use App\Models\PenerimaanJasa;
-use App\Models\ServicePurchase;
+use App\Models\PesananJasa;
 use App\Models\PenerimaanBarang;
 use App\Policies\AsetPolicy;
 use App\Policies\KategoriAsetPolicy;
 use App\Policies\PenerimaanJasaPolicy;
-use App\Policies\ServicePurchasePolicy;
+use App\Policies\PesananJasaPolicy;
 use Tests\TestCase;
 class AssetAndServicePolicyTest extends TestCase {
     private function user(int $type): User { return new User(['id'=>$type,'name'=>"Role {$type}",'type'=>$type]); }
@@ -29,8 +29,8 @@ class AssetAndServicePolicyTest extends TestCase {
         $this->assertFalse($policy->create($this->user(User::ROLE_PURCHASING)));
     }
     public function test_purchasing_and_accounting_manage_services_but_finance_does_not(): void {
-        $poPolicy=new ServicePurchasePolicy();$bapPolicy=new PenerimaanJasaPolicy();
-        $po=new ServicePurchase(['document_type'=>'SERVICE']);$bap=new PenerimaanJasa(['document_type'=>'SERVICE_BAP','status'=>PenerimaanBarang::POSTED]);
+        $poPolicy=new PesananJasaPolicy();$bapPolicy=new PenerimaanJasaPolicy();
+        $po=new PesananJasa(['document_type'=>'SERVICE']);$bap=new PenerimaanJasa(['document_type'=>'SERVICE_BAP','status'=>PenerimaanBarang::POSTED]);
         foreach([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING] as $type){$this->assertTrue($poPolicy->view($this->user($type),$po));$this->assertTrue($bapPolicy->view($this->user($type),$bap));}
         $this->assertFalse($poPolicy->viewAny($this->user(User::ROLE_FINANCE)));
         $this->assertFalse($bapPolicy->viewAny($this->user(User::ROLE_FINANCE)));

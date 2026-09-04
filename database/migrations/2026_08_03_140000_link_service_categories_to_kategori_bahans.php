@@ -9,12 +9,12 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('service_categories', function (Blueprint $table) {
+        Schema::table('wms_kategori_jasa', function (Blueprint $table) {
             $table->unsignedBigInteger('kategori_bahan_id')->nullable()->after('display_code');
             $table->foreign('kategori_bahan_id')->references('id')->on('kategori_bahans')->nullOnDelete();
         });
 
-        Schema::table('service_po_details', function (Blueprint $table) {
+        Schema::table('wms_pesanan_jasa_detail', function (Blueprint $table) {
             $table->unsignedBigInteger('id_kategori')->nullable()->after('service_category_id');
             $table->foreign('id_kategori')->references('id')->on('kategori_bahans')->nullOnDelete();
         });
@@ -60,28 +60,28 @@ return new class extends Migration
             ]
         );
 
-        DB::table('service_categories')
+        DB::table('wms_kategori_jasa')
             ->where('display_code', '98')
             ->update([
                 'kategori_bahan_id' => DB::table('kategori_bahans')->where('katnama', 'Jasa Operasional')->value('id'),
             ]);
 
-        DB::table('service_categories')
+        DB::table('wms_kategori_jasa')
             ->where('display_code', '99')
             ->update([
                 'kategori_bahan_id' => DB::table('kategori_bahans')->where('katnama', 'Jasa Produksi')->value('id'),
             ]);
 
-        DB::table('service_po_details')
-            ->join('service_categories', 'service_categories.id', '=', 'service_po_details.service_category_id')
+        DB::table('wms_pesanan_jasa_detail')
+            ->join('wms_kategori_jasa', 'wms_kategori_jasa.id', '=', 'wms_pesanan_jasa_detail.service_category_id')
             ->update([
-                'service_po_details.id_kategori' => DB::raw('service_categories.kategori_bahan_id'),
+                'wms_pesanan_jasa_detail.id_kategori' => DB::raw('wms_kategori_jasa.kategori_bahan_id'),
             ]);
 
         DB::table('wms_penerimaan_jasa_detail')
-            ->join('service_po_details', 'service_po_details.id', '=', 'wms_penerimaan_jasa_detail.service_po_detail_id')
+            ->join('wms_pesanan_jasa_detail', 'wms_pesanan_jasa_detail.id', '=', 'wms_penerimaan_jasa_detail.service_po_detail_id')
             ->update([
-                'wms_penerimaan_jasa_detail.id_kategori' => DB::raw('service_po_details.id_kategori'),
+                'wms_penerimaan_jasa_detail.id_kategori' => DB::raw('wms_pesanan_jasa_detail.id_kategori'),
             ]);
     }
 
@@ -92,12 +92,12 @@ return new class extends Migration
             $table->dropColumn('id_kategori');
         });
 
-        Schema::table('service_po_details', function (Blueprint $table) {
+        Schema::table('wms_pesanan_jasa_detail', function (Blueprint $table) {
             $table->dropForeign(['id_kategori']);
             $table->dropColumn('id_kategori');
         });
 
-        Schema::table('service_categories', function (Blueprint $table) {
+        Schema::table('wms_kategori_jasa', function (Blueprint $table) {
             $table->dropForeign(['kategori_bahan_id']);
             $table->dropColumn('kategori_bahan_id');
         });

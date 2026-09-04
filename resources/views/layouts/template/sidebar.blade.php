@@ -200,10 +200,10 @@
                 @endcan
 
                 @if (Auth::user()->can('viewAny', App\Models\Pembelian::class) ||
-                        Auth::user()->can('viewAny', App\Models\ServicePurchase::class))
-                    <li class="{{ request()->routeIs('pembelian.*', 'service-purchases.*') ? 'active' : '' }}">
+                        Auth::user()->can('viewAny', App\Models\PesananJasa::class))
+                    <li class="{{ request()->routeIs('pembelian.*', 'pesanan-jasa.*') ? 'active' : '' }}">
                         <a href="#transaksi" class="svg-icon"
-                            aria-expanded="{{ request()->routeIs('pembelian.*', 'service-purchases.*') ? 'true' : 'false' }}">
+                            aria-expanded="{{ request()->routeIs('pembelian.*', 'pesanan-jasa.*') ? 'true' : 'false' }}">
                             <i>
                                 <svg class="svg-icon" id="mm-transaksi-1" width="20"
                                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -217,7 +217,7 @@
                             <i class="fa-solid fa-chevron-down mm-arrow-right arrow-hover"></i>
                         </a>
                         <ul id="transaksi"
-                            class="submenu {{ request()->routeIs('pembelian.*', 'service-purchases.*') ? 'show' : '' }}">
+                            class="submenu {{ request()->routeIs('pembelian.*', 'pesanan-jasa.*') ? 'show' : '' }}">
                             @can('viewAny', App\Models\Pembelian::class)
                                 <li class="{{ request()->routeIs('pembelian.*') ? 'active' : '' }}">
                                     <a href="{{ route('pembelian.index') }}" class="svg-icon">
@@ -232,9 +232,9 @@
                                     </a>
                                 </li>
                             @endcan
-                            @can('viewAny', App\Models\ServicePurchase::class)
-                                <li class="{{ request()->routeIs('service-purchases.*') ? 'active' : '' }}">
-                                    <a href="{{ route('service-purchases.index') }}" class="svg-icon">
+                            @can('viewAny', App\Models\PesananJasa::class)
+                                <li class="{{ request()->routeIs('pesanan-jasa.*') ? 'active' : '' }}">
+                                    <a href="{{ route('pesanan-jasa.index') }}" class="svg-icon">
                                         <i class="fa-solid fa-file-signature"></i><span>PO Jasa</span>
                                     </a>
                                 </li>

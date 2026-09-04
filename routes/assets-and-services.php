@@ -3,8 +3,8 @@
 use App\Http\Controllers\KategoriAsetController;
 use App\Http\Controllers\AsetController;
 use App\Http\Controllers\PenerimaanJasaController;
-use App\Http\Controllers\ServiceCategoryController;
-use App\Http\Controllers\ServicePurchaseController;
+use App\Http\Controllers\KategoriJasaController;
+use App\Http\Controllers\PesananJasaController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
@@ -17,10 +17,10 @@ Route::middleware('auth')->group(function () {
         ->except(['destroy']);
     Route::resource('kategori-aset', KategoriAsetController::class)->only(['index', 'store', 'update', 'destroy']);
 
-    Route::get('service-purchases-report/pdf', [ServicePurchaseController::class, 'reportPdf'])->name('service-purchases.report.pdf');
-    Route::resource('service-purchases', ServicePurchaseController::class);
+    Route::get('pesanan-jasa-report/pdf', [PesananJasaController::class, 'reportPdf'])->name('pesanan-jasa.report.pdf');
+    Route::resource('pesanan-jasa', PesananJasaController::class)->parameters(['pesanan-jasa' => 'service_purchase']);
     Route::get('penerimaan-jasa-report/pdf', [PenerimaanJasaController::class, 'reportPdf'])->name('penerimaan-jasa.report.pdf');
     Route::post('penerimaan-jasa/{service_bap}/cancel', [PenerimaanJasaController::class, 'cancel'])->name('penerimaan-jasa.cancel');
     Route::resource('penerimaan-jasa', PenerimaanJasaController::class)->parameters(['penerimaan-jasa' => 'service_bap'])->only(['index', 'create', 'store', 'show']);
-    Route::resource('service-categories', ServiceCategoryController::class)->only(['index', 'update']);
+    Route::resource('kategori-jasa', KategoriJasaController::class)->parameters(['kategori-jasa' => 'service_category'])->only(['index', 'update']);
 });

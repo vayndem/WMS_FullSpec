@@ -3,7 +3,7 @@
     @php($editing = isset($po))
     <div class="content-page">
         <h3 class="mb-4 text-2xl font-bold">{{ $editing ? 'Edit' : 'Buat' }} PO Jasa</h3>
-        <form method="post" action="{{ $editing ? route('service-purchases.update', $po) : route('service-purchases.store') }}" class="card border border-base-300 bg-base-100 shadow-sm">
+        <form method="post" action="{{ $editing ? route('pesanan-jasa.update', $po) : route('pesanan-jasa.store') }}" class="card border border-base-300 bg-base-100 shadow-sm">
             @csrf
             @if ($editing)
                 @method('PUT')
@@ -61,7 +61,7 @@
                 <button type="button" id="addRow" class="btn btn-outline btn-primary btn-sm mt-3">+ Tambah Baris</button>
             </div>
             <div class="flex justify-end gap-2 border-t border-base-300 p-4">
-                <a href="{{ route('service-purchases.index') }}" class="btn btn-ghost border border-base-300">Batal</a>
+                <a href="{{ route('pesanan-jasa.index') }}" class="btn btn-ghost border border-base-300">Batal</a>
                 <button class="btn btn-primary">Simpan PO</button>
             </div>
         </form>

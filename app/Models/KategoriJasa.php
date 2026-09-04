@@ -6,8 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class ServiceCategory extends Model
+class KategoriJasa extends Model
 {
+    protected $table = 'wms_kategori_jasa';
     public const OPERATIONAL = 'SERVICE_OPERATIONAL';
     public const PRODUCTION = 'SERVICE_PRODUCTION';
     protected $guarded = [];
@@ -30,6 +31,6 @@ class ServiceCategory extends Model
     }
     public function poDetails(): HasMany
     {
-        return $this->hasMany(ServicePoDetail::class);
+        return $this->hasMany(PesananJasaDetail::class);
     }
 }

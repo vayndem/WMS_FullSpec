@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-class ServicePurchase extends Pembelian
+class PesananJasa extends Pembelian
 {
     protected $guarded = [];
 

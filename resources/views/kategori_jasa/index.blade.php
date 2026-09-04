@@ -7,7 +7,7 @@
         </div>
         <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
             @foreach ($categories as $c)
-                <form method="post" action="{{ route('service-categories.update', $c) }}" class="card border border-base-300 bg-base-100 shadow-sm">
+                <form method="post" action="{{ route('kategori-jasa.update', $c) }}" class="card border border-base-300 bg-base-100 shadow-sm">
                     @csrf
                     @method('PUT')
                     <div class="p-4">

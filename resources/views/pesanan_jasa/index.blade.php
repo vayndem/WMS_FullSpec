@@ -3,14 +3,14 @@
     <div class="content-page">
         <div class="mb-4 flex items-center justify-between">
             <div>
-                <h3 class="text-2xl font-bold">Purchase Order Jasa</h3>
+                <h3 class="text-2xl font-bold">Pesanan Jasa (PO Jasa)</h3>
                 <p class="text-base-content/60">PO jasa selalu terpisah dari PO barang.</p>
             </div>
             <div class="flex gap-2">
-                @can('viewAny', App\Models\ServiceCategory::class)
-                    <a href="{{ route('service-categories.index') }}" class="btn btn-outline btn-primary">Kategori & COA</a>
+                @can('viewAny', App\Models\KategoriJasa::class)
+                    <a href="{{ route('kategori-jasa.index') }}" class="btn btn-outline btn-primary">Kategori & COA</a>
                 @endcan
-                <a href="{{ route('service-purchases.create') }}" class="btn btn-primary">+ Buat PO Jasa</a>
+                <a href="{{ route('pesanan-jasa.create') }}" class="btn btn-primary">+ Buat PO Jasa</a>
             </div>
         </div>
         <div class="card border border-base-300 bg-base-100 shadow-sm">
@@ -21,7 +21,7 @@
                             <option value="{{ $size }}" @selected((string) request('per_page', 10) === (string) $size)>{{ $size === 'all' ? 'Semua' : $size }} data</option>
                         @endforeach
                     </select>
-                    <a class="btn btn-error" href="{{ route('service-purchases.report.pdf', request()->query()) }}"><i class="fa-solid fa-file-pdf"></i> PDF</a>
+                    <a class="btn btn-error" href="{{ route('pesanan-jasa.report.pdf', request()->query()) }}"><i class="fa-solid fa-file-pdf"></i> PDF</a>
                     <input name="q" value="{{ request('q') }}" onchange="this.form.submit()" class="input input-bordered max-w-xs" placeholder="Cari PO/supplier...">
                 </form>
             </div>
@@ -43,7 +43,7 @@
                                 <td>{{ $po->tanggal }}</td>
                                 <td>{{ $po->supplier->nama }}</td>
                                 <td class="text-end">Rp {{ number_format($po->service_details_sum_subtotal, 0, ',', '.') }}</td>
-                                <td class="text-end"><a class="btn btn-outline btn-primary btn-sm" href="{{ route('service-purchases.show', $po) }}">Detail</a></td>
+                                <td class="text-end"><a class="btn btn-outline btn-primary btn-sm" href="{{ route('pesanan-jasa.show', $po) }}">Detail</a></td>
                             </tr>
                         @empty
                             <tr><td colspan="5" class="py-4 text-center text-base-content/50">Belum ada PO jasa.</td></tr>

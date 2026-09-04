@@ -49,7 +49,7 @@ class ChartOfAccount extends Model
                 ->orWhere('disposal_gain_coa_id', $this->id)
                 ->orWhere('disposal_loss_coa_id', $this->id)
                 ->exists()
-            || ServiceCategory::where('expense_coa_id', $this->id)
+            || KategoriJasa::where('expense_coa_id', $this->id)
                 ->orWhere('grni_coa_id', $this->id)
                 ->exists()
             || Aset::where('acquisition_credit_coa_id', $this->id)->exists()

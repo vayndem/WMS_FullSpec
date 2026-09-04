@@ -6,8 +6,8 @@ use App\Http\Requests\StorePenerimaanJasaRequest;
 use App\Http\Requests\CancelPenerimaanJasaRequest;
 use App\Models\PenerimaanBarang;
 use App\Models\PenerimaanJasa;
-use App\Models\ServicePurchase;
-use App\Models\ServicePoDetail;
+use App\Models\PesananJasa;
+use App\Models\PesananJasaDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -57,7 +57,7 @@ class PenerimaanJasaController extends Controller
     public function create()
     {
         $this->authorize('create', PenerimaanJasa::class);
-        $orders = ServicePurchase::with(['supplier', 'serviceDetails.category'])
+        $orders = PesananJasa::with(['supplier', 'serviceDetails.category'])
             ->whereDoesntHave(
                 'serviceDetails.bapDetails.lpb',
                 fn($query) => $query->where('status', PenerimaanBarang::POSTED)
@@ -71,7 +71,7 @@ class PenerimaanJasaController extends Controller
     {
         $bap = DB::transaction(function () use ($request) {
             $data = $request->validated();
-            $po = ServicePurchase::where('no_po', $data['no_po'])->lockForUpdate()->firstOrFail();
+            $po = PesananJasa::where('no_po', $data['no_po'])->lockForUpdate()->firstOrFail();
             $bap = PenerimaanJasa::create([
                 'id_lpb' => $data['id_lpb'],
                 'tanggal' => $data['tanggal'],
@@ -84,7 +84,7 @@ class PenerimaanJasaController extends Controller
                 'document_type' => 'SERVICE_BAP'
             ]);
             foreach ($data['items'] as $item) {
-                $poDetail = ServicePoDetail::with('category')->lockForUpdate()->findOrFail($item['service_po_detail_id']);
+                $poDetail = PesananJasaDetail::with('category')->lockForUpdate()->findOrFail($item['service_po_detail_id']);
                 if ($poDetail->pembelian_id !== $po->id) throw new RuntimeException('Detail jasa bukan bagian dari PO yang dipilih.');
                 $hasActiveBap = $poDetail->bapDetails()
                     ->whereHas('lpb', fn($query) => $query->where('status', PenerimaanBarang::POSTED))

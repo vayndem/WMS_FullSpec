@@ -2,17 +2,17 @@
 
 namespace App\Http\Requests;
 
-use App\Models\ServiceCategory;
-use App\Models\ServicePurchase;
+use App\Models\KategoriJasa;
+use App\Models\PesananJasa;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
-class StoreServicePurchaseRequest extends FormRequest
+class StorePesananJasaRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can($this->route('service_purchase') ? 'update' : 'create', $this->route('service_purchase') ?: ServicePurchase::class);
+        return $this->user()->can($this->route('service_purchase') ? 'update' : 'create', $this->route('service_purchase') ?: PesananJasa::class);
     }
     public function rules(): array
     {
@@ -24,7 +24,7 @@ class StoreServicePurchaseRequest extends FormRequest
             'term' => 'nullable|string|max:250',
             'notes' => 'nullable|string|max:2000',
             'items' => 'required|array|min:1',
-            'items.*.service_category_id' => 'required|exists:service_categories,id',
+            'items.*.service_category_id' => 'required|exists:wms_kategori_jasa,id',
             'items.*.description' => 'required|string|max:2000',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit' => 'required|string|max:30',
@@ -36,7 +36,7 @@ class StoreServicePurchaseRequest extends FormRequest
     {
         return [function (Validator $validator) {
             foreach ($this->input('items', []) as $index => $item) {
-                $category = ServiceCategory::find($item['service_category_id'] ?? 0);
+                $category = KategoriJasa::find($item['service_category_id'] ?? 0);
                 if ($category && !$category->kategori_bahan_id) {
                     $validator->errors()->add("items.$index.service_category_id", 'Kategori jasa belum terhubung ke kategori bahan.');
                 }

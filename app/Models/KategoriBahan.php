@@ -40,12 +40,12 @@ class KategoriBahan extends Model
 
     public function serviceCategories(): HasMany
     {
-        return $this->hasMany(ServiceCategory::class, 'kategori_bahan_id', 'id');
+        return $this->hasMany(KategoriJasa::class, 'kategori_bahan_id', 'id');
     }
 
     public function servicePoDetails(): HasMany
     {
-        return $this->hasMany(ServicePoDetail::class, 'id_kategori', 'id');
+        return $this->hasMany(PesananJasaDetail::class, 'id_kategori', 'id');
     }
 
     public function serviceBapDetails(): HasMany

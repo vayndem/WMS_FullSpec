@@ -9,8 +9,8 @@ use App\Models\ChartOfAccount;
 use App\Models\InvoiceLpb;
 use App\Models\InvoicePayment;
 use App\Models\PenerimaanJasa;
-use App\Models\ServiceCategory;
-use App\Models\ServicePurchase;
+use App\Models\KategoriJasa;
+use App\Models\PesananJasa;
 use App\Models\PenerimaanBarang;
 use App\Models\Supplier;
 use App\Services\AsetAccountingService;
@@ -58,12 +58,12 @@ class AssetAndServiceDemoSeeder extends Seeder
                     'reason' => 'Contoh nominal manual berbeda dari jadwal otomatis',
                 ]);
             }
-            if (!ServicePurchase::where('notes', 'PO jasa demo terpisah dari barang')->exists()) {
+            if (!PesananJasa::where('notes', 'PO jasa demo terpisah dari barang')->exists()) {
                 Auth::setUser(User::where('email', 'purchasing@wms.local')->firstOrFail());
                 $supplier = Supplier::where('nama', 'PT. Global Supply Indonesia')->firstOrFail();
                 $bank = ChartOfAccount::where('kode_akun', '1102')->firstOrFail();
                 $accounting = app(WmsAccountingService::class);
-                $po = ServicePurchase::create([
+                $po = PesananJasa::create([
                     'no_po' => $numbers->financial('PJ', today()->subDays(7)),
                     'document_type' => 'SERVICE',
                     'tanggal' => today()->subDays(7),
@@ -76,8 +76,8 @@ class AssetAndServiceDemoSeeder extends Seeder
                     'total_include' => 8000000,
                     'grand_total' => 8000000
                 ]);
-                $operational = ServiceCategory::where('code', ServiceCategory::OPERATIONAL)->firstOrFail();
-                $production = ServiceCategory::where('code', ServiceCategory::PRODUCTION)->firstOrFail();
+                $operational = KategoriJasa::where('code', KategoriJasa::OPERATIONAL)->firstOrFail();
+                $production = KategoriJasa::where('code', KategoriJasa::PRODUCTION)->firstOrFail();
                 $op = $po->serviceDetails()->create([
                     'service_category_id' => $operational->id,
                     'id_kategori' => $operational->kategori_bahan_id,
@@ -174,7 +174,7 @@ class AssetAndServiceDemoSeeder extends Seeder
                 ]);
                 $accounting->postPayment($partialPayment);
 
-                $poLunas = ServicePurchase::create([
+                $poLunas = PesananJasa::create([
                     'no_po' => $numbers->financial('PJ', today()->subDays(5)),
                     'document_type' => 'SERVICE',
                     'tanggal' => today()->subDays(5),

@@ -12,7 +12,7 @@ use App\Models\Gudang;
 use App\Models\AccountingSetting;
 use App\Models\TaxRate;
 use App\Models\KategoriAset;
-use App\Models\ServiceCategory;
+use App\Models\KategoriJasa;
 use App\Models\StokGudang;
 use App\Models\MutasiStok;
 use App\Models\User;
@@ -224,7 +224,7 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        ServiceCategory::updateOrCreate(['code' => ServiceCategory::OPERATIONAL], [
+        KategoriJasa::updateOrCreate(['code' => KategoriJasa::OPERATIONAL], [
             'display_code' => '98',
             'kategori_bahan_id' => $katJasaOperasional->id,
             'name' => 'Jasa Operasional',
@@ -234,7 +234,7 @@ class DatabaseSeeder extends Seeder
             'requires_cost_center' => true,
             'is_active' => true,
         ]);
-        ServiceCategory::updateOrCreate(['code' => ServiceCategory::PRODUCTION], [
+        KategoriJasa::updateOrCreate(['code' => KategoriJasa::PRODUCTION], [
             'display_code' => '99',
             'kategori_bahan_id' => $katJasaProduksi->id,
             'name' => 'Jasa Produksi',

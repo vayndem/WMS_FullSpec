@@ -3,15 +3,15 @@
 namespace App\Policies;
 
 use App\Models\User;
-use App\Models\ServiceCategory;
+use App\Models\KategoriJasa;
 
-class ServiceCategoryPolicy
+class KategoriJasaPolicy
 {
     public function viewAny(User $user): bool
     {
         return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_ACCOUNTING]);
     }
-    public function update(User $user, ServiceCategory $category): bool
+    public function update(User $user, KategoriJasa $category): bool
     {
         return $user->isAccounting();
     }
