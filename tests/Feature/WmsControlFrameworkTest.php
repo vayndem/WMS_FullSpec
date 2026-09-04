@@ -6,7 +6,7 @@ use App\Models\Bahan;
 use App\Models\FakturPembelian;
 use App\Models\PembayaranFaktur;
 use App\Models\InventoryLayer;
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use App\Models\LandedCost;
 use App\Models\PenerimaanBarang;
 use App\Models\InventoryReservation;
@@ -104,7 +104,7 @@ class WmsControlFrameworkTest extends TestCase
         $user = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);
         Auth::login($user);
         $layer = InventoryLayer::where('remaining_quantity', '>', 0)->firstOrFail();
-        $credit = ChartOfAccount::where('is_active', true)->where('is_postable', true)->where('kategori_akun', 'LIABILITAS')->where('posisi_normal', 'KREDIT')->firstOrFail();
+        $credit = BaganAkun::where('is_active', true)->where('is_postable', true)->where('kategori_akun', 'LIABILITAS')->where('posisi_normal', 'KREDIT')->firstOrFail();
         $cost = LandedCost::create(['number' => 'TEST-LDC-001', 'date' => today(), 'description' => 'Integration landed cost', 'allocation_basis' => 'VALUE', 'total_amount' => 1000, 'credit_coa_id' => $credit->id, 'created_by' => $user->id]);
         $before = (float) $layer->unit_cost;
 
@@ -205,8 +205,8 @@ class WmsControlFrameworkTest extends TestCase
             'sisa_tagihan' => 500000,
             'status' => FakturPembelian::UNPAID,
         ]);
-        $kasUtama = ChartOfAccount::where('kode_akun', '1101')->firstOrFail();
-        $uangMukaAccount = ChartOfAccount::where('kode_akun', '1401')->firstOrFail();
+        $kasUtama = BaganAkun::where('kode_akun', '1101')->firstOrFail();
+        $uangMukaAccount = BaganAkun::where('kode_akun', '1401')->firstOrFail();
         $numbers = app(DocumentNumberService::class);
 
         $responseA = $this->actingAs($finance)->postJson(route('pembayaran-faktur.store'), [
@@ -274,8 +274,8 @@ class WmsControlFrameworkTest extends TestCase
         $supplierTwo = Supplier::create(['nama' => 'Supplier Dua', 'alamat' => 'Jl. Dua', 'telp' => '0800000002', 'pembayaran' => 'Transfer']);
         $invoiceOne = FakturPembelian::create(['no_invoice' => 'ADV-TEST-X1', 'kode_supplier' => $supplierOne->id, 'tanggal' => today(), 'grand_total' => 1000000, 'sisa_tagihan' => 1000000, 'status' => FakturPembelian::UNPAID]);
         $invoiceTwo = FakturPembelian::create(['no_invoice' => 'ADV-TEST-X2', 'kode_supplier' => $supplierTwo->id, 'tanggal' => today(), 'grand_total' => 500000, 'sisa_tagihan' => 500000, 'status' => FakturPembelian::UNPAID]);
-        $kasUtama = ChartOfAccount::where('kode_akun', '1101')->firstOrFail();
-        $uangMukaAccount = ChartOfAccount::where('kode_akun', '1401')->firstOrFail();
+        $kasUtama = BaganAkun::where('kode_akun', '1101')->firstOrFail();
+        $uangMukaAccount = BaganAkun::where('kode_akun', '1401')->firstOrFail();
         $numbers = app(DocumentNumberService::class);
 
         $responseOne = $this->actingAs($finance)->postJson(route('pembayaran-faktur.store'), [

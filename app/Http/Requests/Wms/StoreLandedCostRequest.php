@@ -11,7 +11,7 @@ class StoreLandedCostRequest extends InventoryFinancialControlRequest
             'description' => ['required', 'string', 'max:255'],
             'allocation_basis' => ['required', 'in:VALUE,QUANTITY'],
             'total_amount' => ['required', 'numeric', 'gt:0'],
-            'credit_coa_id' => ['required', 'integer', 'exists:chart_of_accounts,id'],
+            'credit_coa_id' => ['required', 'integer', 'exists:wms_bagan_akun,id'],
             'layer_ids' => ['required', 'array', 'min:1'],
             'layer_ids.*' => ['integer', 'distinct', 'exists:inventory_layers,id'],
         ];

@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Gudang;
 use App\Models\Bahan;
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use App\Models\InventoryLayer;
 use App\Models\Jurnal;
 use App\Models\KategoriBahan;
@@ -48,7 +48,7 @@ class WmsDemoSeeder extends Seeder
                 ]
             );
 
-            $equity = ChartOfAccount::updateOrCreate(
+            $equity = BaganAkun::updateOrCreate(
                 ['kode_akun' => '3101'],
                 [
                     'nama_akun' => 'Ekuitas Data Demo',

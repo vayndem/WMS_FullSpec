@@ -36,7 +36,7 @@ class StorePembayaranFakturRequest extends FormRequest
             'invoice_lpb_id'               => 'required|integer|exists:wms_faktur_pembelian,id',
             'tanggal_pembayaran'           => 'required|date',
             'metode_pembayaran'            => 'required|string|max:150',
-            'coa_kas_bank_id'              => ['required', 'integer', Rule::exists('chart_of_accounts', 'id')->where(
+            'coa_kas_bank_id'              => ['required', 'integer', Rule::exists('wms_bagan_akun', 'id')->where(
                 fn($query) => $query->where('is_active', 1)->where('is_postable', 1)->where('is_cash_bank', 1)
             )],
             'jumlah_pembayaran'            => 'nullable|numeric|min:0',
@@ -45,7 +45,7 @@ class StorePembayaranFakturRequest extends FormRequest
             'biaya_transfer_bank'          => 'nullable|numeric|min:0',
             'selisih_bayar'                => 'nullable|numeric|min:0',
             'jenis_selisih'                => ['nullable', Rule::requiredIf(fn() => (float) $this->input('selisih_bayar', 0) > 0), 'in:PENDAPATAN_SELISIH,BEBAN_SELISIH,UANG_MUKA_SUPPLIER'],
-            'coa_selisih_id'               => ['nullable', Rule::requiredIf(fn() => (float) $this->input('selisih_bayar', 0) > 0), 'integer', Rule::exists('chart_of_accounts', 'id')->where(
+            'coa_selisih_id'               => ['nullable', Rule::requiredIf(fn() => (float) $this->input('selisih_bayar', 0) > 0), 'integer', Rule::exists('wms_bagan_akun', 'id')->where(
                 fn($query) => $query->where('is_active', 1)->where('is_postable', 1)
             )],
             'uang_muka_sumber_payment_id'  => ['nullable', 'integer', 'exists:wms_pembayaran_faktur,id'],

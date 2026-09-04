@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Bahan;
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use App\Models\Gudang;
 use App\Models\InventoryLayer;
 use App\Models\FakturPembelian;
@@ -63,8 +63,8 @@ class FinancialStatementDemoSeeder extends Seeder
             $category = KategoriBahan::where('katnama', 'Bahan Baku Paper')->firstOrFail();
             $warehouse = Gudang::where('nama', 'Gudang Utama')->firstOrFail();
             $supplier = Supplier::where('nama', 'PT. Global Supply Indonesia')->firstOrFail();
-            $bank = ChartOfAccount::where('kode_akun', '1102')->firstOrFail();
-            $pendapatanSelisih = ChartOfAccount::where('kode_akun', '4201')->firstOrFail();
+            $bank = BaganAkun::where('kode_akun', '1102')->firstOrFail();
+            $pendapatanSelisih = BaganAkun::where('kode_akun', '4201')->firstOrFail();
 
             $material = Bahan::create([
                 'nama' => '[DEMO] Kertas Laporan Keuangan',
@@ -190,7 +190,7 @@ class FinancialStatementDemoSeeder extends Seeder
         WmsAccountingService $accounting,
         PaymentAllocationService $allocation,
         DocumentNumberService $numbers,
-        ChartOfAccount $bank,
+        BaganAkun $bank,
         PenerimaanBarang $lpb,
         Carbon $invoiceDate,
         Carbon $paymentDate,

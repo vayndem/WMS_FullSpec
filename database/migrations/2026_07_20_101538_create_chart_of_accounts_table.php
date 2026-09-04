@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('chart_of_accounts', function (Blueprint $table) {
+        Schema::create('wms_bagan_akun', function (Blueprint $table) {
             $table->id();
             $table->string('kode_akun', 50)->unique();
             $table->string('nama_akun', 150);
@@ -21,6 +21,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('chart_of_accounts');
+        Schema::dropIfExists('wms_bagan_akun');
     }
 };

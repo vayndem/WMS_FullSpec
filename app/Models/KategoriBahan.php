@@ -60,26 +60,26 @@ class KategoriBahan extends Model
 
     public function coaPersediaan(): BelongsTo
     {
-        return $this->belongsTo(ChartOfAccount::class, 'coa_persediaan_id');
+        return $this->belongsTo(BaganAkun::class, 'coa_persediaan_id');
     }
 
     public function coaBeban(): BelongsTo
     {
-        return $this->belongsTo(ChartOfAccount::class, 'coa_beban_id');
+        return $this->belongsTo(BaganAkun::class, 'coa_beban_id');
     }
 
     public function coaClearingLpb(): BelongsTo
     {
-        return $this->belongsTo(ChartOfAccount::class, 'coa_clearing_lpb_id');
+        return $this->belongsTo(BaganAkun::class, 'coa_clearing_lpb_id');
     }
 
     public function coaBebanSelisihOpname(): BelongsTo
     {
-        return $this->belongsTo(ChartOfAccount::class, 'coa_beban_selisih_opname_id');
+        return $this->belongsTo(BaganAkun::class, 'coa_beban_selisih_opname_id');
     }
 
     public function coaKoreksiOpname(): BelongsTo
     {
-        return $this->belongsTo(ChartOfAccount::class, 'coa_koreksi_opname_id');
+        return $this->belongsTo(BaganAkun::class, 'coa_koreksi_opname_id');
     }
 }

@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use App\Models\TipePembebanan;
 use App\Models\Supplier;
 use App\Models\Bahan;
@@ -74,7 +74,7 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($coas as $coa) {
-            ChartOfAccount::updateOrCreate(['kode_akun' => $coa['kode_akun']], array_merge([
+            BaganAkun::updateOrCreate(['kode_akun' => $coa['kode_akun']], array_merge([
                 'is_active' => true,
                 'is_postable' => true,
                 'is_cash_bank' => false,
@@ -95,7 +95,7 @@ class DatabaseSeeder extends Seeder
             AccountingSetting::updateOrCreate(
                 ['key' => $key],
                 [
-                    'coa_id' => ChartOfAccount::where('kode_akun', $code)->value('id'),
+                    'coa_id' => BaganAkun::where('kode_akun', $code)->value('id'),
                     'description' => 'Mapping sistem WMS; nama dan kode akun tetap dapat disesuaikan accountant.'
                 ]
             );
@@ -111,11 +111,11 @@ class DatabaseSeeder extends Seeder
             ['keterangan' => 'Pembebanan ke Persediaan Stok Gudang']
         );
 
-        $coaPersediaan = ChartOfAccount::where('kode_akun', '1301')->first();
-        $coaBeban = ChartOfAccount::where('kode_akun', '5101')->first();
-        $coaClearing = ChartOfAccount::where('kode_akun', '2102')->first();
-        $coaOpnameLoss = ChartOfAccount::where('kode_akun', '5106')->first();
-        $coaOpnameGain = ChartOfAccount::where('kode_akun', '4202')->first();
+        $coaPersediaan = BaganAkun::where('kode_akun', '1301')->first();
+        $coaBeban = BaganAkun::where('kode_akun', '5101')->first();
+        $coaClearing = BaganAkun::where('kode_akun', '2102')->first();
+        $coaOpnameLoss = BaganAkun::where('kode_akun', '5106')->first();
+        $coaOpnameGain = BaganAkun::where('kode_akun', '4202')->first();
 
         $katBahan = KategoriBahan::updateOrCreate(
             ['katnama' => 'Bahan Baku Paper'],
@@ -133,9 +133,9 @@ class DatabaseSeeder extends Seeder
             ['katnama' => 'Jasa Operasional'],
             [
                 'tipe_pembebanan_id'  => $tipe1->id,
-                'coa_persediaan_id'   => ChartOfAccount::where('kode_akun', '5202')->value('id'),
-                'coa_beban_id'        => ChartOfAccount::where('kode_akun', '5202')->value('id'),
-                'coa_clearing_lpb_id' => ChartOfAccount::where('kode_akun', '2104')->value('id'),
+                'coa_persediaan_id'   => BaganAkun::where('kode_akun', '5202')->value('id'),
+                'coa_beban_id'        => BaganAkun::where('kode_akun', '5202')->value('id'),
+                'coa_clearing_lpb_id' => BaganAkun::where('kode_akun', '2104')->value('id'),
                 'coa_beban_selisih_opname_id' => $coaOpnameLoss?->id,
                 'coa_koreksi_opname_id' => $coaOpnameGain?->id,
             ]
@@ -145,9 +145,9 @@ class DatabaseSeeder extends Seeder
             ['katnama' => 'Jasa Produksi'],
             [
                 'tipe_pembebanan_id'  => $tipe2->id,
-                'coa_persediaan_id'   => ChartOfAccount::where('kode_akun', '1302')->value('id'),
-                'coa_beban_id'        => ChartOfAccount::where('kode_akun', '1302')->value('id'),
-                'coa_clearing_lpb_id' => ChartOfAccount::where('kode_akun', '2104')->value('id'),
+                'coa_persediaan_id'   => BaganAkun::where('kode_akun', '1302')->value('id'),
+                'coa_beban_id'        => BaganAkun::where('kode_akun', '1302')->value('id'),
+                'coa_clearing_lpb_id' => BaganAkun::where('kode_akun', '2104')->value('id'),
                 'coa_beban_selisih_opname_id' => $coaOpnameLoss?->id,
                 'coa_koreksi_opname_id' => $coaOpnameGain?->id,
             ]
@@ -216,11 +216,11 @@ class DatabaseSeeder extends Seeder
 
         KategoriAset::updateOrCreate(['code' => 'EQUIPMENT'], [
             'name' => 'Peralatan dan Inventaris',
-            'akun_aset_id' => ChartOfAccount::where('kode_akun', '1501')->value('id'),
-            'accumulated_depreciation_coa_id' => ChartOfAccount::where('kode_akun', '1591')->value('id'),
-            'depreciation_expense_coa_id' => ChartOfAccount::where('kode_akun', '5301')->value('id'),
-            'disposal_gain_coa_id' => ChartOfAccount::where('kode_akun', '4203')->value('id'),
-            'disposal_loss_coa_id' => ChartOfAccount::where('kode_akun', '5302')->value('id'),
+            'akun_aset_id' => BaganAkun::where('kode_akun', '1501')->value('id'),
+            'accumulated_depreciation_coa_id' => BaganAkun::where('kode_akun', '1591')->value('id'),
+            'depreciation_expense_coa_id' => BaganAkun::where('kode_akun', '5301')->value('id'),
+            'disposal_gain_coa_id' => BaganAkun::where('kode_akun', '4203')->value('id'),
+            'disposal_loss_coa_id' => BaganAkun::where('kode_akun', '5302')->value('id'),
             'is_active' => true,
         ]);
 
@@ -228,8 +228,8 @@ class DatabaseSeeder extends Seeder
             'display_code' => '98',
             'kategori_bahan_id' => $katJasaOperasional->id,
             'name' => 'Jasa Operasional',
-            'expense_coa_id' => ChartOfAccount::where('kode_akun', '5202')->value('id'),
-            'grni_coa_id' => ChartOfAccount::where('kode_akun', '2104')->value('id'),
+            'expense_coa_id' => BaganAkun::where('kode_akun', '5202')->value('id'),
+            'grni_coa_id' => BaganAkun::where('kode_akun', '2104')->value('id'),
             'requires_datapesanan' => false,
             'requires_cost_center' => true,
             'is_active' => true,
@@ -238,8 +238,8 @@ class DatabaseSeeder extends Seeder
             'display_code' => '99',
             'kategori_bahan_id' => $katJasaProduksi->id,
             'name' => 'Jasa Produksi',
-            'expense_coa_id' => ChartOfAccount::where('kode_akun', '1302')->value('id'),
-            'grni_coa_id' => ChartOfAccount::where('kode_akun', '2104')->value('id'),
+            'expense_coa_id' => BaganAkun::where('kode_akun', '1302')->value('id'),
+            'grni_coa_id' => BaganAkun::where('kode_akun', '2104')->value('id'),
             'requires_datapesanan' => true,
             'requires_cost_center' => false,
             'is_active' => true,

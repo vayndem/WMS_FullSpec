@@ -26,8 +26,8 @@ class StoreJurnalDetailRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'jurnal_id'  => 'required|integer|exists:jurnals,id',
-            'coa_id'     => ['required', 'integer', Rule::exists('chart_of_accounts', 'id')->where(
+            'jurnal_id'  => 'required|integer|exists:wms_jurnal,id',
+            'coa_id'     => ['required', 'integer', Rule::exists('wms_bagan_akun', 'id')->where(
                 fn($query) => $query->where('is_active', 1)->where('is_postable', 1)
             )],
             'debit'      => 'nullable|numeric|min:0',

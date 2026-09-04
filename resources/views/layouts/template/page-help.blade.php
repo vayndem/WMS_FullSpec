@@ -121,8 +121,8 @@
                     ? 'Anda hanya dapat mencatat atau membatalkan pembayaran. Header faktur dikelola Purchasing.'
                     : 'PPh 23 diakui pada saat pembayaran, bukan saat faktur diterima.',
         ],
-        'chart-of-accounts.' => [
-            'title' => 'Panduan Chart of Accounts',
+        'bagan-akun.' => [
+            'title' => 'Panduan Bagan Akun',
             'intro' => 'Accountant mengelola nama akun dan mapping yang dipakai jurnal otomatis.',
             'steps' => [
                 'Buat akun dan tentukan kategori serta posisi normal.',

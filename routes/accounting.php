@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\AccountingPeriodLockController;
 use App\Http\Controllers\AccountingReconciliationController;
-use App\Http\Controllers\ChartOfAccountController;
+use App\Http\Controllers\BaganAkunController;
 use App\Http\Controllers\FinancialStatementController;
 use App\Http\Controllers\JurnalController;
 use App\Http\Controllers\JurnalDetailController;
@@ -10,10 +10,10 @@ use App\Http\Controllers\TaxRateController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
-    Route::get('chart-of-accounts/kas-bank', [ChartOfAccountController::class, 'getKasBank'])->name('chart-of-accounts.kas-bank');
-    Route::put('chart-of-accounts/mapping', [ChartOfAccountController::class, 'updateMapping'])->name('chart-of-accounts.mapping.update');
-    Route::get('chart-of-accounts-report/pdf', [ChartOfAccountController::class, 'reportPdf'])->name('chart-of-accounts.report.pdf');
-    Route::resource('chart-of-accounts', ChartOfAccountController::class);
+    Route::get('bagan-akun/kas-bank', [BaganAkunController::class, 'getKasBank'])->name('bagan-akun.kas-bank');
+    Route::put('bagan-akun/mapping', [BaganAkunController::class, 'updateMapping'])->name('bagan-akun.mapping.update');
+    Route::get('bagan-akun-report/pdf', [BaganAkunController::class, 'reportPdf'])->name('bagan-akun.report.pdf');
+    Route::resource('bagan-akun', BaganAkunController::class)->parameters(['bagan-akun' => 'chart_of_account']);
 
     Route::get('jurnal-report/pdf', [JurnalController::class, 'reportPdf'])->name('jurnal.report.pdf');
     Route::post('jurnal/{jurnal}/post', [JurnalController::class, 'post'])->name('jurnal.post');

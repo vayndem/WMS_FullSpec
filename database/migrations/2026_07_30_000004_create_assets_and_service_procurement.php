@@ -20,11 +20,11 @@ return new class extends Migration
             $table->boolean('is_active')->default(true)
                 ->comment('0=kategori aset nonaktif, 1=kategori aset aktif');
             $table->timestamps();
-            $table->foreign('akun_aset_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
-            $table->foreign('accumulated_depreciation_coa_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
-            $table->foreign('depreciation_expense_coa_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
-            $table->foreign('disposal_gain_coa_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
-            $table->foreign('disposal_loss_coa_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
+            $table->foreign('akun_aset_id')->references('id')->on('wms_bagan_akun')->restrictOnDelete();
+            $table->foreign('accumulated_depreciation_coa_id')->references('id')->on('wms_bagan_akun')->restrictOnDelete();
+            $table->foreign('depreciation_expense_coa_id')->references('id')->on('wms_bagan_akun')->restrictOnDelete();
+            $table->foreign('disposal_gain_coa_id')->references('id')->on('wms_bagan_akun')->restrictOnDelete();
+            $table->foreign('disposal_loss_coa_id')->references('id')->on('wms_bagan_akun')->restrictOnDelete();
         });
 
         Schema::create('wms_asets', function (Blueprint $table) {
@@ -55,7 +55,7 @@ return new class extends Migration
             $table->unsignedBigInteger('created_by');
             $table->timestamps();
             $table->foreign('kategori_aset_id')->references('id')->on('wms_kategori_asets')->restrictOnDelete();
-            $table->foreign('acquisition_credit_coa_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
+            $table->foreign('acquisition_credit_coa_id')->references('id')->on('wms_bagan_akun')->restrictOnDelete();
             $table->index(['status', 'kategori_aset_id']);
         });
 
@@ -74,7 +74,7 @@ return new class extends Migration
             $table->unsignedBigInteger('journal_id')->nullable();
             $table->timestamps();
             $table->foreign('aset_id')->references('id')->on('wms_asets')->restrictOnDelete();
-            $table->foreign('journal_id')->references('id')->on('jurnals')->restrictOnDelete();
+            $table->foreign('journal_id')->references('id')->on('wms_jurnal')->restrictOnDelete();
         });
 
         Schema::create('wms_pelepasan_asets', function (Blueprint $table) {
@@ -93,8 +93,8 @@ return new class extends Migration
             $table->unsignedBigInteger('journal_id')->nullable();
             $table->timestamps();
             $table->foreign('aset_id')->references('id')->on('wms_asets')->restrictOnDelete();
-            $table->foreign('cash_bank_coa_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
-            $table->foreign('journal_id')->references('id')->on('jurnals')->restrictOnDelete();
+            $table->foreign('cash_bank_coa_id')->references('id')->on('wms_bagan_akun')->restrictOnDelete();
+            $table->foreign('journal_id')->references('id')->on('wms_jurnal')->restrictOnDelete();
         });
 
         Schema::table('wms_pesanan_pembelian', function (Blueprint $table) {
@@ -115,8 +115,8 @@ return new class extends Migration
             $table->boolean('is_active')->default(true)
                 ->comment('0=kategori jasa nonaktif, 1=kategori jasa aktif');
             $table->timestamps();
-            $table->foreign('expense_coa_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
-            $table->foreign('grni_coa_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
+            $table->foreign('expense_coa_id')->references('id')->on('wms_bagan_akun')->restrictOnDelete();
+            $table->foreign('grni_coa_id')->references('id')->on('wms_bagan_akun')->restrictOnDelete();
         });
 
         Schema::create('wms_pesanan_jasa_detail', function (Blueprint $table) {

@@ -53,7 +53,7 @@ return new class extends Migration
                 ->comment('Jenis selisih pembayaran: PENDAPATAN_SELISIH, BEBAN_SELISIH, atau UANG_MUKA_SUPPLIER');
             $table->unsignedBigInteger('coa_selisih_id')->nullable()->after('jenis_selisih');
             $table->decimal('kelebihan_pembayaran', 15, 2)->default(0)->after('coa_selisih_id');
-            $table->foreign('coa_selisih_id')->references('id')->on('chart_of_accounts')->onDelete('restrict');
+            $table->foreign('coa_selisih_id')->references('id')->on('wms_bagan_akun')->onDelete('restrict');
         });
     }
 

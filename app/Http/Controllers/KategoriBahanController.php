@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\KategoriBahan;
 use App\Models\TipePembebanan;
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use App\Http\Requests\StoreKategoriBahanRequest;
 use App\Http\Requests\UpdateKategoriBahanRequest;
 use Illuminate\Http\Request;
@@ -66,7 +66,7 @@ class KategoriBahanController extends Controller
         $this->authorize('create', KategoriBahan::class);
 
         $tipePembebanans = TipePembebanan::all();
-        $coas = ChartOfAccount::where('is_active', true)->where('is_postable', true)->orderBy('kode_akun')->get();
+        $coas = BaganAkun::where('is_active', true)->where('is_postable', true)->orderBy('kode_akun')->get();
 
         return view('kategoribahan.create', compact('tipePembebanans', 'coas'));
     }
@@ -107,7 +107,7 @@ class KategoriBahanController extends Controller
         $this->authorize('update', $kategori);
 
         $tipePembebanans = TipePembebanan::all();
-        $coas = ChartOfAccount::where('is_active', true)->where('is_postable', true)->orderBy('kode_akun')->get();
+        $coas = BaganAkun::where('is_active', true)->where('is_postable', true)->orderBy('kode_akun')->get();
 
         return view('kategoribahan.edit', compact('kategori', 'tipePembebanans', 'coas'));
     }

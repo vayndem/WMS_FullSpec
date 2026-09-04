@@ -21,7 +21,7 @@ class AccountingSetting extends Model
 
     public function coa(): BelongsTo
     {
-        return $this->belongsTo(ChartOfAccount::class, 'coa_id');
+        return $this->belongsTo(BaganAkun::class, 'coa_id');
     }
 
     public static function accountId(string $key): int

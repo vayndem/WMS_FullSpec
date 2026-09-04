@@ -18,9 +18,9 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('tipe_pembebanan_id')->references('id')->on('tipe_pembebanans')->onDelete('set null');
-            $table->foreign('coa_persediaan_id')->references('id')->on('chart_of_accounts')->onDelete('set null');
-            $table->foreign('coa_beban_id')->references('id')->on('chart_of_accounts')->onDelete('set null');
-            $table->foreign('coa_clearing_lpb_id')->references('id')->on('chart_of_accounts')->onDelete('set null');
+            $table->foreign('coa_persediaan_id')->references('id')->on('wms_bagan_akun')->onDelete('set null');
+            $table->foreign('coa_beban_id')->references('id')->on('wms_bagan_akun')->onDelete('set null');
+            $table->foreign('coa_clearing_lpb_id')->references('id')->on('wms_bagan_akun')->onDelete('set null');
         });
     }
 

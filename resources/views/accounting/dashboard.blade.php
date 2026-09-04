@@ -27,7 +27,7 @@
         ['Rekonsiliasi WMS', 'Periksa stok, layer, GRNI, hutang supplier, invoice, dan jurnal.', 'reconciliation.index', 'fa-scale-balanced', 'primary'],
         ['Master Bahan', 'Lihat posisi stok, harga rata-rata, nilai persediaan, dan detail layer.', 'bahan.index', 'fa-boxes-stacked', 'info'],
         ['Jurnal Umum', 'Periksa jurnal otomatis dan kelola jurnal manual.', 'jurnal.index', 'fa-book', 'success'],
-        ['Chart of Accounts', 'Kelola akun dan mapping jurnal otomatis WMS.', 'chart-of-accounts.index', 'fa-sitemap', 'warning'],
+        ['Bagan Akun', 'Kelola akun dan mapping jurnal otomatis WMS.', 'bagan-akun.index', 'fa-sitemap', 'warning'],
         ['Kunci Periode', 'Tutup periode agar transaksi lama tidak berubah.', 'period-lock.index', 'fa-calendar-xmark', 'danger'],
         ['Tarif Pajak', 'Kelola tarif PPN dan PPh berdasarkan tanggal efektif.', 'tax-rate.index', 'fa-percent', 'secondary'],
         ['Faktur Pembelian', 'Periksa invoice penerimaan barang, pembayaran, PPh, dan sisa tagihan.', 'faktur-pembelian.index', 'fa-file-invoice-dollar', 'primary'],

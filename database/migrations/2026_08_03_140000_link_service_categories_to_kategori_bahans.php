@@ -26,11 +26,11 @@ return new class extends Migration
 
         $inventoryTypeId = DB::table('tipe_pembebanans')->where('nama_tipe', 'INVENTORY')->value('id');
         $directTypeId = DB::table('tipe_pembebanans')->where('nama_tipe', 'DIRECT_COST')->value('id');
-        $grniServiceId = DB::table('chart_of_accounts')->where('kode_akun', '2104')->value('id');
-        $expenseOperationalId = DB::table('chart_of_accounts')->where('kode_akun', '5202')->value('id');
-        $expenseProductionId = DB::table('chart_of_accounts')->where('kode_akun', '1302')->value('id');
-        $opnameLossId = DB::table('chart_of_accounts')->where('kode_akun', '5106')->value('id');
-        $opnameGainId = DB::table('chart_of_accounts')->where('kode_akun', '4202')->value('id');
+        $grniServiceId = DB::table('wms_bagan_akun')->where('kode_akun', '2104')->value('id');
+        $expenseOperationalId = DB::table('wms_bagan_akun')->where('kode_akun', '5202')->value('id');
+        $expenseProductionId = DB::table('wms_bagan_akun')->where('kode_akun', '1302')->value('id');
+        $opnameLossId = DB::table('wms_bagan_akun')->where('kode_akun', '5106')->value('id');
+        $opnameGainId = DB::table('wms_bagan_akun')->where('kode_akun', '4202')->value('id');
 
         DB::table('kategori_bahans')->updateOrInsert(
             ['katnama' => 'Jasa Operasional'],

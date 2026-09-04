@@ -4,17 +4,17 @@
     <div class="content-page">
         <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h3 class="text-2xl font-bold">Chart of Accounts (COA)</h3>
+                <h3 class="text-2xl font-bold">Bagan Akun (COA)</h3>
                 <p class="text-base-content/60">Kelola daftar akun dan struktur pengkodean akuntansi</p>
             </div>
-            @can('create', App\Models\ChartOfAccount::class)
-                <button type="button" class="btn btn-primary" onclick="openAjaxModal('{{ route('chart-of-accounts.create') }}')">
+            @can('create', App\Models\BaganAkun::class)
+                <button type="button" class="btn btn-primary" onclick="openAjaxModal('{{ route('bagan-akun.create') }}')">
                     <i class="fa-solid fa-plus"></i> Tambah Akun COA
                 </button>
             @endcan
         </div>
 
-        @can('updateMapping', App\Models\ChartOfAccount::class)
+        @can('updateMapping', App\Models\BaganAkun::class)
             <div class="collapse collapse-arrow mb-4 border border-base-300 bg-base-100 shadow-sm">
                 <input type="checkbox">
                 <div class="collapse-title flex items-center justify-between font-bold">
@@ -24,7 +24,7 @@
                     </div>
                 </div>
                 <div class="collapse-content">
-                    <form action="{{ route('chart-of-accounts.mapping.update') }}" method="POST"
+                    <form action="{{ route('bagan-akun.mapping.update') }}" method="POST"
                         @submit.prevent="submitAjaxForm($event, { onSuccess: () => {} })">
                         @csrf
                         @method('PUT')
@@ -86,8 +86,8 @@
 
         <div class="card border border-base-300 bg-base-100 shadow-sm"
             x-data="wmsDataTable({
-                url: '{{ route('chart-of-accounts.index') }}',
-                reportUrl: '{{ route('chart-of-accounts.report.pdf') }}',
+                url: '{{ route('bagan-akun.index') }}',
+                reportUrl: '{{ route('bagan-akun.report.pdf') }}',
                 columns: [
                     { data: 'kode_akun' }, { data: 'nama_akun' }, { data: 'kategori_akun' },
                     { data: 'posisi_normal' }, { data: 'keterangan' }, { data: 'aksi', orderable: false, searchable: false },
@@ -150,10 +150,10 @@
                                 <td class="text-center">
                                     <div class="flex items-center justify-center gap-1">
                                         <button type="button" x-show="row.can_update" class="btn btn-outline btn-warning btn-sm"
-                                            @click="openAjaxModal(`{{ url('chart-of-accounts') }}/${row.id}/edit`)">
+                                            @click="openAjaxModal(`{{ url('bagan-akun') }}/${row.id}/edit`)">
                                             <i class="fa-solid fa-pen-to-square"></i>
                                         </button>
-                                        <form :action="`{{ url('chart-of-accounts') }}/${row.id}`" method="POST" x-show="row.can_delete" class="inline">
+                                        <form :action="`{{ url('bagan-akun') }}/${row.id}`" method="POST" x-show="row.can_delete" class="inline">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-outline btn-error btn-sm"

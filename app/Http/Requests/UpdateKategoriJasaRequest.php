@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use App\Models\KategoriJasa;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -15,7 +15,7 @@ class UpdateKategoriJasaRequest extends FormRequest
     }
     public function rules(): array
     {
-        $available = Rule::exists('chart_of_accounts', 'id')
+        $available = Rule::exists('wms_bagan_akun', 'id')
             ->where(fn($query) => $query->where('is_active', 1)->where('is_postable', 1));
 
         return [
@@ -30,8 +30,8 @@ class UpdateKategoriJasaRequest extends FormRequest
         return [function ($validator) {
             /** @var KategoriJasa|null $category */
             $category = $this->route('service_category');
-            $expense = ChartOfAccount::find($this->input('expense_coa_id'));
-            $grni = ChartOfAccount::find($this->input('grni_coa_id'));
+            $expense = BaganAkun::find($this->input('expense_coa_id'));
+            $grni = BaganAkun::find($this->input('grni_coa_id'));
             $expensePairs = $category?->code === KategoriJasa::PRODUCTION
                 ? [['ASET', 'DEBIT']]
                 : [['BEBAN', 'DEBIT']];

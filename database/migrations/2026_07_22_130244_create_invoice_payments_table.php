@@ -26,7 +26,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('invoice_lpb_id')->references('id')->on('wms_faktur_pembelian')->onDelete('cascade');
-            $table->foreign('coa_kas_bank_id')->references('id')->on('chart_of_accounts')->onDelete('set null');
+            $table->foreign('coa_kas_bank_id')->references('id')->on('wms_bagan_akun')->onDelete('set null');
             $table->foreign('finance_user_id')->references('id')->on('users')->onDelete('restrict');
         });
     }

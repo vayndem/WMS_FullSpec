@@ -21,13 +21,13 @@ class UpdateJurnalRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'no_jurnal'        => ['required', 'string', 'max:30', 'regex:/^\d{2}-\d{2}-[A-Z]{2}-(?:I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)-\d{3}$/', Rule::unique('jurnals', 'no_jurnal')->ignore(is_object($this->route('jurnal')) ? $this->route('jurnal')->id : $this->route('jurnal'))],
+            'no_jurnal'        => ['required', 'string', 'max:30', 'regex:/^\d{2}-\d{2}-[A-Z]{2}-(?:I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)-\d{3}$/', Rule::unique('wms_jurnal', 'no_jurnal')->ignore(is_object($this->route('jurnal')) ? $this->route('jurnal')->id : $this->route('jurnal'))],
             'tanggal'          => 'required|date',
             'keterangan'       => 'nullable|string',
             'sumber_transaksi' => 'nullable|string|max:100',
             'reff_id'          => 'nullable|integer',
             'details'          => 'required|array|min:2',
-            'details.*.coa_id' => ['required', 'integer', Rule::exists('chart_of_accounts', 'id')->where(
+            'details.*.coa_id' => ['required', 'integer', Rule::exists('wms_bagan_akun', 'id')->where(
                 fn($query) => $query->where('is_active', 1)->where('is_postable', 1)
             )],
             'details.*.debit'  => 'nullable|numeric|min:0',

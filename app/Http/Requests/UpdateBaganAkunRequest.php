@@ -2,16 +2,16 @@
 
 namespace App\Http\Requests;
 
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateChartOfAccountRequest extends FormRequest
+class UpdateBaganAkunRequest extends FormRequest
 {
     public function authorize(): bool
     {
         $coa = $this->route('chart_of_account') ?? $this->route('id');
         if (is_numeric($coa)) {
-            $coa = ChartOfAccount::find($coa);
+            $coa = BaganAkun::find($coa);
         }
 
         return $coa ? ($this->user()?->can('update', $coa) ?? false) : false;
@@ -25,7 +25,7 @@ class UpdateChartOfAccountRequest extends FormRequest
         }
 
         return [
-            'kode_akun'     => 'required|string|max:50|unique:chart_of_accounts,kode_akun,' . $id,
+            'kode_akun'     => 'required|string|max:50|unique:wms_bagan_akun,kode_akun,' . $id,
             'nama_akun'     => 'required|string|max:150',
             'kategori_akun' => 'required|in:ASET,LIABILITAS,EKUITAS,PENDAPATAN,BEBAN',
             'posisi_normal' => 'required|in:DEBIT,KREDIT',

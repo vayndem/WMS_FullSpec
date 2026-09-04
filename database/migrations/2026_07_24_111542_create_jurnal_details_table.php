@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('jurnal_details', function (Blueprint $table) {
+        Schema::create('wms_jurnal_detail', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('jurnal_id');
             $table->unsignedBigInteger('coa_id');
@@ -17,13 +17,13 @@ return new class extends Migration
             $table->text('keterangan')->nullable();
             $table->timestamps();
 
-            $table->foreign('jurnal_id')->references('id')->on('jurnals')->onDelete('cascade');
-            $table->foreign('coa_id')->references('id')->on('chart_of_accounts')->onDelete('restrict');
+            $table->foreign('jurnal_id')->references('id')->on('wms_jurnal')->onDelete('cascade');
+            $table->foreign('coa_id')->references('id')->on('wms_bagan_akun')->onDelete('restrict');
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('jurnal_details');
+        Schema::dropIfExists('wms_jurnal_detail');
     }
 };

@@ -3,7 +3,7 @@
         <div class="bg-warning px-6 py-4 text-warning-content">
             <h3 class="text-lg font-bold"><i class="fa-solid fa-pen-to-square"></i> Edit Akun COA</h3>
         </div>
-        <form action="{{ route('chart-of-accounts.update', $coa->id) }}" method="POST" @submit.prevent="submitAjaxForm($event)" class="flex flex-col">
+        <form action="{{ route('bagan-akun.update', $coa->id) }}" method="POST" @submit.prevent="submitAjaxForm($event)" class="flex flex-col">
             @csrf
             @method('PUT')
             <div class="flex flex-col gap-4 p-6">

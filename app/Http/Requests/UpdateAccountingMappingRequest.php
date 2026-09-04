@@ -4,18 +4,18 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 
 class UpdateAccountingMappingRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('updateMapping', ChartOfAccount::class) ?? false;
+        return $this->user()?->can('updateMapping', BaganAkun::class) ?? false;
     }
 
     public function rules(): array
     {
-        $account = fn() => ['required', 'integer', Rule::exists('chart_of_accounts', 'id')
+        $account = fn() => ['required', 'integer', Rule::exists('wms_bagan_akun', 'id')
             ->where(fn($query) => $query->where('is_active', 1)->where('is_postable', 1))];
 
         return [
@@ -51,7 +51,7 @@ class UpdateAccountingMappingRequest extends FormRequest
                 'DISKON_PEMBELIAN' => ['BEBAN', 'KREDIT'],
             ];
             foreach ($this->input('global', []) as $key => $id) {
-                $coa = ChartOfAccount::find($id);
+                $coa = BaganAkun::find($id);
                 if (
                     $coa && isset($expected[$key]) &&
                     ($coa->kategori_akun !== $expected[$key][0] || $coa->posisi_normal !== $expected[$key][1])
@@ -69,7 +69,7 @@ class UpdateAccountingMappingRequest extends FormRequest
                         'coa_koreksi_opname_id' => ['PENDAPATAN', 'KREDIT'],
                     ] as $field => $rule
                 ) {
-                    $coa = ChartOfAccount::find($mapping[$field] ?? null);
+                    $coa = BaganAkun::find($mapping[$field] ?? null);
                     if ($coa && ($coa->kategori_akun !== $rule[0] || $coa->posisi_normal !== $rule[1])) {
                         $validator->errors()->add("categories.{$id}.{$field}", 'Kategori atau posisi normal akun tidak sesuai dengan perannya.');
                     }

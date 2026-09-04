@@ -2,14 +2,14 @@
 
 namespace Tests\Unit;
 
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use PHPUnit\Framework\TestCase;
 
-class ChartOfAccountSafetyTest extends TestCase
+class BaganAkunSafetyTest extends TestCase
 {
     public function test_posting_account_must_be_active_and_postable(): void
     {
-        $account = new ChartOfAccount([
+        $account = new BaganAkun([
             'kategori_akun' => 'BEBAN',
             'posisi_normal' => 'DEBIT',
             'is_active' => false,
@@ -25,7 +25,7 @@ class ChartOfAccountSafetyTest extends TestCase
 
     public function test_account_category_and_normal_position_must_match_mapping_role(): void
     {
-        $account = new ChartOfAccount([
+        $account = new BaganAkun([
             'kategori_akun' => 'ASET',
             'posisi_normal' => 'DEBIT',
             'is_active' => true,
@@ -40,7 +40,7 @@ class ChartOfAccountSafetyTest extends TestCase
 
     public function test_cash_bank_role_requires_cash_bank_flag(): void
     {
-        $account = new ChartOfAccount([
+        $account = new BaganAkun([
             'kategori_akun' => 'ASET',
             'posisi_normal' => 'DEBIT',
             'is_active' => true,
@@ -53,7 +53,7 @@ class ChartOfAccountSafetyTest extends TestCase
 
     public function test_contra_asset_can_be_validated_as_asset_credit(): void
     {
-        $account = new ChartOfAccount([
+        $account = new BaganAkun([
             'kategori_akun' => 'ASET',
             'posisi_normal' => 'KREDIT',
             'is_active' => true,

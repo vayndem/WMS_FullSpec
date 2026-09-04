@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use App\Models\User;
 use App\Services\FinancialStatementService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -15,7 +15,7 @@ class FinancialStatementTest extends TestCase
     public function test_accounting_can_view_all_four_reports_and_pdf_exports(): void
     {
         $accounting = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);
-        $coa = ChartOfAccount::firstOrFail();
+        $coa = BaganAkun::firstOrFail();
 
         $this->actingAs($accounting)->get(route('financial-statements.neraca-saldo'))->assertOk()->assertSee('Neraca Saldo');
         $this->actingAs($accounting)->get(route('financial-statements.neraca-saldo.pdf'))->assertOk();
@@ -63,7 +63,7 @@ class FinancialStatementTest extends TestCase
     public function test_general_ledger_closing_balance_matches_opening_plus_movements(): void
     {
         $service = app(FinancialStatementService::class);
-        $account = ChartOfAccount::where('kode_akun', '1102')->firstOrFail();
+        $account = BaganAkun::where('kode_akun', '1102')->firstOrFail();
         $data = $service->generalLedger($account, today()->subYear(), today());
 
         $sign = $account->posisi_normal === 'DEBIT' ? 1 : -1;

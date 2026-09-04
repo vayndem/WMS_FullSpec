@@ -2,20 +2,20 @@
 
 namespace App\Http\Requests;
 
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreChartOfAccountRequest extends FormRequest
+class StoreBaganAkunRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('create', ChartOfAccount::class) ?? false;
+        return $this->user()?->can('create', BaganAkun::class) ?? false;
     }
 
     public function rules(): array
     {
         return [
-            'kode_akun'     => 'required|string|max:50|unique:chart_of_accounts,kode_akun',
+            'kode_akun'     => 'required|string|max:50|unique:wms_bagan_akun,kode_akun',
             'nama_akun'     => 'required|string|max:150',
             'kategori_akun' => 'required|in:ASET,LIABILITAS,EKUITAS,PENDAPATAN,BEBAN',
             'posisi_normal' => 'required|in:DEBIT,KREDIT',

@@ -3,7 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\KategoriAset;
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -19,11 +19,11 @@ class StoreKategoriAsetRequest extends FormRequest
         return [
             'code' => ['required', 'string', 'max:30', Rule::unique('wms_kategori_asets', 'code')->ignore($id)],
             'name' => 'required|string|max:150',
-            'akun_aset_id' => 'required|exists:chart_of_accounts,id',
-            'accumulated_depreciation_coa_id' => 'required|different:akun_aset_id|exists:chart_of_accounts,id',
-            'depreciation_expense_coa_id' => 'required|exists:chart_of_accounts,id',
-            'disposal_gain_coa_id' => 'required|exists:chart_of_accounts,id',
-            'disposal_loss_coa_id' => 'required|exists:chart_of_accounts,id',
+            'akun_aset_id' => 'required|exists:wms_bagan_akun,id',
+            'accumulated_depreciation_coa_id' => 'required|different:akun_aset_id|exists:wms_bagan_akun,id',
+            'depreciation_expense_coa_id' => 'required|exists:wms_bagan_akun,id',
+            'disposal_gain_coa_id' => 'required|exists:wms_bagan_akun,id',
+            'disposal_loss_coa_id' => 'required|exists:wms_bagan_akun,id',
             'is_active' => 'nullable|boolean',
         ];
     }
@@ -40,7 +40,7 @@ class StoreKategoriAsetRequest extends FormRequest
             ];
 
             foreach ($rules as $field => $allowed) {
-                $account = ChartOfAccount::find($this->input($field));
+                $account = BaganAkun::find($this->input($field));
                 if ($account && !$account->isUsableFor($allowed)) {
                     $validator->errors()->add($field, 'Akun harus aktif, postable, serta sesuai dengan fungsi kategori aset.');
                 }

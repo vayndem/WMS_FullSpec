@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use App\Services\FinancialStatementService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -59,14 +59,14 @@ class FinancialStatementController extends Controller
     {
         $this->authorize('viewFinancialStatements');
 
-        $accounts = ChartOfAccount::orderBy('kode_akun')->get();
+        $accounts = BaganAkun::orderBy('kode_akun')->get();
         $from = $this->parseDate($request->input('from'), today()->startOfMonth());
         $to = $this->parseDate($request->input('to'), today());
         $account = null;
         $data = null;
 
         if ($request->filled('coa_id')) {
-            $account = ChartOfAccount::find($request->integer('coa_id'));
+            $account = BaganAkun::find($request->integer('coa_id'));
             if ($account) {
                 $data = $this->statements->generalLedger($account, $from, $to);
             }
@@ -79,7 +79,7 @@ class FinancialStatementController extends Controller
     {
         $this->authorize('viewFinancialStatements');
 
-        $account = ChartOfAccount::findOrFail($request->integer('coa_id'));
+        $account = BaganAkun::findOrFail($request->integer('coa_id'));
         $from = $this->parseDate($request->input('from'), today()->startOfMonth());
         $to = $this->parseDate($request->input('to'), today());
         $data = $this->statements->generalLedger($account, $from, $to);

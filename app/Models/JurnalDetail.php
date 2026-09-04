@@ -10,7 +10,7 @@ class JurnalDetail extends Model
 {
     use HasFactory;
 
-    protected $table = 'jurnal_details';
+    protected $table = 'wms_jurnal_detail';
 
     protected $fillable = [
         'jurnal_id',
@@ -27,6 +27,6 @@ class JurnalDetail extends Model
 
     public function coa(): BelongsTo
     {
-        return $this->belongsTo(ChartOfAccount::class, 'coa_id');
+        return $this->belongsTo(BaganAkun::class, 'coa_id');
     }
 }

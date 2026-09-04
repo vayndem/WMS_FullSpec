@@ -10,7 +10,7 @@ class Jurnal extends Model
 {
     use HasFactory;
 
-    protected $table = 'jurnals';
+    protected $table = 'wms_jurnal';
 
     protected $fillable = [
         'no_jurnal',

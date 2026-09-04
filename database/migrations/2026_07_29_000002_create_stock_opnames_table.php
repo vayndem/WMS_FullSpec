@@ -69,8 +69,8 @@ return new class extends Migration
         Schema::table('kategori_bahans', function (Blueprint $table) {
             $table->unsignedBigInteger('coa_beban_selisih_opname_id')->nullable()->after('coa_clearing_lpb_id');
             $table->unsignedBigInteger('coa_koreksi_opname_id')->nullable()->after('coa_beban_selisih_opname_id');
-            $table->foreign('coa_beban_selisih_opname_id')->references('id')->on('chart_of_accounts')->onDelete('restrict');
-            $table->foreign('coa_koreksi_opname_id')->references('id')->on('chart_of_accounts')->onDelete('restrict');
+            $table->foreign('coa_beban_selisih_opname_id')->references('id')->on('wms_bagan_akun')->onDelete('restrict');
+            $table->foreign('coa_koreksi_opname_id')->references('id')->on('wms_bagan_akun')->onDelete('restrict');
         });
     }
 

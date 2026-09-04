@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Aset;
 use App\Models\KategoriAset;
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -26,7 +26,7 @@ class StoreAsetRequest extends FormRequest
             'condition' => 'required|in:BAIK,PERLU_SERVIS,RUSAK',
             'acquisition_date' => 'required|date',
             'acquisition_type' => 'required|in:OPENING_BALANCE,CASH,CREDIT,GRANT,CORRECTION',
-            'acquisition_credit_coa_id' => 'required|exists:chart_of_accounts,id',
+            'acquisition_credit_coa_id' => 'required|exists:wms_bagan_akun,id',
             'acquisition_cost' => 'required|numeric|min:0.01',
             'residual_value' => 'required|numeric|min:0|lte:acquisition_cost',
             'useful_life_months' => 'nullable|integer|min:1|max:1200',
@@ -44,7 +44,7 @@ class StoreAsetRequest extends FormRequest
                 $validator->errors()->add('kategori_aset_id', 'Kategori aset sudah tidak aktif.');
             }
 
-            $source = ChartOfAccount::find($this->input('acquisition_credit_coa_id'));
+            $source = BaganAkun::find($this->input('acquisition_credit_coa_id'));
             if (!$source) {
                 return;
             }

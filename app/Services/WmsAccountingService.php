@@ -11,7 +11,7 @@ use App\Models\PenerimaanBarangDetail;
 use App\Models\PemakaianBarang;
 use App\Models\PemakaianBarangAlokasiStok;
 use App\Models\InventoryLayer;
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use App\Models\ReturPembelian;
 use App\Models\KategoriJasa;
 use Illuminate\Support\Facades\Auth;
@@ -183,8 +183,8 @@ class WmsAccountingService
             $expensePairs = $category->code === KategoriJasa::PRODUCTION
                 ? [['ASET', 'DEBIT']]
                 : [['BEBAN', 'DEBIT']];
-            ChartOfAccount::assertUsable($category->expense_coa_id, $expensePairs, "beban/WIP jasa {$category->name}");
-            ChartOfAccount::assertUsable($category->grni_coa_id, [['LIABILITAS', 'KREDIT']], "GRNI jasa {$category->name}");
+            BaganAkun::assertUsable($category->expense_coa_id, $expensePairs, "beban/WIP jasa {$category->name}");
+            BaganAkun::assertUsable($category->grni_coa_id, [['LIABILITAS', 'KREDIT']], "GRNI jasa {$category->name}");
             $this->line($lines, $category->expense_coa_id, $details->sum('amount'), 0, "Penyelesaian jasa {$category->name}");
         }
 
@@ -203,12 +203,12 @@ class WmsAccountingService
         $this->periods->assertOpen($payment->tanggal_pembayaran, 'Pembayaran supplier');
         $payment->loadMissing('invoice', 'sumberUangMuka');
         $invoice = $payment->invoice;
-        ChartOfAccount::assertUsable($payment->coa_kas_bank_id, [['ASET', 'DEBIT']], 'kas/bank pembayaran', true);
+        BaganAkun::assertUsable($payment->coa_kas_bank_id, [['ASET', 'DEBIT']], 'kas/bank pembayaran', true);
         if ((float) $payment->uang_muka_dipakai > 0) {
             if (!$payment->sumberUangMuka) {
                 throw new RuntimeException('Sumber uang muka supplier tidak ditemukan.');
             }
-            ChartOfAccount::assertUsable($payment->sumberUangMuka->coa_selisih_id, [['ASET', 'DEBIT']], 'uang muka supplier');
+            BaganAkun::assertUsable($payment->sumberUangMuka->coa_selisih_id, [['ASET', 'DEBIT']], 'uang muka supplier');
         }
         if ($payment->jenis_selisih) {
             $differencePairs = match ($payment->jenis_selisih) {
@@ -217,7 +217,7 @@ class WmsAccountingService
                 'UANG_MUKA_SUPPLIER' => [['ASET', 'DEBIT']],
                 default => throw new RuntimeException('Jenis selisih pembayaran tidak dikenali.'),
             };
-            ChartOfAccount::assertUsable($payment->coa_selisih_id, $differencePairs, 'selisih pembayaran');
+            BaganAkun::assertUsable($payment->coa_selisih_id, $differencePairs, 'selisih pembayaran');
         }
         $apReduction = (float) $payment->total_transaksi_pengurang_hutang;
         $lines = [];
@@ -328,8 +328,8 @@ class WmsAccountingService
         if (!$category || !$category->coa_persediaan_id || !$category->coa_beban_id || !$category->coa_clearing_lpb_id) {
             throw new RuntimeException('Mapping Persediaan, Pemakaian, dan GRNI pada kategori bahan belum lengkap.');
         }
-        ChartOfAccount::assertUsable($category->coa_persediaan_id, [['ASET', 'DEBIT']], 'persediaan kategori bahan');
-        ChartOfAccount::assertUsable($category->coa_beban_id, [['BEBAN', 'DEBIT']], 'pemakaian kategori bahan');
-        ChartOfAccount::assertUsable($category->coa_clearing_lpb_id, [['LIABILITAS', 'KREDIT']], 'GRNI kategori bahan');
+        BaganAkun::assertUsable($category->coa_persediaan_id, [['ASET', 'DEBIT']], 'persediaan kategori bahan');
+        BaganAkun::assertUsable($category->coa_beban_id, [['BEBAN', 'DEBIT']], 'pemakaian kategori bahan');
+        BaganAkun::assertUsable($category->coa_clearing_lpb_id, [['LIABILITAS', 'KREDIT']], 'GRNI kategori bahan');
     }
 }

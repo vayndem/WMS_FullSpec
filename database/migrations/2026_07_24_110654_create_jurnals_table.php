@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('jurnals', function (Blueprint $table) {
+        Schema::create('wms_jurnal', function (Blueprint $table) {
             $table->id();
             $table->string('no_jurnal', 100)->unique();
             $table->date('tanggal');
@@ -23,6 +23,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('jurnals');
+        Schema::dropIfExists('wms_jurnal');
     }
 };

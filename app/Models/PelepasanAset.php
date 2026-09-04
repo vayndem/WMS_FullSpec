@@ -13,6 +13,6 @@ class PelepasanAset extends Model
         'gain_amount' => 'decimal:2', 'loss_amount' => 'decimal:2',
     ];
     public function asset() { return $this->belongsTo(Aset::class, 'aset_id'); }
-    public function cashBankAccount() { return $this->belongsTo(ChartOfAccount::class, 'cash_bank_coa_id'); }
+    public function cashBankAccount() { return $this->belongsTo(BaganAkun::class, 'cash_bank_coa_id'); }
     public function journal() { return $this->belongsTo(Jurnal::class); }
 }

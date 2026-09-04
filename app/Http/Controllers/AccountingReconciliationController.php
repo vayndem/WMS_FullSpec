@@ -32,7 +32,7 @@ class AccountingReconciliationController extends Controller
             ->selectRaw('SUM(COALESCE(layers.inventory_value,0)) inventory_value')
             ->first();
 
-        $journal = DB::table('jurnals')->whereIn('status', ['POSTED', 'REVERSED'])
+        $journal = DB::table('wms_jurnal')->whereIn('status', ['POSTED', 'REVERSED'])
             ->selectRaw('COUNT(*) total_rows')
             ->selectRaw('SUM(CASE WHEN ABS(COALESCE(total_debit,0)-COALESCE(total_kredit,0)) <= 0.01 THEN 0 ELSE 1 END) invalid_rows')
             ->first();
@@ -50,15 +50,15 @@ class AccountingReconciliationController extends Controller
             ->sum(DB::raw('wms_penerimaan_barang_detail.jumlah_barang_diterima * wms_penerimaan_barang_detail.harga'));
         $grniAccounts = DB::table('kategori_bahans')->whereNotNull('coa_clearing_lpb_id')
             ->distinct()->pluck('coa_clearing_lpb_id');
-        $grniLedger = (float) DB::table('jurnal_details')->join('jurnals', 'jurnals.id', '=', 'jurnal_details.jurnal_id')
-            ->whereIn('jurnals.status', ['POSTED', 'REVERSED'])->whereIn('jurnal_details.coa_id', $grniAccounts)
+        $grniLedger = (float) DB::table('wms_jurnal_detail')->join('wms_jurnal', 'wms_jurnal.id', '=', 'wms_jurnal_detail.jurnal_id')
+            ->whereIn('wms_jurnal.status', ['POSTED', 'REVERSED'])->whereIn('wms_jurnal_detail.coa_id', $grniAccounts)
             ->selectRaw('COALESCE(SUM(kredit-debit),0) balance')->value('balance');
 
         $apLedger = null;
         try {
             $apId = AccountingSetting::accountId(AccountingSetting::HUTANG_USAHA);
-            $apLedger = (float) DB::table('jurnal_details')->join('jurnals', 'jurnals.id', '=', 'jurnal_details.jurnal_id')
-                ->whereIn('jurnals.status', ['POSTED', 'REVERSED'])->where('jurnal_details.coa_id', $apId)
+            $apLedger = (float) DB::table('wms_jurnal_detail')->join('wms_jurnal', 'wms_jurnal.id', '=', 'wms_jurnal_detail.jurnal_id')
+                ->whereIn('wms_jurnal.status', ['POSTED', 'REVERSED'])->where('wms_jurnal_detail.coa_id', $apId)
                 ->selectRaw('COALESCE(SUM(kredit-debit),0) balance')->value('balance');
         } catch (\RuntimeException) {
             $apLedger = null;

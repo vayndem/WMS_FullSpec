@@ -5,7 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use App\Models\Aset;
 use App\Models\KategoriAset;
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use App\Models\FakturPembelian;
 use App\Models\PembayaranFaktur;
 use App\Models\PenerimaanJasa;
@@ -39,7 +39,7 @@ class AssetAndServiceDemoSeeder extends Seeder
                     'condition' => 'BAIK',
                     'acquisition_date' => today()->subYears(1),
                     'acquisition_type' => 'OPENING_BALANCE',
-                    'acquisition_credit_coa_id' => ChartOfAccount::where('kode_akun', '3102')->value('id'),
+                    'acquisition_credit_coa_id' => BaganAkun::where('kode_akun', '3102')->value('id'),
                     'acquisition_cost' => 4000000,
                     'residual_value' => 0,
                     'useful_life_months' => 48,
@@ -61,7 +61,7 @@ class AssetAndServiceDemoSeeder extends Seeder
             if (!PesananJasa::where('notes', 'PO jasa demo terpisah dari barang')->exists()) {
                 Auth::setUser(User::where('email', 'purchasing@wms.local')->firstOrFail());
                 $supplier = Supplier::where('nama', 'PT. Global Supply Indonesia')->firstOrFail();
-                $bank = ChartOfAccount::where('kode_akun', '1102')->firstOrFail();
+                $bank = BaganAkun::where('kode_akun', '1102')->firstOrFail();
                 $accounting = app(WmsAccountingService::class);
                 $po = PesananJasa::create([
                     'no_po' => $numbers->financial('PJ', today()->subDays(7)),

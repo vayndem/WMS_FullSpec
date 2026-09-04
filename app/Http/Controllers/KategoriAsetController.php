@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreKategoriAsetRequest;
 use App\Models\KategoriAset;
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 
 class KategoriAsetController extends Controller
 {
@@ -12,7 +12,7 @@ class KategoriAsetController extends Controller
     {
         $this->authorize('viewAny', KategoriAset::class);
         $categories = KategoriAset::with(['assetAccount', 'accumulatedAccount', 'expenseAccount'])->orderBy('code')->get();
-        $accounts = ChartOfAccount::where('is_active', true)->where('is_postable', true)->orderBy('kode_akun')->get();
+        $accounts = BaganAkun::where('is_active', true)->where('is_postable', true)->orderBy('kode_akun')->get();
         return view('kategori_aset.index', compact('categories', 'accounts'));
     }
     public function store(StoreKategoriAsetRequest $request)

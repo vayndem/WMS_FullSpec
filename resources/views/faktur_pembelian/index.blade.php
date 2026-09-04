@@ -400,7 +400,7 @@
                     this.payment.jumlah_pembayaran = Number(this.invoice?.sisa_tagihan || 0);
                     try {
                         const [coaRes, advanceRes] = await Promise.all([
-                            fetch('{{ url('chart-of-accounts/kas-bank') }}', { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } }).then((r) => r.json()),
+                            fetch('{{ url('bagan-akun/kas-bank') }}', { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } }).then((r) => r.json()),
                             fetch(`{{ url('pembayaran-faktur/available-advances') }}/${this.invoice.kode_supplier}`, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } }).then((r) => r.json()),
                         ]);
                         this.coaKasBankOptions = coaRes.data || [];

@@ -28,7 +28,7 @@ class UpdateJurnalDetailRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'coa_id'     => ['required', 'integer', Rule::exists('chart_of_accounts', 'id')->where(
+            'coa_id'     => ['required', 'integer', Rule::exists('wms_bagan_akun', 'id')->where(
                 fn($query) => $query->where('is_active', 1)->where('is_postable', 1)
             )],
             'debit'      => 'nullable|numeric|min:0',

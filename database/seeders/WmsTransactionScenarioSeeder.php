@@ -6,7 +6,7 @@ use App\Models\AccountingSetting;
 use App\Models\Gudang;
 use App\Models\User;
 use App\Models\Bahan;
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use App\Models\FakturPembelian;
 use App\Models\PembayaranFaktur;
 use App\Models\InventoryLayer;
@@ -52,7 +52,7 @@ class WmsTransactionScenarioSeeder extends Seeder
             $category = KategoriBahan::where('katnama', 'Bahan Baku Paper')->firstOrFail();
             $warehouse = Gudang::where('nama', 'Gudang Utama')->firstOrFail();
             $supplier = Supplier::where('nama', 'PT. Global Supply Indonesia')->firstOrFail();
-            $bank = ChartOfAccount::where('kode_akun', '1102')->firstOrFail();
+            $bank = BaganAkun::where('kode_akun', '1102')->firstOrFail();
             $date = today()->subDays(20);
 
             $material = Bahan::updateOrCreate(
@@ -348,8 +348,8 @@ class WmsTransactionScenarioSeeder extends Seeder
         }
 
         $grniIds = KategoriBahan::whereNotNull('coa_clearing_lpb_id')->pluck('coa_clearing_lpb_id');
-        $grniLedger = (float) DB::table('jurnal_details')->join('jurnals', 'jurnals.id', '=', 'jurnal_details.jurnal_id')
-            ->whereIn('jurnals.status', ['POSTED', 'REVERSED'])->whereIn('jurnal_details.coa_id', $grniIds)
+        $grniLedger = (float) DB::table('wms_jurnal_detail')->join('wms_jurnal', 'wms_jurnal.id', '=', 'wms_jurnal_detail.jurnal_id')
+            ->whereIn('wms_jurnal.status', ['POSTED', 'REVERSED'])->whereIn('wms_jurnal_detail.coa_id', $grniIds)
             ->selectRaw('COALESCE(SUM(kredit-debit),0) balance')->value('balance');
         $grniExpected = (float) DB::table('wms_penerimaan_barang_detail')->join('wms_penerimaan_barang', 'wms_penerimaan_barang.id_lpb', '=', 'wms_penerimaan_barang_detail.id_lpb')
             ->leftJoin('wms_faktur_pembelian_penerimaan', 'wms_faktur_pembelian_penerimaan.lpb_id', '=', 'wms_penerimaan_barang.id')
@@ -360,8 +360,8 @@ class WmsTransactionScenarioSeeder extends Seeder
         }
 
         $apId = AccountingSetting::accountId(AccountingSetting::HUTANG_USAHA);
-        $apLedger = (float) DB::table('jurnal_details')->join('jurnals', 'jurnals.id', '=', 'jurnal_details.jurnal_id')
-            ->whereIn('jurnals.status', ['POSTED', 'REVERSED'])->where('jurnal_details.coa_id', $apId)
+        $apLedger = (float) DB::table('wms_jurnal_detail')->join('wms_jurnal', 'wms_jurnal.id', '=', 'wms_jurnal_detail.jurnal_id')
+            ->whereIn('wms_jurnal.status', ['POSTED', 'REVERSED'])->where('wms_jurnal_detail.coa_id', $apId)
             ->selectRaw('COALESCE(SUM(kredit-debit),0) balance')->value('balance');
         $invoiceOutstanding = (float) FakturPembelian::where('status', '!=', FakturPembelian::VOID)->sum('sisa_tagihan');
         if (abs($apLedger - $invoiceOutstanding) > 0.01) {

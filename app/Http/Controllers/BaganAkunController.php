@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ChartOfAccount;
-use App\Http\Requests\StoreChartOfAccountRequest;
-use App\Http\Requests\UpdateChartOfAccountRequest;
+use App\Models\BaganAkun;
+use App\Http\Requests\StoreBaganAkunRequest;
+use App\Http\Requests\UpdateBaganAkunRequest;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\AccountingSetting;
@@ -12,14 +12,14 @@ use App\Models\KategoriBahan;
 use App\Http\Requests\UpdateAccountingMappingRequest;
 use Illuminate\Support\Facades\DB;
 
-class ChartOfAccountController extends Controller
+class BaganAkunController extends Controller
 {
     public function index(Request $request)
     {
-        $this->authorize('viewAny', ChartOfAccount::class);
+        $this->authorize('viewAny', BaganAkun::class);
 
         if ($request->ajax()) {
-            $query = ChartOfAccount::query();
+            $query = BaganAkun::query();
 
             return datatables()->of($query)
                 ->addIndexColumn()
@@ -32,21 +32,21 @@ class ChartOfAccountController extends Controller
                 ->make(true);
         }
 
-        $accounts = ChartOfAccount::where('is_active', true)->where('is_postable', true)->orderBy('kode_akun')->get();
+        $accounts = BaganAkun::where('is_active', true)->where('is_postable', true)->orderBy('kode_akun')->get();
         $settings = AccountingSetting::pluck('coa_id', 'key');
         $categories = KategoriBahan::with(['coaPersediaan', 'coaBeban', 'coaClearingLpb'])->orderBy('katnama')->get();
 
-        return view('coa.index', compact('accounts', 'settings', 'categories'));
+        return view('bagan_akun.index', compact('accounts', 'settings', 'categories'));
     }
 
     public function reportPdf(Request $request)
     {
-        $this->authorize('viewAny', ChartOfAccount::class);
+        $this->authorize('viewAny', BaganAkun::class);
 
         $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
         $search = trim((string) $request->input('search', ''));
         $fields = ['kode_akun', 'nama_akun', 'kategori_akun', 'posisi_normal', 'keterangan'];
-        $query = ChartOfAccount::query()->orderBy('kode_akun');
+        $query = BaganAkun::query()->orderBy('kode_akun');
 
         if ($search !== '') {
             $query->where(function ($builder) use ($fields, $search) {
@@ -88,16 +88,16 @@ class ChartOfAccountController extends Controller
 
     public function create()
     {
-        $this->authorize('create', ChartOfAccount::class);
+        $this->authorize('create', BaganAkun::class);
 
-        return view('coa.create');
+        return view('bagan_akun.create');
     }
 
-    public function store(StoreChartOfAccountRequest $request)
+    public function store(StoreBaganAkunRequest $request)
     {
         $validated = $request->validated();
 
-        $coa = ChartOfAccount::create($validated);
+        $coa = BaganAkun::create($validated);
 
         return response()->json([
             'success' => true,
@@ -108,7 +108,7 @@ class ChartOfAccountController extends Controller
 
     public function show($id)
     {
-        $coa = ChartOfAccount::findOrFail($id);
+        $coa = BaganAkun::findOrFail($id);
         $this->authorize('view', $coa);
 
         return response()->json([
@@ -119,15 +119,15 @@ class ChartOfAccountController extends Controller
 
     public function edit($id)
     {
-        $coa = ChartOfAccount::findOrFail($id);
+        $coa = BaganAkun::findOrFail($id);
         $this->authorize('update', $coa);
 
-        return view('coa.edit', compact('coa'));
+        return view('bagan_akun.edit', compact('coa'));
     }
 
-    public function update(UpdateChartOfAccountRequest $request, $id)
+    public function update(UpdateBaganAkunRequest $request, $id)
     {
-        $coa = ChartOfAccount::findOrFail($id);
+        $coa = BaganAkun::findOrFail($id);
         $this->authorize('update', $coa);
 
         $validated = $request->validated();
@@ -154,7 +154,7 @@ class ChartOfAccountController extends Controller
 
     public function destroy($id)
     {
-        $coa = ChartOfAccount::findOrFail($id);
+        $coa = BaganAkun::findOrFail($id);
         $this->authorize('delete', $coa);
 
         $coa->update(['is_active' => false, 'is_cash_bank' => false]);
@@ -167,7 +167,7 @@ class ChartOfAccountController extends Controller
 
     public function getKasBank()
     {
-        $coas = ChartOfAccount::where('is_active', true)
+        $coas = BaganAkun::where('is_active', true)
             ->where('is_postable', true)
             ->where('is_cash_bank', true)
             ->orderBy('kode_akun', 'asc')
@@ -176,7 +176,7 @@ class ChartOfAccountController extends Controller
         return response()->json([
             'success' => true,
             'data'    => $coas,
-            'postable' => ChartOfAccount::where('is_active', true)->where('is_postable', true)
+            'postable' => BaganAkun::where('is_active', true)->where('is_postable', true)
                 ->orderBy('kode_akun')->get(['id', 'kode_akun', 'nama_akun', 'kategori_akun']),
         ]);
     }

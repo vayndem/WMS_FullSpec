@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Jurnal;
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use App\Http\Requests\StoreJurnalRequest;
 use App\Http\Requests\UpdateJurnalRequest;
 use Illuminate\Http\Request;
@@ -109,7 +109,7 @@ class JurnalController extends Controller
     {
         $this->authorize('create', Jurnal::class);
 
-        $coas = ChartOfAccount::where('is_active', true)->where('is_postable', true)->orderBy('kode_akun')->get();
+        $coas = BaganAkun::where('is_active', true)->where('is_postable', true)->orderBy('kode_akun')->get();
         $documentNumber = $this->numbers->financial('JR');
 
         return view('jurnal.create', compact('coas', 'documentNumber'));
@@ -159,7 +159,7 @@ class JurnalController extends Controller
         $jurnal = Jurnal::with(['details.coa'])->findOrFail($id);
         $this->authorize('update', $jurnal);
 
-        $coas = ChartOfAccount::where('is_active', true)->where('is_postable', true)->orderBy('kode_akun')->get();
+        $coas = BaganAkun::where('is_active', true)->where('is_postable', true)->orderBy('kode_akun')->get();
 
         return view('jurnal.edit', compact('jurnal', 'coas'));
     }

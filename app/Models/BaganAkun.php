@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use RuntimeException;
 
-class ChartOfAccount extends Model
+class BaganAkun extends Model
 {
     use HasFactory;
 
-    protected $table = 'chart_of_accounts';
+    protected $table = 'wms_bagan_akun';
 
     protected $fillable = [
         'kode_akun',

@@ -7,7 +7,7 @@ use App\Models\InventoryLayer;
 use App\Models\Jurnal;
 use App\Models\StockOpname;
 use App\Models\StockOpnameDetail;
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use App\Models\StokGudang;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -187,9 +187,9 @@ class StockOpnameService
         if (!$category || !$category->coa_persediaan_id || !$category->coa_beban_selisih_opname_id || !$category->coa_koreksi_opname_id) {
             throw new RuntimeException("Mapping COA stock opname kategori {$category?->katnama} belum lengkap.");
         }
-        ChartOfAccount::assertUsable($category->coa_persediaan_id, [['ASET', 'DEBIT']], 'persediaan stock opname');
-        ChartOfAccount::assertUsable($category->coa_beban_selisih_opname_id, [['BEBAN', 'DEBIT']], 'beban selisih stock opname');
-        ChartOfAccount::assertUsable($category->coa_koreksi_opname_id, [['PENDAPATAN', 'KREDIT']], 'koreksi positif stock opname');
+        BaganAkun::assertUsable($category->coa_persediaan_id, [['ASET', 'DEBIT']], 'persediaan stock opname');
+        BaganAkun::assertUsable($category->coa_beban_selisih_opname_id, [['BEBAN', 'DEBIT']], 'beban selisih stock opname');
+        BaganAkun::assertUsable($category->coa_koreksi_opname_id, [['PENDAPATAN', 'KREDIT']], 'koreksi positif stock opname');
     }
 
     private function line(array &$lines, ?int $accountId, float $debit, float $credit, string $description): void

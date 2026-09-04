@@ -2,17 +2,17 @@
 
 namespace App\Policies;
 
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use App\Models\User;
 
-class ChartOfAccountPolicy
+class BaganAkunPolicy
 {
     public function viewAny(User $user): bool
     {
         return $user->isAccounting();
     }
 
-    public function view(User $user, ChartOfAccount $chartOfAccount): bool
+    public function view(User $user, BaganAkun $chartOfAccount): bool
     {
         return $user->isAccounting();
     }
@@ -22,12 +22,12 @@ class ChartOfAccountPolicy
         return $user->isAccounting();
     }
 
-    public function update(User $user, ChartOfAccount $chartOfAccount): bool
+    public function update(User $user, BaganAkun $chartOfAccount): bool
     {
         return $user->isAccounting();
     }
 
-    public function delete(User $user, ChartOfAccount $chartOfAccount): bool
+    public function delete(User $user, BaganAkun $chartOfAccount): bool
     {
         return $user->isAccounting()
             && !$chartOfAccount->jurnalDetails()->exists()

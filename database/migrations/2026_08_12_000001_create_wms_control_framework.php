@@ -39,7 +39,7 @@ return new class extends Migration
             $table->unsignedBigInteger('document_id');
             $table->text('reason');
             $table->string('status', 20)->default('POSTED');
-            $table->foreignId('reversal_journal_id')->nullable()->constrained('jurnals')->nullOnDelete();
+            $table->foreignId('reversal_journal_id')->nullable()->constrained('wms_jurnal')->nullOnDelete();
             $table->foreignId('created_by')->constrained('users')->restrictOnDelete();
             $table->timestamp('posted_at');
             $table->timestamps();
@@ -134,8 +134,8 @@ return new class extends Migration
             $table->string('description');
             $table->string('allocation_basis', 20)->default('VALUE');
             $table->decimal('total_amount', 18, 2);
-            $table->foreignId('credit_coa_id')->constrained('chart_of_accounts')->restrictOnDelete();
-            $table->foreignId('journal_id')->nullable()->constrained('jurnals')->nullOnDelete();
+            $table->foreignId('credit_coa_id')->constrained('wms_bagan_akun')->restrictOnDelete();
+            $table->foreignId('journal_id')->nullable()->constrained('wms_jurnal')->nullOnDelete();
             $table->string('status', 20)->default('DRAFT');
             $table->foreignId('created_by')->constrained('users')->restrictOnDelete();
             $table->foreignId('posted_by')->nullable()->constrained('users')->nullOnDelete();

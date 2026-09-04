@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Services\WmsAccountingService;
 use App\Services\PaymentAllocationService;
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use App\Services\DocumentNumberService;
 
 class PembayaranFakturController extends Controller
@@ -65,7 +65,7 @@ class PembayaranFakturController extends Controller
             $difference = (float) $validated['selisih_bayar'];
             $differenceType = $validated['jenis_selisih'] ?? null;
             if ($difference > 0) {
-                $differenceAccount = ChartOfAccount::findOrFail($validated['coa_selisih_id']);
+                $differenceAccount = BaganAkun::findOrFail($validated['coa_selisih_id']);
                 $required = [
                     'PENDAPATAN_SELISIH' => ['PENDAPATAN', 'KREDIT'],
                     'BEBAN_SELISIH' => ['BEBAN', 'DEBIT'],

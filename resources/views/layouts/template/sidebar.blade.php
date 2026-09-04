@@ -84,13 +84,13 @@
                 @endif
 
                 @if (Auth::user()->can('viewAny', App\Models\TipePembebanan::class) ||
-                        Auth::user()->can('viewAny', App\Models\ChartOfAccount::class) ||
+                        Auth::user()->can('viewAny', App\Models\BaganAkun::class) ||
                         Auth::user()->can('viewAny', App\Models\Jurnal::class) ||
                         Auth::user()->can('viewFinancialStatements'))
                     <li
-                        class="{{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('chart-of-accounts.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') || request()->routeIs('financial-statements.*') ? 'active' : '' }}">
+                        class="{{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('bagan-akun.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') || request()->routeIs('financial-statements.*') ? 'active' : '' }}">
                         <a href="#akuntansi" class="svg-icon"
-                            aria-expanded="{{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('chart-of-accounts.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') || request()->routeIs('financial-statements.*') ? 'true' : 'false' }}">
+                            aria-expanded="{{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('bagan-akun.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') || request()->routeIs('financial-statements.*') ? 'true' : 'false' }}">
                             <i>
                                 <svg class="svg-icon" id="mm-akuntansi-1" width="20"
                                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -104,7 +104,7 @@
                             <i class="fa-solid fa-chevron-down mm-arrow-right arrow-hover"></i>
                         </a>
                         <ul id="akuntansi"
-                            class="submenu {{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('chart-of-accounts.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') || request()->routeIs('financial-statements.*') ? 'show' : '' }}">
+                            class="submenu {{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('bagan-akun.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') || request()->routeIs('financial-statements.*') ? 'show' : '' }}">
 
                             @can('viewAny', App\Models\TipePembebanan::class)
                                 <li class="{{ request()->routeIs('tipe-pembebanan.*') ? 'active' : '' }}">
@@ -130,9 +130,9 @@
                                 </li>
                             @endcan
 
-                            @can('viewAny', App\Models\ChartOfAccount::class)
-                                <li class="{{ request()->routeIs('chart-of-accounts.*') ? 'active' : '' }}">
-                                    <a href="{{ route('chart-of-accounts.index') }}" class="svg-icon">
+                            @can('viewAny', App\Models\BaganAkun::class)
+                                <li class="{{ request()->routeIs('bagan-akun.*') ? 'active' : '' }}">
+                                    <a href="{{ route('bagan-akun.index') }}" class="svg-icon">
                                         <i>
                                             <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none"
                                                 viewBox="0 0 24 24" stroke="currentColor" width="20">
@@ -140,7 +140,7 @@
                                                     d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                             </svg>
                                         </i>
-                                        <span class="">Chart of Accounts</span>
+                                        <span class="">Bagan Akun</span>
                                     </a>
                                 </li>
                             @endcan

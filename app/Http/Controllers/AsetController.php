@@ -7,7 +7,7 @@ use App\Http\Requests\StorePenyusutanAsetRequest;
 use App\Http\Requests\StorePelepasanAsetRequest;
 use App\Models\Aset;
 use App\Models\KategoriAset;
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use App\Services\AsetAccountingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -85,7 +85,7 @@ class AsetController extends Controller
         $this->authorize('view', $aset);
         $aset->load(['category', 'acquisitionCreditAccount', 'depreciations.journal', 'disposal.journal']);
         $financial = $request->user()->can('viewFinancials', Aset::class);
-        $cashBanks = ChartOfAccount::where('is_active', true)->where('is_cash_bank', true)->orderBy('kode_akun')->get();
+        $cashBanks = BaganAkun::where('is_active', true)->where('is_cash_bank', true)->orderBy('kode_akun')->get();
         return view('aset.show', ['asset' => $aset, 'financial' => $financial, 'cashBanks' => $cashBanks]);
     }
     public function edit(Aset $aset)
@@ -119,7 +119,7 @@ class AsetController extends Controller
     {
         return [
             'categories' => KategoriAset::where('is_active', true)->orderBy('name')->get(),
-            'accounts' => ChartOfAccount::where('is_active', true)->where('is_postable', true)->orderBy('kode_akun')->get()
+            'accounts' => BaganAkun::where('is_active', true)->where('is_postable', true)->orderBy('kode_akun')->get()
         ];
     }
 }

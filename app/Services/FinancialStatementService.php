@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use App\Models\JurnalDetail;
 use Illuminate\Support\Carbon;
 
@@ -10,7 +10,7 @@ class FinancialStatementService
 {
     public function trialBalance(Carbon $asOf): array
     {
-        $accounts = ChartOfAccount::orderBy('kode_akun')->get();
+        $accounts = BaganAkun::orderBy('kode_akun')->get();
 
         $sums = JurnalDetail::query()
             ->whereHas('jurnal', fn ($q) => $q->where('status', 'POSTED')->whereDate('tanggal', '<=', $asOf))
@@ -19,7 +19,7 @@ class FinancialStatementService
             ->get()
             ->keyBy('coa_id');
 
-        $rows = $accounts->map(function (ChartOfAccount $account) use ($sums) {
+        $rows = $accounts->map(function (BaganAkun $account) use ($sums) {
             $sum = $sums->get($account->id);
 
             return [
@@ -37,7 +37,7 @@ class FinancialStatementService
         ];
     }
 
-    public function generalLedger(ChartOfAccount $account, Carbon $from, Carbon $to): array
+    public function generalLedger(BaganAkun $account, Carbon $from, Carbon $to): array
     {
         if ($from->gt($to)) {
             [$from, $to] = [$to, $from];
@@ -97,10 +97,10 @@ class FinancialStatementService
             ->get()
             ->keyBy('coa_id');
 
-        $accounts = ChartOfAccount::whereIn('kategori_akun', ['PENDAPATAN', 'BEBAN'])->orderBy('kode_akun')->get();
+        $accounts = BaganAkun::whereIn('kategori_akun', ['PENDAPATAN', 'BEBAN'])->orderBy('kode_akun')->get();
 
         $section = function (string $kategori, bool $normalCredit) use ($accounts, $sums) {
-            return $accounts->where('kategori_akun', $kategori)->map(function (ChartOfAccount $account) use ($sums, $normalCredit) {
+            return $accounts->where('kategori_akun', $kategori)->map(function (BaganAkun $account) use ($sums, $normalCredit) {
                 $sum = $sums->get($account->id);
                 $debit = (float) ($sum->total_debit ?? 0);
                 $kredit = (float) ($sum->total_kredit ?? 0);
@@ -166,7 +166,7 @@ class FinancialStatementService
 
     private function cumulativeNetIncome(Carbon $asOf): float
     {
-        $accountIds = ChartOfAccount::whereIn('kategori_akun', ['PENDAPATAN', 'BEBAN'])->pluck('id');
+        $accountIds = BaganAkun::whereIn('kategori_akun', ['PENDAPATAN', 'BEBAN'])->pluck('id');
 
         $net = JurnalDetail::query()
             ->whereIn('coa_id', $accountIds)

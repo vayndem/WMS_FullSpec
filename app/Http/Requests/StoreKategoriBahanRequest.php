@@ -17,11 +17,11 @@ class StoreKategoriBahanRequest extends FormRequest
         return [
             'katnama'             => 'required|string|max:255',
             'tipe_pembebanan_id' => 'nullable|integer|exists:tipe_pembebanans,id',
-            'coa_persediaan_id'   => 'required|integer|exists:chart_of_accounts,id',
-            'coa_beban_id'        => 'required|integer|exists:chart_of_accounts,id',
-            'coa_clearing_lpb_id' => 'required|integer|exists:chart_of_accounts,id',
-            'coa_beban_selisih_opname_id' => 'required|integer|exists:chart_of_accounts,id',
-            'coa_koreksi_opname_id' => 'required|integer|exists:chart_of_accounts,id',
+            'coa_persediaan_id'   => 'required|integer|exists:wms_bagan_akun,id',
+            'coa_beban_id'        => 'required|integer|exists:wms_bagan_akun,id',
+            'coa_clearing_lpb_id' => 'required|integer|exists:wms_bagan_akun,id',
+            'coa_beban_selisih_opname_id' => 'required|integer|exists:wms_bagan_akun,id',
+            'coa_koreksi_opname_id' => 'required|integer|exists:wms_bagan_akun,id',
         ];
     }
 
@@ -36,7 +36,7 @@ class StoreKategoriBahanRequest extends FormRequest
             'coa_clearing_lpb_id' => ['LIABILITAS', 'KREDIT'],
             'coa_beban_selisih_opname_id' => ['BEBAN', 'DEBIT'],
             'coa_koreksi_opname_id' => ['PENDAPATAN', 'KREDIT']] as $field => $expected) {
-            $coa = \App\Models\ChartOfAccount::find($this->input($field));
+            $coa = \App\Models\BaganAkun::find($this->input($field));
             if ($coa && (!$coa->is_active || !$coa->is_postable || $coa->kategori_akun !== $expected[0] || $coa->posisi_normal !== $expected[1])) {
                 $validator->errors()->add($field, 'Akun tidak aktif atau kategori/posisi normalnya tidak sesuai.');
             }

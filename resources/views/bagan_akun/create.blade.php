@@ -3,7 +3,7 @@
         <div class="bg-primary px-6 py-4 text-primary-content">
             <h3 class="text-lg font-bold"><i class="fa-solid fa-sitemap"></i> Tambah Akun COA</h3>
         </div>
-        <form action="{{ route('chart-of-accounts.store') }}" method="POST" @submit.prevent="submitAjaxForm($event)" class="flex flex-col">
+        <form action="{{ route('bagan-akun.store') }}" method="POST" @submit.prevent="submitAjaxForm($event)" class="flex flex-col">
             @csrf
             <div class="flex flex-col gap-4 p-6">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">

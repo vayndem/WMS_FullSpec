@@ -6,7 +6,7 @@ use App\Models\Aset;
 use App\Models\PenyusutanAset;
 use App\Models\PelepasanAset;
 use App\Models\Jurnal;
-use App\Models\ChartOfAccount;
+use App\Models\BaganAkun;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -113,7 +113,7 @@ class AsetAccountingService
                 throw new RuntimeException('Akun kas/bank wajib dipilih untuk penjualan aset.');
             }
             if ($data['disposal_type'] === 'SALE') {
-                ChartOfAccount::assertUsable($data['cash_bank_coa_id'], [['ASET', 'DEBIT']], 'kas/bank penjualan aset', true);
+                BaganAkun::assertUsable($data['cash_bank_coa_id'], [['ASET', 'DEBIT']], 'kas/bank penjualan aset', true);
             }
             $book = (float) $asset->book_value;
             $gain = max($proceeds - $book, 0);
@@ -186,11 +186,11 @@ class AsetAccountingService
         if (!$asset->category) {
             throw new RuntimeException('Kategori aset tidak tersedia.');
         }
-        ChartOfAccount::assertUsable($asset->category->akun_aset_id, [['ASET', 'DEBIT']], 'harga perolehan aset');
-        ChartOfAccount::assertUsable($asset->category->accumulated_depreciation_coa_id, [['ASET', 'KREDIT']], 'akumulasi penyusutan');
-        ChartOfAccount::assertUsable($asset->category->depreciation_expense_coa_id, [['BEBAN', 'DEBIT']], 'beban penyusutan');
-        ChartOfAccount::assertUsable($asset->category->disposal_gain_coa_id, [['PENDAPATAN', 'KREDIT']], 'keuntungan pelepasan aset');
-        ChartOfAccount::assertUsable($asset->category->disposal_loss_coa_id, [['BEBAN', 'DEBIT']], 'kerugian pelepasan aset');
+        BaganAkun::assertUsable($asset->category->akun_aset_id, [['ASET', 'DEBIT']], 'harga perolehan aset');
+        BaganAkun::assertUsable($asset->category->accumulated_depreciation_coa_id, [['ASET', 'KREDIT']], 'akumulasi penyusutan');
+        BaganAkun::assertUsable($asset->category->depreciation_expense_coa_id, [['BEBAN', 'DEBIT']], 'beban penyusutan');
+        BaganAkun::assertUsable($asset->category->disposal_gain_coa_id, [['PENDAPATAN', 'KREDIT']], 'keuntungan pelepasan aset');
+        BaganAkun::assertUsable($asset->category->disposal_loss_coa_id, [['BEBAN', 'DEBIT']], 'kerugian pelepasan aset');
     }
 
     private function assertAcquisitionAccount(Aset $asset): void
@@ -202,6 +202,6 @@ class AsetAccountingService
             'CORRECTION' => [[['EKUITAS', 'KREDIT'], ['PENDAPATAN', 'KREDIT']], null],
             default => throw new RuntimeException('Jenis perolehan aset tidak dikenali.'),
         };
-        ChartOfAccount::assertUsable($asset->acquisition_credit_coa_id, $allowed, 'lawan perolehan aset', $mustBeCash);
+        BaganAkun::assertUsable($asset->acquisition_credit_coa_id, $allowed, 'lawan perolehan aset', $mustBeCash);
     }
 }

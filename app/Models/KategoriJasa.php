@@ -19,11 +19,11 @@ class KategoriJasa extends Model
     ];
     public function expenseAccount()
     {
-        return $this->belongsTo(ChartOfAccount::class, 'expense_coa_id');
+        return $this->belongsTo(BaganAkun::class, 'expense_coa_id');
     }
     public function grniAccount()
     {
-        return $this->belongsTo(ChartOfAccount::class, 'grni_coa_id');
+        return $this->belongsTo(BaganAkun::class, 'grni_coa_id');
     }
     public function kategoriBahan(): BelongsTo
     {

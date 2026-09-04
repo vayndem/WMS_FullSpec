@@ -9,7 +9,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('chart_of_accounts', function (Blueprint $table) {
+        Schema::table('wms_bagan_akun', function (Blueprint $table) {
             $table->boolean('is_active')->default(true)->after('posisi_normal')
                 ->comment('0=akun nonaktif, 1=akun aktif');
             $table->boolean('is_postable')->default(true)->after('is_active')
@@ -24,7 +24,7 @@ return new class extends Migration
             $table->unsignedBigInteger('coa_id');
             $table->text('description')->nullable();
             $table->timestamps();
-            $table->foreign('coa_id')->references('id')->on('chart_of_accounts')->onDelete('restrict');
+            $table->foreign('coa_id')->references('id')->on('wms_bagan_akun')->onDelete('restrict');
         });
 
         Schema::table('wms_penerimaan_barang_detail', function (Blueprint $table) {
@@ -115,7 +115,7 @@ return new class extends Migration
             $table->text('void_reason')->nullable()->after('voided_at');
         });
 
-        Schema::table('jurnals', function (Blueprint $table) {
+        Schema::table('wms_jurnal', function (Blueprint $table) {
             $table->string('status', 20)->default('DRAFT')->after('reff_id')
                 ->comment('Status jurnal: DRAFT=belum posting, POSTED=terposting, REVERSED=telah dibalik');
             $table->unsignedBigInteger('created_by')->nullable()->after('status')
@@ -125,14 +125,14 @@ return new class extends Migration
             $table->timestamp('posted_at')->nullable()->after('posted_by');
             $table->unsignedBigInteger('reversal_of_id')->nullable()->after('posted_at')
                 ->comment('ID jurnal asal yang dibalik; null untuk jurnal normal');
-            $table->foreign('reversal_of_id')->references('id')->on('jurnals')->onDelete('restrict');
+            $table->foreign('reversal_of_id')->references('id')->on('wms_jurnal')->onDelete('restrict');
             $table->unique(['sumber_transaksi', 'reff_id'], 'jurnals_source_reference_unique');
         });
     }
 
     public function down(): void
     {
-        Schema::table('jurnals', function (Blueprint $table) {
+        Schema::table('wms_jurnal', function (Blueprint $table) {
             $table->dropUnique('jurnals_source_reference_unique');
             $table->dropForeign(['reversal_of_id']);
             $table->dropColumn(['status', 'created_by', 'posted_by', 'posted_at', 'reversal_of_id']);
@@ -151,6 +151,6 @@ return new class extends Migration
             $table->dropColumn(['jumlah_tersisa', 'nilai_awal']);
         });
         Schema::dropIfExists('accounting_settings');
-        Schema::table('chart_of_accounts', fn (Blueprint $table) => $table->dropColumn(['is_active', 'is_postable', 'is_cash_bank']));
+        Schema::table('wms_bagan_akun', fn (Blueprint $table) => $table->dropColumn(['is_active', 'is_postable', 'is_cash_bank']));
     }
 };

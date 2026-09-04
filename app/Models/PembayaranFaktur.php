@@ -64,12 +64,12 @@ class PembayaranFaktur extends Model
 
     public function coaKasBank()
     {
-        return $this->belongsTo(ChartOfAccount::class, 'coa_kas_bank_id');
+        return $this->belongsTo(BaganAkun::class, 'coa_kas_bank_id');
     }
 
     public function coaSelisih()
     {
-        return $this->belongsTo(ChartOfAccount::class, 'coa_selisih_id');
+        return $this->belongsTo(BaganAkun::class, 'coa_selisih_id');
     }
 
     public function sumberUangMuka()
