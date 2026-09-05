@@ -532,6 +532,25 @@ class WmsControlFrameworkTest extends TestCase
         $create->assertSee('function invoiceCreateForm', false);
     }
 
+    public function test_every_role_dashboard_renders_its_task_list(): void
+    {
+        $roles = [
+            User::ROLE_PURCHASING => 'Semua Tugas Purchasing',
+            User::ROLE_FINANCE => 'Semua Tugas Finance',
+            User::ROLE_WAREHOUSE => 'Semua Tugas Gudang',
+            User::ROLE_PRODUCTION => 'Semua Tugas Produksi',
+            User::ROLE_ACCOUNTING => 'Semua Tugas Accounting',
+            User::ROLE_ACCOUNTING_MANAGER => 'Semua Tugas Accounting',
+        ];
+
+        foreach ($roles as $role => $expectedHeading) {
+            $user = User::factory()->create(['type' => $role]);
+            $this->actingAs($user)->get(route('dashboard'))
+                ->assertOk()
+                ->assertSee($expectedHeading);
+        }
+    }
+
     public function test_non_purchasing_role_can_submit_and_track_a_material_request_to_fulfillment(): void
     {
         $finance = User::factory()->create(['type' => User::ROLE_FINANCE]);

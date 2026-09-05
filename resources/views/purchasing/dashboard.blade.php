@@ -21,6 +21,14 @@
             </div>
         </div>
 
+        <div class="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-3">
+            <div class="xl:col-span-2">
+                <h5 class="mb-3 font-bold"><i class="fa-solid fa-list-check text-primary"></i> Semua Tugas Purchasing</h5>
+                @include('layouts.template.task-grid', ['tasks' => $tasks])
+            </div>
+            @include('layouts.template.task-chart', ['tasks' => $tasks, 'chartTitle' => 'Distribusi Tugas', 'chartType' => 'bar', 'horizontal' => true])
+        </div>
+
         @php
             $colorClasses = [
                 'primary' => 'bg-primary/10 text-primary',

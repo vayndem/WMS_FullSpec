@@ -14,6 +14,9 @@ use App\Models\Bahan;
 use App\Models\PemakaianBarang;
 use App\Models\StockOpname;
 use App\Models\PenerimaanJasa;
+use App\Models\ReturPembelian;
+use App\Models\Jurnal;
+use App\Models\Aset;
 use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
@@ -67,7 +70,10 @@ class AuthController extends Controller
                 $this->productionDashboardData($user)
             ));
         } else if ($user->isAccounting() || $user->isAccountingManager()) {
-            return view('accounting.dashboard', compact('user'));
+            return view('accounting.dashboard', array_merge(
+                compact('user'),
+                $this->accountingDashboardData($user)
+            ));
         } else {
             return view('dashboard', compact('user'));
         }
@@ -75,19 +81,38 @@ class AuthController extends Controller
 
     private function warehouseDashboardData(): array
     {
+        $stockAttention = Bahan::whereColumn('stok_onhand', '<=', 'planning')->count();
+        $receiptsToday = PenerimaanBarang::whereDate('tanggal', today())->count();
+        $issuesToday = PemakaianBarang::whereDate('tanggal', today())->count();
+        $openOpnames = StockOpname::whereIn('status', [
+            StockOpname::DRAFT,
+            StockOpname::REJECTED,
+            StockOpname::SUBMITTED,
+            StockOpname::APPROVED,
+        ])->count();
+        $serviceBapsToday = PenerimaanJasa::whereDate('tanggal', today())->count();
+        $transfersInProgress = DB::table('transfer_gudangs')->whereIn('status', ['DRAFT', 'DIAJUKAN', 'DIKIRIM'])->count();
+        $myPendingRequests = MaterialRequest::where('requested_by', Auth::id())->where('status', MaterialRequest::PENDING)->count();
+
+        $tasks = collect([
+            ['label' => 'Bahan Perlu Perhatian Stok', 'count' => $stockAttention, 'url' => route('bahan.index'), 'icon' => 'fa-triangle-exclamation', 'tone' => 'warning'],
+            ['label' => 'Penerimaan Hari Ini', 'count' => $receiptsToday, 'url' => route('penerimaan-barang.index'), 'icon' => 'fa-truck-ramp-box', 'tone' => 'info'],
+            ['label' => 'Pemakaian Hari Ini', 'count' => $issuesToday, 'url' => route('pemakaian-barang.index'), 'icon' => 'fa-boxes-packing', 'tone' => 'info'],
+            ['label' => 'Stock Opname Terbuka', 'count' => $openOpnames, 'url' => route('stock-opname.index'), 'icon' => 'fa-clipboard-list', 'tone' => 'warning'],
+            ['label' => 'BAP Jasa Hari Ini', 'count' => $serviceBapsToday, 'url' => route('penerimaan-jasa.index'), 'icon' => 'fa-handshake', 'tone' => 'neutral'],
+            ['label' => 'Transfer Gudang Berjalan', 'count' => $transfersInProgress, 'url' => route('transfer-gudangs.index'), 'icon' => 'fa-truck-fast', 'tone' => 'info'],
+            ['label' => 'Request Saya Menunggu Approval', 'count' => $myPendingRequests, 'url' => route('request.index'), 'icon' => 'fa-file-circle-question', 'tone' => 'neutral'],
+        ]);
+
         return [
+            'tasks' => $tasks,
             'warehouseMetrics' => [
                 'total_materials' => Bahan::count(),
-                'stock_attention' => Bahan::whereColumn('stok_onhand', '<=', 'planning')->count(),
-                'receipts_today' => PenerimaanBarang::whereDate('tanggal', today())->count(),
-                'issues_today' => PemakaianBarang::whereDate('tanggal', today())->count(),
-                'open_opnames' => StockOpname::whereIn('status', [
-                    StockOpname::DRAFT,
-                    StockOpname::REJECTED,
-                    StockOpname::SUBMITTED,
-                    StockOpname::APPROVED,
-                ])->count(),
-                'service_baps_today' => PenerimaanJasa::whereDate('tanggal', today())->count(),
+                'stock_attention' => $stockAttention,
+                'receipts_today' => $receiptsToday,
+                'issues_today' => $issuesToday,
+                'open_opnames' => $openOpnames,
+                'service_baps_today' => $serviceBapsToday,
             ],
             'recentReceipts' => PenerimaanBarang::with('pembelian.supplier')
                 ->latest('tanggal')->latest('id')->limit(5)->get(),
@@ -99,25 +124,37 @@ class AuthController extends Controller
     private function productionDashboardData($user): array
     {
         $warehouseIds = $user->accessibleGudangIds('npk');
+        $issuesToday = PemakaianBarang::whereIn('id_gudang_asal', $warehouseIds)->whereDate('tanggal', today())->count();
+        $transfersInProgress = DB::table('transfer_gudangs')
+            ->where(function ($query) use ($warehouseIds) {
+                $query->whereIn('gudang_asal_id', $warehouseIds)
+                    ->orWhereIn('gudang_tujuan_id', $warehouseIds);
+            })
+            ->whereIn('status', ['DRAFT', 'DIAJUKAN'])
+            ->count();
+        $openOpnames = StockOpname::whereIn('warehouse_id', $user->accessibleGudangIds('opname'))
+            ->whereIn('status', [
+                StockOpname::DRAFT,
+                StockOpname::REJECTED,
+                StockOpname::SUBMITTED,
+                StockOpname::APPROVED,
+            ])->count();
+        $myPendingRequests = MaterialRequest::where('requested_by', $user->id)->where('status', MaterialRequest::PENDING)->count();
+
+        $tasks = collect([
+            ['label' => 'Pemakaian Hari Ini', 'count' => $issuesToday, 'url' => route('pemakaian-barang.index'), 'icon' => 'fa-boxes-packing', 'tone' => 'info'],
+            ['label' => 'Transfer Sedang Berjalan', 'count' => $transfersInProgress, 'url' => route('transfer-gudangs.index'), 'icon' => 'fa-truck-fast', 'tone' => 'info'],
+            ['label' => 'Stock Opname Terbuka', 'count' => $openOpnames, 'url' => route('stock-opname.index'), 'icon' => 'fa-clipboard-list', 'tone' => 'warning'],
+            ['label' => 'Request Saya Menunggu Approval', 'count' => $myPendingRequests, 'url' => route('request.index'), 'icon' => 'fa-file-circle-question', 'tone' => 'neutral'],
+        ]);
 
         return [
+            'tasks' => $tasks,
             'productionMetrics' => [
                 'assigned_warehouses' => count($user->accessibleGudangIds()),
-                'issues_today' => PemakaianBarang::whereIn('id_gudang_asal', $warehouseIds)->whereDate('tanggal', today())->count(),
-                'transfers_in_progress' => DB::table('transfer_gudangs')
-                    ->where(function ($query) use ($warehouseIds) {
-                        $query->whereIn('gudang_asal_id', $warehouseIds)
-                            ->orWhereIn('gudang_tujuan_id', $warehouseIds);
-                    })
-                    ->whereIn('status', ['DRAFT', 'DIAJUKAN'])
-                    ->count(),
-                'open_opnames' => StockOpname::whereIn('warehouse_id', $user->accessibleGudangIds('opname'))
-                    ->whereIn('status', [
-                        StockOpname::DRAFT,
-                        StockOpname::REJECTED,
-                        StockOpname::SUBMITTED,
-                        StockOpname::APPROVED,
-                    ])->count(),
+                'issues_today' => $issuesToday,
+                'transfers_in_progress' => $transfersInProgress,
+                'open_opnames' => $openOpnames,
             ],
             'recentIssues' => PemakaianBarang::with(['barang', 'gudangAsal'])
                 ->whereIn('id_gudang_asal', $warehouseIds)
@@ -187,7 +224,27 @@ class AuthController extends Controller
             ->orderByRaw('tgl_deadline_pembayaran IS NULL')
             ->orderBy('tgl_deadline_pembayaran')->limit(5)->get();
 
-        return compact('metrics', 'pendingRequests', 'openPurchaseOrders', 'unbilledReceipts', 'dueInvoices');
+        $pendingApprovalInvoices = FakturPembelian::where('status', FakturPembelian::PENDING_APPROVAL)->count();
+        $openServiceOrders = PesananPembelian::where('document_type', 'SERVICE')->where('status', PesananPembelian::OPEN)->count();
+        $unbilledServiceReceipts = PenerimaanJasa::whereNull('no_invoice')->count();
+        $activeReturs = ReturPembelian::where('status', ReturPembelian::POSTED)->count();
+
+        $tasks = collect([
+            ['label' => 'Request Menunggu Approval', 'count' => $metrics['pending_requests'], 'url' => route('request.index'), 'icon' => 'fa-file-circle-question', 'tone' => 'warning'],
+            ['label' => 'Request Disetujui Belum Di-PO-kan', 'count' => $metrics['approved_unrealized'], 'url' => route('request.index'), 'icon' => 'fa-cart-plus', 'tone' => 'info'],
+            ['label' => 'PO Terbuka', 'count' => $metrics['open_purchase_orders'], 'url' => route('pembelian.index'), 'icon' => 'fa-file-invoice', 'tone' => 'info'],
+            ['label' => 'PO Menunggu Penerimaan', 'count' => $metrics['awaiting_receipt'], 'url' => route('pembelian.index'), 'icon' => 'fa-truck', 'tone' => 'warning'],
+            ['label' => 'Penerimaan Barang Belum Ditagih', 'count' => $metrics['unbilled_receipts'], 'url' => route('penerimaan-barang.index'), 'icon' => 'fa-receipt', 'tone' => 'neutral'],
+            ['label' => 'Invoice Menunggu Persetujuan Manager', 'count' => $pendingApprovalInvoices, 'url' => route('faktur-pembelian.index'), 'icon' => 'fa-hourglass-half', 'tone' => 'info'],
+            ['label' => 'Invoice Belum Lunas', 'count' => $metrics['unpaid_invoices'], 'url' => route('faktur-pembelian.index'), 'icon' => 'fa-file-invoice-dollar', 'tone' => 'neutral'],
+            ['label' => 'Invoice Jatuh Tempo', 'count' => $metrics['overdue_invoices'], 'url' => route('faktur-pembelian.index'), 'icon' => 'fa-clock', 'tone' => 'error'],
+            ['label' => 'Bahan Di Bawah Planning', 'count' => $metrics['stock_attention'], 'url' => route('bahan.index'), 'icon' => 'fa-triangle-exclamation', 'tone' => 'warning'],
+            ['label' => 'PO Jasa Terbuka', 'count' => $openServiceOrders, 'url' => route('pesanan-jasa.index'), 'icon' => 'fa-handshake', 'tone' => 'info'],
+            ['label' => 'Penerimaan Jasa Belum Ditagih', 'count' => $unbilledServiceReceipts, 'url' => route('penerimaan-jasa.index'), 'icon' => 'fa-receipt', 'tone' => 'neutral'],
+            ['label' => 'Retur Pembelian Aktif', 'count' => $activeReturs, 'url' => route('retur-pembelian.index'), 'icon' => 'fa-rotate-left', 'tone' => 'neutral'],
+        ]);
+
+        return compact('metrics', 'pendingRequests', 'openPurchaseOrders', 'unbilledReceipts', 'dueInvoices', 'tasks');
     }
 
     private function paymentDashboardData(): array
@@ -219,6 +276,60 @@ class AuthController extends Controller
         $recentPayments = PembayaranFaktur::with(['invoice.supplier', 'coaKasBank'])
             ->where('status', PembayaranFaktur::POSTED)->latest('tanggal_pembayaran')->latest('id')->limit(8)->get();
 
-        return compact('metrics', 'priorityInvoices', 'recentPayments');
+        $pendingApprovalInvoices = FakturPembelian::where('status', FakturPembelian::PENDING_APPROVAL)->count();
+        $availableAdvances = PembayaranFaktur::where('status', PembayaranFaktur::POSTED)
+            ->where('jenis_selisih', 'UANG_MUKA_SUPPLIER')
+            ->get()
+            ->filter(fn($payment) => $payment->sisaUangMuka() > 0.01)
+            ->count();
+
+        $tasks = collect([
+            ['label' => 'Invoice Siap Dibayar', 'count' => $metrics['unpaid_count'], 'url' => route('faktur-pembelian.index'), 'icon' => 'fa-file-invoice-dollar', 'tone' => 'neutral'],
+            ['label' => 'Invoice Jatuh Tempo', 'count' => $metrics['overdue_count'], 'url' => route('faktur-pembelian.index'), 'icon' => 'fa-clock', 'tone' => 'error'],
+            ['label' => 'Jatuh Tempo 7 Hari Ke Depan', 'count' => $metrics['due_soon_count'], 'url' => route('faktur-pembelian.index'), 'icon' => 'fa-calendar-day', 'tone' => 'warning'],
+            ['label' => 'Invoice Menunggu Persetujuan Manager', 'count' => $pendingApprovalInvoices, 'url' => route('faktur-pembelian.index'), 'icon' => 'fa-hourglass-half', 'tone' => 'info'],
+            ['label' => 'Uang Muka Supplier Tersedia', 'count' => $availableAdvances, 'url' => route('faktur-pembelian.index'), 'icon' => 'fa-piggy-bank', 'tone' => 'info'],
+            ['label' => 'Pembayaran Bulan Ini', 'count' => $metrics['payments_this_month'], 'url' => route('faktur-pembelian.index'), 'icon' => 'fa-money-bill-transfer', 'tone' => 'success'],
+        ]);
+
+        return compact('metrics', 'priorityInvoices', 'recentPayments', 'tasks');
+    }
+
+    private function accountingDashboardData($user): array
+    {
+        $pendingApprovalInvoices = FakturPembelian::where('status', FakturPembelian::PENDING_APPROVAL)->count();
+        $draftJurnals = Jurnal::where('status', 'DRAFT')->count();
+        $reconciliationIssues = app(\App\Services\AccountingReconciliationService::class)->checks()->sum('invalid');
+        $opnameAwaitingAccounting = StockOpname::where('status', StockOpname::SUBMITTED)->count();
+        $activeReturs = ReturPembelian::where('status', ReturPembelian::POSTED)->count();
+        $pendingRequests = MaterialRequest::where('status', MaterialRequest::PENDING)->count();
+        $assetsDueDepreciation = Aset::where('status', 'ACTIVE')
+            ->where('depreciation_method', 'STRAIGHT_LINE')
+            ->whereRaw('book_value > residual_value')
+            ->count();
+
+        $tasks = collect(array_filter([
+            $user->isAccountingManager() ? [
+                'label' => 'Invoice Menunggu Persetujuan Saya',
+                'count' => $pendingApprovalInvoices,
+                'url' => route('faktur-pembelian.index'),
+                'icon' => 'fa-hourglass-half',
+                'tone' => 'warning',
+            ] : [
+                'label' => 'Invoice Menunggu Persetujuan Manager',
+                'count' => $pendingApprovalInvoices,
+                'url' => route('faktur-pembelian.index'),
+                'icon' => 'fa-hourglass-half',
+                'tone' => 'info',
+            ],
+            ['label' => 'Jurnal Draft Belum Diposting', 'count' => $draftJurnals, 'url' => route('jurnal.index'), 'icon' => 'fa-book', 'tone' => 'warning'],
+            ['label' => 'Masalah Rekonsiliasi', 'count' => $reconciliationIssues, 'url' => route('reconciliation.index'), 'icon' => 'fa-scale-unbalanced', 'tone' => $reconciliationIssues > 0 ? 'error' : 'success'],
+            ['label' => 'Stock Opname Menunggu Konfirmasi', 'count' => $opnameAwaitingAccounting, 'url' => route('stock-opname.index'), 'icon' => 'fa-clipboard-check', 'tone' => 'warning'],
+            ['label' => 'Retur Pembelian Aktif', 'count' => $activeReturs, 'url' => route('retur-pembelian.index'), 'icon' => 'fa-rotate-left', 'tone' => 'neutral'],
+            ['label' => 'Request Menunggu Approval', 'count' => $pendingRequests, 'url' => route('request.index'), 'icon' => 'fa-file-circle-question', 'tone' => 'neutral'],
+            ['label' => 'Aset Belum Disusutkan Periode Ini', 'count' => $assetsDueDepreciation, 'url' => route('aset.index'), 'icon' => 'fa-building-shield', 'tone' => 'neutral'],
+        ]));
+
+        return ['tasks' => $tasks];
     }
 }

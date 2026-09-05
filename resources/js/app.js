@@ -1,6 +1,7 @@
 import './bootstrap';
 import Alpine from 'alpinejs';
 import wmsDataTable from './data-table';
+import taskChart from './task-chart';
 import './format';
 import './alert';
 import './ajax-modal';
@@ -12,4 +13,5 @@ import './app-shell';
 window.Alpine = Alpine;
 window.wmsDataTable = wmsDataTable;
 Alpine.data('wmsDataTable', wmsDataTable);
+Alpine.data('taskChart', taskChart);
 Alpine.start();
