@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreAsetRequest;
 use App\Http\Requests\StorePenyusutanAsetRequest;
+use App\Http\Requests\StoreAutomaticDepreciationRequest;
 use App\Http\Requests\StorePelepasanAsetRequest;
 use App\Models\Aset;
 use App\Models\KategoriAset;
@@ -114,6 +115,18 @@ class AsetController extends Controller
     {
         $this->accounting->dispose($aset, $request->validated());
         return back()->with('success', 'Pelepasan aset berhasil diposting.');
+    }
+    public function runAutomaticDepreciation(StoreAutomaticDepreciationRequest $request)
+    {
+        $result = $this->accounting->runAutomaticDepreciation($request->validated('posting_date'), $request->validated('period_label'));
+        $postedCount = count($result['posted']);
+        $skippedCount = count($result['skipped']);
+        $failedCount = count($result['failed']);
+        return response()->json([
+            'success' => true,
+            'message' => "Penyusutan otomatis selesai: {$postedCount} aset diposting, {$skippedCount} dilewati, {$failedCount} gagal.",
+            'data' => $result,
+        ]);
     }
     private function formData(?Aset $asset = null): array
     {

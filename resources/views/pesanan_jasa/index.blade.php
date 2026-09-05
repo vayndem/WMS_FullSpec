@@ -54,12 +54,4 @@
             <div class="p-4">{{ $orders->links() }}</div>
         </div>
     </div>
-    @include('layouts.template.page-help', [
-        'title' => 'PO Jasa',
-        'items' => [
-            'PO jasa tidak boleh mencampur barang.',
-            'Jasa operasional dan produksi menggunakan mapping COA berbeda.',
-            'Penerimaan jasa menandai pekerjaan mulai; invoice menandai pekerjaan selesai 100%.',
-        ],
-    ])
 @endsection

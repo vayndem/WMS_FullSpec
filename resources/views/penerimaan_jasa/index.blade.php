@@ -55,13 +55,4 @@
             <div class="p-4">{{ $baps->links() }}</div>
         </div>
     </div>
-    @include('layouts.template.page-help', [
-        'title' => 'Penerimaan Jasa',
-        'items' => [
-            'Penerimaan jasa menandai seluruh pekerjaan dalam PO Jasa mulai dikerjakan.',
-            'Pembuatan penerimaan jasa tidak membentuk jurnal.',
-            'Saat penerimaan jasa masuk invoice, pekerjaan menjadi selesai 100% dan beban/WIP serta hutang dijurnal.',
-            'Penerimaan jasa belum di-invoice dapat dibatalkan oleh role Purchasing atau Accounting.',
-        ],
-    ])
 @endsection

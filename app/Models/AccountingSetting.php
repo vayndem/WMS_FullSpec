@@ -18,6 +18,7 @@ class AccountingSetting extends Model
     public const SELISIH_BAYAR = 'SELISIH_BAYAR';
     public const BIAYA_ONGKIR = 'BIAYA_ONGKIR';
     public const DISKON_PEMBELIAN = 'DISKON_PEMBELIAN';
+    public const UANG_MUKA_SUPPLIER = 'UANG_MUKA_SUPPLIER';
 
     public const PPH_LIABILITY_KEY = [
         'PPH23' => self::HUTANG_PPH23,
@@ -46,6 +47,7 @@ class AccountingSetting extends Model
             self::SELISIH_BAYAR => [['PENDAPATAN', 'KREDIT']],
             self::BIAYA_ONGKIR => [['BEBAN', 'DEBIT']],
             self::DISKON_PEMBELIAN => [['BEBAN', 'KREDIT']],
+            self::UANG_MUKA_SUPPLIER => [['ASET', 'DEBIT']],
         ];
         if (
             !$setting

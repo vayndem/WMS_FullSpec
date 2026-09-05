@@ -63,7 +63,7 @@
                             </div>
                             <div class="form-control">
                                 <label class="label"><span class="label-text">Nominal</span></label>
-                                <input required type="number" min=".01" step=".01" name="amount" data-money-input class="input input-bordered">
+                                <input type="number" min=".01" step=".01" name="amount" data-money-input class="input input-bordered" placeholder="Kosongkan untuk saran otomatis: Rp {{ number_format($asset->suggestedMonthlyDepreciation(), 0, ',', '.') }}">
                             </div>
                             <div class="form-control col-span-2">
                                 <label class="label"><span class="label-text">Periode/Keterangan</span></label>

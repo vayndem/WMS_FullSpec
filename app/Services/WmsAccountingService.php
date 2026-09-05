@@ -54,16 +54,84 @@ class WmsAccountingService
             throw new RuntimeException('Retur pembelian harus memiliki minimal satu baris.');
         }
 
+        $invoice = $retur->lpb->no_invoice
+            ? FakturPembelian::lockForUpdate()->where('no_invoice', $retur->lpb->no_invoice)->first()
+            : null;
+        if ($invoice && $invoice->status === FakturPembelian::VOID) {
+            throw new RuntimeException('Invoice terkait retur ini sudah dibatalkan.');
+        }
+
+        $totalNilai = round((float) $retur->total_nilai, 2);
+        $apPortion = 0.0;
+        $advancePortion = 0.0;
         $lines = [];
+
+        if ($invoice) {
+            $apPortion = round(min($totalNilai, (float) $invoice->sisa_tagihan), 2);
+            $advancePortion = round($totalNilai - $apPortion, 2);
+            $this->line($lines, AccountingSetting::accountId(AccountingSetting::HUTANG_USAHA), $apPortion, 0, "Pengurangan hutang atas retur {$retur->no_retur}");
+            if ($advancePortion > 0) {
+                $this->line($lines, AccountingSetting::accountId(AccountingSetting::UANG_MUKA_SUPPLIER), $advancePortion, 0, "Uang muka supplier dari retur {$retur->no_retur}");
+            }
+        }
+
         foreach ($retur->details->groupBy(fn($detail) => $detail->lpbDetail->id_kategori) as $details) {
             $category = $details->first()->lpbDetail->kategori;
             $this->assertCategoryMapping($category);
             $amount = $details->sum('total_harga');
-            $this->line($lines, $category->coa_clearing_lpb_id, $amount, 0, "Pengurangan GRNI {$category->katnama} (retur)");
+            if (!$invoice) {
+                $this->line($lines, $category->coa_clearing_lpb_id, $amount, 0, "Pengurangan GRNI {$category->katnama} (retur)");
+            }
             $this->line($lines, $category->coa_persediaan_id, 0, $amount, "Pengurangan persediaan {$category->katnama} (retur)");
         }
 
-        return $this->post("RTV-{$retur->no_retur}", $retur->tanggal, 'RETUR_PEMBELIAN', $retur->id, "Retur pembelian {$retur->no_retur} atas LPB {$retur->lpb->id_lpb}", $lines);
+        $journal = $this->post("RTV-{$retur->no_retur}", $retur->tanggal, 'RETUR_PEMBELIAN', $retur->id, "Retur pembelian {$retur->no_retur} atas LPB {$retur->lpb->id_lpb}", $lines);
+
+        if ($invoice) {
+            $this->applyReturToInvoice($retur, $invoice, $apPortion, $advancePortion);
+        }
+
+        return $journal;
+    }
+
+    private function applyReturToInvoice(ReturPembelian $retur, FakturPembelian $invoice, float $apPortion, float $advancePortion): void
+    {
+        if ($apPortion > 0) {
+            $newGrandTotal = round((float) $invoice->grand_total - $apPortion, 2);
+            $newSisaTagihan = max(0, round((float) $invoice->sisa_tagihan - $apPortion, 2));
+            $invoice->update([
+                'grand_total' => $newGrandTotal,
+                'sisa_tagihan' => $newSisaTagihan,
+                'status' => FakturPembelian::paymentStatus($newGrandTotal, (float) $invoice->payments()->sum('total_transaksi_pengurang_hutang')),
+            ]);
+        }
+
+        $advancePaymentId = null;
+        if ($advancePortion > 0) {
+            $advancePayment = PembayaranFaktur::create([
+                'payment_number' => $this->numbers->financial('PY', $retur->tanggal),
+                'invoice_lpb_id' => $invoice->id,
+                'tanggal_pembayaran' => $retur->tanggal,
+                'metode_pembayaran' => 'Uang Muka dari Retur Pembelian',
+                'coa_kas_bank_id' => null,
+                'jumlah_pembayaran' => 0,
+                'selisih_bayar' => $advancePortion,
+                'jenis_selisih' => 'UANG_MUKA_SUPPLIER',
+                'coa_selisih_id' => AccountingSetting::accountId(AccountingSetting::UANG_MUKA_SUPPLIER),
+                'kelebihan_pembayaran' => $advancePortion,
+                'total_transaksi_pengurang_hutang' => 0,
+                'keterangan' => "Uang muka supplier dari retur pembelian {$retur->no_retur}",
+                'finance_user_id' => Auth::id(),
+                'status' => PembayaranFaktur::POSTED,
+            ]);
+            $advancePaymentId = $advancePayment->id;
+        }
+
+        $retur->update([
+            'invoice_id' => $invoice->id,
+            'hutang_reduction' => $apPortion,
+            'advance_payment_id' => $advancePaymentId,
+        ]);
     }
 
     public function postNpk(PemakaianBarang $npk): Jurnal

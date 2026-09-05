@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth')->group(function () {
     Route::get('asetperusahaan-report/pdf', [AsetController::class, 'reportPdf'])->name('aset.report.pdf');
     Route::post('asetperusahaan/{aset}/depreciate', [AsetController::class, 'depreciate'])->name('aset.depreciate');
+    Route::post('asetperusahaan-penyusutan-otomatis', [AsetController::class, 'runAutomaticDepreciation'])->name('aset.depreciate-all');
     Route::post('asetperusahaan/{aset}/dispose', [AsetController::class, 'dispose'])->name('aset.dispose');
     Route::resource('asetperusahaan', AsetController::class)
         ->parameters(['asetperusahaan' => 'aset'])

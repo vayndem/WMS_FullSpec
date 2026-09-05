@@ -2,13 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Models\Aset;
 use App\Models\Bahan;
 use App\Models\FakturPembelian;
+use App\Models\KategoriBahan;
 use App\Models\PembayaranFaktur;
 use App\Models\LayerPersediaan;
 use App\Models\BaganAkun;
 use App\Models\BiayaTambahan;
 use App\Models\PenerimaanBarang;
+use App\Models\PenerimaanBarangDetail;
+use App\Models\PesananPembelian;
 use App\Models\ReservasiPersediaan;
 use App\Models\Gudang;
 use App\Models\TransferGudang;
@@ -24,6 +28,8 @@ use App\Services\RekonsiliasiGudangService;
 use App\Services\ThreeWayMatchService;
 use App\Services\TransferGudangService;
 use App\Services\WarehouseExecutionService;
+use App\Services\StokGudangService;
+use App\Services\WmsAccountingService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
@@ -406,6 +412,76 @@ class WmsControlFrameworkTest extends TestCase
             ->assertJson(['message' => 'Invoice ini tidak menetapkan jenis PPh, sehingga tidak ada potongan PPh yang dapat dicatat.']);
     }
 
+    public function test_automatic_depreciation_posts_straight_line_amount_and_skips_the_same_period_twice(): void
+    {
+        $accounting = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);
+        $category = \App\Models\KategoriAset::where('code', 'EQUIPMENT')->firstOrFail();
+        $asset = Aset::create([
+            'nomor_aset' => 'AUTO-DEP-TEST-1',
+            'kategori_aset_id' => $category->id,
+            'name' => 'Aset Uji Penyusutan Otomatis',
+            'condition' => 'BAIK',
+            'acquisition_date' => today()->subYear(),
+            'acquisition_type' => 'OPENING_BALANCE',
+            'acquisition_credit_coa_id' => BaganAkun::where('kode_akun', '3102')->value('id'),
+            'acquisition_cost' => 2400000,
+            'residual_value' => 0,
+            'useful_life_months' => 24,
+            'depreciation_method' => 'STRAIGHT_LINE',
+            'accumulated_depreciation' => 0,
+            'book_value' => 2400000,
+            'status' => 'ACTIVE',
+            'created_by' => $accounting->id,
+        ]);
+
+        $this->actingAs($accounting)->postJson(route('aset.depreciate-all'), [
+            'posting_date' => today()->toDateString(),
+            'period_label' => 'Penyusutan Otomatis Test',
+        ])->assertOk();
+
+        $asset->refresh();
+        $this->assertEqualsWithDelta(100000.0, (float) $asset->accumulated_depreciation, 0.01);
+        $this->assertSame(1, $asset->depreciations()->count());
+
+        $this->actingAs($accounting)->postJson(route('aset.depreciate-all'), [
+            'posting_date' => today()->toDateString(),
+            'period_label' => 'Penyusutan Otomatis Test',
+        ])->assertOk();
+
+        $this->assertSame(1, $asset->depreciations()->count());
+        $this->assertEqualsWithDelta(100000.0, (float) $asset->fresh()->accumulated_depreciation, 0.01);
+    }
+
+    public function test_manual_depreciation_defaults_to_the_suggested_straight_line_amount_when_amount_is_blank(): void
+    {
+        $accounting = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);
+        $category = \App\Models\KategoriAset::where('code', 'EQUIPMENT')->firstOrFail();
+        $asset = Aset::create([
+            'nomor_aset' => 'MANUAL-DEP-TEST-1',
+            'kategori_aset_id' => $category->id,
+            'name' => 'Aset Uji Penyusutan Manual',
+            'condition' => 'BAIK',
+            'acquisition_date' => today()->subYear(),
+            'acquisition_type' => 'OPENING_BALANCE',
+            'acquisition_credit_coa_id' => BaganAkun::where('kode_akun', '3102')->value('id'),
+            'acquisition_cost' => 1200000,
+            'residual_value' => 0,
+            'useful_life_months' => 12,
+            'depreciation_method' => 'STRAIGHT_LINE',
+            'accumulated_depreciation' => 0,
+            'book_value' => 1200000,
+            'status' => 'ACTIVE',
+            'created_by' => $accounting->id,
+        ]);
+
+        $this->actingAs($accounting)->postJson(route('aset.depreciate', $asset), [
+            'posting_date' => today()->toDateString(),
+            'period_label' => 'Penyusutan Manual Tanpa Nominal',
+        ])->assertRedirect();
+
+        $this->assertEqualsWithDelta(100000.0, (float) $asset->fresh()->accumulated_depreciation, 0.01);
+    }
+
     public function test_purchase_return_index_and_create_views_render(): void
     {
         $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
@@ -454,6 +530,182 @@ class WmsControlFrameworkTest extends TestCase
         $create->assertSee('Pilih Supplier');
         $create->assertSee('Pilih LPB / BAP Supplier');
         $create->assertSee('function invoiceCreateForm', false);
+    }
+
+    public function test_purchase_return_after_partially_paid_invoice_reduces_invoice_balance(): void
+    {
+        $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
+        $lpb = PenerimaanBarang::where('document_type', 'GOODS')
+            ->whereNotNull('no_invoice')
+            ->where('status', PenerimaanBarang::POSTED)
+            ->get()
+            ->first(fn ($candidate) => $candidate->details->contains(
+                fn ($d) => (float) (LayerPersediaan::where('source_type', 'LPB_DETAIL')->where('source_id', $d->id)->value('remaining_quantity') ?? 0) > 0
+            ));
+        $this->assertNotNull($lpb, 'Fixture LPB dengan invoice dan layer tersisa tidak ditemukan.');
+        $detail = $lpb->details->first(fn ($d) => (float) (LayerPersediaan::where('source_type', 'LPB_DETAIL')->where('source_id', $d->id)->value('remaining_quantity') ?? 0) > 0);
+        $layer = LayerPersediaan::where('source_type', 'LPB_DETAIL')->where('source_id', $detail->id)->firstOrFail();
+        $invoice = FakturPembelian::where('no_invoice', $lpb->no_invoice)->firstOrFail();
+
+        $returQty = min(1.0, (float) $layer->remaining_quantity);
+        $this->assertGreaterThan(0, $returQty);
+        $returValue = round($returQty * (float) $detail->harga, 2);
+        $sisaBefore = (float) $invoice->sisa_tagihan;
+        $grandBefore = (float) $invoice->grand_total;
+        $this->assertGreaterThan($returValue, $sisaBefore, 'Fixture invoice tidak memiliki sisa tagihan yang cukup untuk skenario ini.');
+
+        $numbers = app(DocumentNumberService::class);
+        $response = $this->actingAs($warehouse)->postJson(route('retur-pembelian.store'), [
+            'no_retur' => $numbers->external('RTV'),
+            'lpb_id' => $lpb->id,
+            'tanggal' => today()->toDateString(),
+            'alasan' => 'Retur setelah invoice terbit (integration test).',
+            'details' => [['lpb_detail_id' => $detail->id, 'jumlah_retur' => $returQty]],
+        ])->assertCreated();
+        $retur = ReturPembelian::findOrFail($response->json('data.id'));
+
+        $invoice->refresh();
+        $this->assertEqualsWithDelta($grandBefore - $returValue, (float) $invoice->grand_total, 0.01);
+        $this->assertEqualsWithDelta($sisaBefore - $returValue, (float) $invoice->sisa_tagihan, 0.01);
+        $this->assertEqualsWithDelta($returValue, (float) $retur->hutang_reduction, 0.01);
+        $this->assertNull($retur->advance_payment_id);
+
+        $jurnal = \App\Models\Jurnal::with('details')->where('sumber_transaksi', 'RETUR_PEMBELIAN')->where('reff_id', $retur->id)->firstOrFail();
+        $this->assertEqualsWithDelta((float) $jurnal->total_debit, (float) $jurnal->total_kredit, 0.01);
+        $hutangAccount = BaganAkun::where('kode_akun', '2101')->firstOrFail();
+        $this->assertTrue($jurnal->details->contains(fn ($line) => (int) $line->coa_id === $hutangAccount->id && abs((float) $line->debit - $returValue) < 0.01));
+    }
+
+    public function test_purchase_return_after_fully_paid_invoice_creates_supplier_advance(): void
+    {
+        $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
+        $accounting = app(WmsAccountingService::class);
+        $numbers = app(DocumentNumberService::class);
+        $category = KategoriBahan::where('katnama', 'Bahan Baku Paper')->firstOrFail();
+        $gudang = Gudang::where('nama', 'Gudang Utama')->firstOrFail();
+        $supplier = Supplier::create(['nama' => 'Supplier Retur Lunas', 'alamat' => 'Jl. Retur', 'telp' => '0800000099', 'pembayaran' => 'Transfer']);
+
+        $material = Bahan::create([
+            'nama' => 'Bahan Uji Retur Lunas',
+            'kategori' => $category->id,
+            'satuan' => 'KG',
+            'stok_onhand' => 0,
+            'stok_onpurchase' => 0,
+            'planning' => 0,
+            'stokawal' => 0,
+            'pengambilan_stokawal' => 0,
+            'tipe_gudang' => $gudang->id,
+            'tipe_barang' => $category->id,
+        ]);
+
+        $po = PesananPembelian::create([
+            'no_po' => $numbers->financial('PO', today()->subDays(10)),
+            'tanggal' => today()->subDays(10),
+            'supplier_id' => $supplier->id,
+            'gudang_id' => $gudang->id,
+            'no_order' => '-',
+            'untuk_perhatian' => 'Uji Retur Lunas',
+            'term' => '30 hari',
+            'notes' => 'PO uji retur setelah invoice lunas',
+            'total_exclude' => 100000,
+            'total_include' => 100000,
+            'grand_total' => 100000,
+            'status' => PesananPembelian::OPEN,
+            'jenis' => 0,
+            'kunci' => 1,
+        ]);
+
+        $lpbNumber = $numbers->external('LPB', today()->subDays(5));
+        $lpb = PenerimaanBarang::create([
+            'id_lpb' => $lpbNumber,
+            'tanggal' => today()->subDays(5),
+            'no_po' => $po->no_po,
+            'gudang_id' => $gudang->id,
+            'no_sj' => 'SJ-' . $lpbNumber,
+            'id_user' => 5,
+            'flag' => 0,
+            'status' => PenerimaanBarang::POSTED,
+            'jenis_lpb' => 1,
+            'kunci' => 1,
+        ]);
+        $detail = PenerimaanBarangDetail::create([
+            'id_lpb' => $lpb->id_lpb,
+            'id_bahan' => $material->id,
+            'id_kategori' => $category->id,
+            'jumlah_barang_diterima' => 10,
+            'lot_number' => 'LOT-RETUR-LUNAS',
+            'harga' => 10000,
+            'nilai_awal' => 100000,
+            'jumlah_dipakai' => 0,
+            'jumlah_tersisa' => 10,
+            'flag_dipakai' => 1,
+        ]);
+        LayerPersediaan::create([
+            'bahan_id' => $material->id,
+            'gudang_id' => $gudang->id,
+            'source_type' => 'LPB_DETAIL',
+            'source_id' => $detail->id,
+            'transaction_date' => today()->subDays(5),
+            'initial_quantity' => 10,
+            'remaining_quantity' => 10,
+            'unit_cost' => 10000,
+        ]);
+        app(StokGudangService::class)->masuk($gudang->id, $material->id, 10, 10000, 'LPB', 'LPB', $lpb->id, 'Fixture uji retur lunas');
+        $accounting->postLpb($lpb);
+
+        $invoice = FakturPembelian::create([
+            'no_invoice' => 'RETUR-LUNAS-TEST-1',
+            'kode_supplier' => $supplier->id,
+            'tanggal' => today()->subDays(3),
+            'sub_total' => 100000,
+            'grand_total' => 100000,
+            'total_pembayaran' => 100000,
+            'sisa_tagihan' => 0,
+            'status' => FakturPembelian::PAID,
+        ]);
+        $invoice->receipts()->create(['lpb_id' => $lpb->id, 'amount' => 100000]);
+        $lpb->update(['no_invoice' => $invoice->no_invoice]);
+        $accounting->postInvoice($invoice);
+
+        $response = $this->actingAs($warehouse)->postJson(route('retur-pembelian.store'), [
+            'no_retur' => $numbers->external('RTV'),
+            'lpb_id' => $lpb->id,
+            'tanggal' => today()->toDateString(),
+            'alasan' => 'Retur setelah invoice lunas (integration test).',
+            'details' => [['lpb_detail_id' => $detail->id, 'jumlah_retur' => 2]],
+        ])->assertCreated();
+        $retur = ReturPembelian::findOrFail($response->json('data.id'));
+
+        $this->assertEqualsWithDelta(0.0, (float) $retur->hutang_reduction, 0.01);
+        $this->assertNotNull($retur->advance_payment_id);
+
+        $advance = PembayaranFaktur::findOrFail($retur->advance_payment_id);
+        $this->assertSame('UANG_MUKA_SUPPLIER', $advance->jenis_selisih);
+        $this->assertEqualsWithDelta(20000.0, (float) $advance->kelebihan_pembayaran, 0.01);
+        $this->assertNull($advance->coa_kas_bank_id);
+
+        $jurnal = \App\Models\Jurnal::with('details')->where('sumber_transaksi', 'RETUR_PEMBELIAN')->where('reff_id', $retur->id)->firstOrFail();
+        $this->assertEqualsWithDelta((float) $jurnal->total_debit, (float) $jurnal->total_kredit, 0.01);
+        $uangMukaAccount = BaganAkun::where('kode_akun', '1401')->firstOrFail();
+        $this->assertTrue($jurnal->details->contains(fn ($line) => (int) $line->coa_id === $uangMukaAccount->id && abs((float) $line->debit - 20000.0) < 0.01));
+
+        $availableAdvances = $this->actingAs(User::factory()->create(['type' => User::ROLE_FINANCE]))
+            ->getJson(route('pembayaran-faktur.available-advances', $supplier->id))
+            ->assertOk()
+            ->json('data');
+        $this->assertTrue(collect($availableAdvances)->contains(fn ($row) => (int) $row['id'] === $advance->id));
+
+        $this->actingAs(User::factory()->create(['type' => User::ROLE_FINANCE]))
+            ->deleteJson(route('pembayaran-faktur.destroy', $advance->id))
+            ->assertStatus(422);
+
+        app(InventoryReversalService::class)->reverseReturPembelian($retur, 'Koreksi integration test retur pasca invoice lunas');
+
+        $this->assertSame(ReturPembelian::REVERSED, $retur->fresh()->status);
+        $this->assertEqualsWithDelta(100000.0, (float) $invoice->fresh()->grand_total, 0.01);
+        $this->assertEqualsWithDelta(0.0, (float) $invoice->fresh()->sisa_tagihan, 0.01);
+        $this->assertSame(PembayaranFaktur::VOID, $advance->fresh()->status);
+        $this->assertEqualsWithDelta(10.0, (float) LayerPersediaan::where('source_type', 'LPB_DETAIL')->where('source_id', $detail->id)->value('remaining_quantity'), 0.000001);
     }
 
     public function test_purchase_return_reduces_stock_and_grni_then_can_be_reversed(): void

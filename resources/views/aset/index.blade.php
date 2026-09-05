@@ -13,6 +13,28 @@
                 </div>
             @endcan
         </div>
+
+        @can('depreciateAny', App\Models\Aset::class)
+            <div class="collapse collapse-arrow mb-4 border border-base-300 bg-base-100 shadow-sm">
+                <input type="checkbox">
+                <div class="collapse-title font-bold">Penyusutan Otomatis (Garis Lurus)</div>
+                <div class="collapse-content">
+                    <p class="mb-3 text-sm text-base-content/60">
+                        Menjalankan penyusutan garis lurus otomatis untuk seluruh aset aktif sesuai saran bulanan masing-masing aset.
+                        Aset yang sudah disusutkan pada periode yang sama, atau yang nilai bukunya sudah mencapai residu, akan dilewati.
+                    </p>
+                    <form action="{{ route('aset.depreciate-all') }}" method="POST"
+                        class="grid grid-cols-1 gap-2 md:grid-cols-4"
+                        @submit.prevent="submitAjaxForm($event, { onSuccess: () => location.reload() })">
+                        @csrf
+                        <input required type="date" name="posting_date" value="{{ today()->format('Y-m-d') }}" class="input input-bordered">
+                        <input required name="period_label" class="input input-bordered md:col-span-2" placeholder="Contoh: Penyusutan September 2026">
+                        <button class="btn btn-primary">Jalankan Penyusutan</button>
+                    </form>
+                </div>
+            </div>
+        @endcan
+
         <div class="card border border-base-300 bg-base-100 shadow-sm">
             <div class="p-4">
                 <form class="grid grid-cols-1 gap-2 md:grid-cols-6">
@@ -72,12 +94,4 @@
             <div class="p-4">{{ $assets->links() }}</div>
         </div>
     </div>
-    @include('layouts.template.page-help', [
-        'title' => 'Cara menggunakan Aset',
-        'items' => [
-            'Semua user dapat melihat identitas aset.',
-            'Nilai finansial hanya terlihat untuk Purchasing (5) dan Accounting (33).',
-            'Hanya Accounting yang dapat membuat, mengubah, menyusutkan, menjual, atau menghapus aset.',
-        ],
-    ])
 @endsection

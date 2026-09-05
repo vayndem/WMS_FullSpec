@@ -30,6 +30,7 @@ class UpdateAccountingMappingRequest extends FormRequest
             'global.SELISIH_BAYAR' => $account(),
             'global.BIAYA_ONGKIR' => $account(),
             'global.DISKON_PEMBELIAN' => $account(),
+            'global.UANG_MUKA_SUPPLIER' => $account(),
             'categories' => 'required|array',
             'categories.*.coa_persediaan_id' => $account(),
             'categories.*.coa_beban_id' => $account(),
@@ -53,6 +54,7 @@ class UpdateAccountingMappingRequest extends FormRequest
                 'SELISIH_BAYAR' => ['PENDAPATAN', 'KREDIT'],
                 'BIAYA_ONGKIR' => ['BEBAN', 'DEBIT'],
                 'DISKON_PEMBELIAN' => ['BEBAN', 'KREDIT'],
+                'UANG_MUKA_SUPPLIER' => ['ASET', 'DEBIT'],
             ];
             foreach ($this->input('global', []) as $key => $id) {
                 $coa = BaganAkun::find($id);

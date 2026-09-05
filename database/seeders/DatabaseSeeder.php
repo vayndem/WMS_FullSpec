@@ -102,6 +102,7 @@ class DatabaseSeeder extends Seeder
             AccountingSetting::SELISIH_BAYAR => '4201',
             AccountingSetting::BIAYA_ONGKIR => '5105',
             AccountingSetting::DISKON_PEMBELIAN => '5201',
+            AccountingSetting::UANG_MUKA_SUPPLIER => '1401',
         ];
         foreach ($accountMappings as $key => $code) {
             AccountingSetting::updateOrCreate(

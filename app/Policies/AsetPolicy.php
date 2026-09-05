@@ -52,6 +52,11 @@ class AsetPolicy
         return $this->update($user, $asset);
     }
 
+    public function depreciateAny(User $user): bool
+    {
+        return $this->canManageAssets($user);
+    }
+
     public function dispose(User $user, Aset $asset): bool
     {
         return $this->update($user, $asset);

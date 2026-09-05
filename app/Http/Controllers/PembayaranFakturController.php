@@ -191,6 +191,11 @@ class PembayaranFakturController extends Controller
 
         abort_if($payment->status === PembayaranFaktur::VOID, 422, 'Pembayaran ini sudah dibatalkan sebelumnya.');
         abort_if(
+            $payment->coa_kas_bank_id === null && $payment->jenis_selisih === 'UANG_MUKA_SUPPLIER',
+            422,
+            'Uang muka ini berasal dari retur pembelian; batalkan melalui pembalikan retur pembelian terkait, bukan dari sini.'
+        );
+        abort_if(
             $payment->pemakaianUangMuka()->exists(),
             422,
             'Uang muka dari pembayaran ini sudah dipakai pada pembayaran lain; batalkan pembayaran yang memakai uang muka tersebut terlebih dahulu.'

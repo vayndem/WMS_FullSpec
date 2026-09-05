@@ -12,6 +12,6 @@ class StorePenyusutanAsetRequest extends FormRequest
     }
     public function rules(): array
     {
-        return ['posting_date' => 'required|date', 'period_label' => 'required|string|max:100', 'amount' => 'required|numeric|min:0.01', 'reason' => 'nullable|string|max:1000'];
+        return ['posting_date' => 'required|date', 'period_label' => 'required|string|max:100', 'amount' => 'nullable|numeric|min:0.01', 'reason' => 'nullable|string|max:1000'];
     }
 }

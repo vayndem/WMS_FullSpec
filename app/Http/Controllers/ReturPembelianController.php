@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreReturPembelianRequest;
+use App\Models\FakturPembelian;
 use App\Models\LayerPersediaan;
 use App\Models\PenerimaanBarang;
 use App\Models\PenerimaanBarangDetail;
@@ -43,12 +44,16 @@ class ReturPembelianController extends Controller
     {
         $this->authorize('create', ReturPembelian::class);
 
-        $lpbs = PenerimaanBarang::whereNull('no_invoice')
-            ->where('status', PenerimaanBarang::POSTED)
+        $lpbs = PenerimaanBarang::where('status', PenerimaanBarang::POSTED)
             ->where('document_type', '!=', 'SERVICE_BAP')
             ->with(['pembelian.supplier'])
             ->orderBy('id_lpb', 'desc')
-            ->get();
+            ->get()
+            ->reject(function (PenerimaanBarang $lpb) {
+                $invoice = $lpb->no_invoice ? FakturPembelian::where('no_invoice', $lpb->no_invoice)->first() : null;
+                return $invoice && $invoice->status === FakturPembelian::VOID;
+            })
+            ->values();
         $documentNumber = $this->numbers->external('RTV');
 
         return view('retur_pembelian.create', compact('lpbs', 'documentNumber'));
@@ -59,10 +64,12 @@ class ReturPembelianController extends Controller
         $this->authorize('create', ReturPembelian::class);
 
         $lpb = PenerimaanBarang::where('id_lpb', $id_lpb)
-            ->whereNull('no_invoice')
             ->where('status', PenerimaanBarang::POSTED)
             ->with(['details.bahan', 'pembelian.supplier'])
             ->firstOrFail();
+
+        $invoice = $lpb->no_invoice ? FakturPembelian::where('no_invoice', $lpb->no_invoice)->first() : null;
+        abort_if($invoice && $invoice->status === FakturPembelian::VOID, 422, 'Invoice terkait LPB ini sudah dibatalkan.');
 
         $items = $lpb->details->map(function (PenerimaanBarangDetail $detail) {
             return [
@@ -76,7 +83,14 @@ class ReturPembelianController extends Controller
 
         return response()->json([
             'success' => true,
-            'lpb' => ['id' => $lpb->id, 'id_lpb' => $lpb->id_lpb, 'supplier' => $lpb->pembelian->supplier->nama ?? '-'],
+            'lpb' => [
+                'id' => $lpb->id,
+                'id_lpb' => $lpb->id_lpb,
+                'supplier' => $lpb->pembelian->supplier->nama ?? '-',
+                'no_invoice' => $lpb->no_invoice,
+                'invoice_status' => $invoice?->status,
+                'invoice_sisa_tagihan' => $invoice ? (float) $invoice->sisa_tagihan : null,
+            ],
             'items' => $items,
         ]);
     }
@@ -89,8 +103,9 @@ class ReturPembelianController extends Controller
         $retur = DB::transaction(function () use ($validated, $user) {
             $lpb = PenerimaanBarang::lockForUpdate()->findOrFail($validated['lpb_id']);
             abort_if($lpb->status !== PenerimaanBarang::POSTED, 422, 'LPB harus berstatus posted.');
-            abort_if($lpb->no_invoice !== null, 422, 'LPB sudah ditagih; retur tidak dapat dibuat lagi untuk LPB ini.');
             abort_if($lpb->document_type === 'SERVICE_BAP', 422, 'Retur pembelian hanya berlaku untuk penerimaan barang, bukan jasa.');
+            $invoice = $lpb->no_invoice ? FakturPembelian::where('no_invoice', $lpb->no_invoice)->first() : null;
+            abort_if($invoice && $invoice->status === FakturPembelian::VOID, 422, 'Invoice terkait LPB ini sudah dibatalkan.');
             $this->periods->assertOpen($validated['tanggal'], 'Retur pembelian');
 
             $retur = ReturPembelian::create([

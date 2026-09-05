@@ -77,15 +77,6 @@
         </form>
     </div>
 
-    @include('layouts.template.page-help', [
-        'title' => 'Konversi Satuan Bahan',
-        'items' => [
-            'Stok dan layer tetap disimpan dalam satuan utama.',
-            'NPK otomatis menggunakan satuan kecil jika konversinya tersedia.',
-            'Mengubah konversi tidak mengubah stok lama; hanya cara input dan tampilan ekuivalennya.',
-            'Kategori bahan terhubung langsung dengan mapping COA pada master Kategori & Mapping.',
-        ],
-    ])
 @endsection
 
 @if ($errors->any())

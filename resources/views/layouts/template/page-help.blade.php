@@ -16,32 +16,44 @@
     $guides = [
         'dashboard' => [
             'title' => 'Panduan Dashboard',
-            'intro' =>
-                $userType === \App\Models\User::ROLE_PURCHASING
-                    ? 'Dashboard Purchasing merangkum pekerjaan dari request sampai invoice supplier.'
-                    : ($userType === \App\Models\User::ROLE_FINANCE
-                        ? 'Dashboard pembayaran merangkum invoice supplier yang perlu dilunasi.'
-                        : 'Dashboard menampilkan pintasan dan ringkasan sesuai hak akses Anda.'),
-            'steps' =>
-                $userType === \App\Models\User::ROLE_PURCHASING
-                    ? [
-                        'Periksa request yang masih pending.',
-                        'Pantau PO yang belum diterima penuh.',
-                        'Tindak lanjuti penerimaan barang yang belum memiliki invoice.',
-                        'Perhatikan invoice jatuh tempo dan bahan di bawah planning.',
-                    ]
-                    : ($userType === \App\Models\User::ROLE_FINANCE
-                        ? [
-                            'Dahulukan invoice yang terlambat atau segera jatuh tempo.',
-                            'Klik Bayar pada invoice yang dipilih.',
-                            'Pilih akun Kas/Bank dan isi komponen pembayaran.',
-                            'Periksa riwayat pembayaran setelah transaksi berhasil.',
-                        ]
-                        : [
-                            'Pilih modul melalui sidebar.',
-                            'Perhatikan indikator transaksi yang memerlukan tindakan.',
-                            'Gunakan menu profil untuk keluar dengan aman.',
-                        ]),
+            'intro' => match ($userType) {
+                \App\Models\User::ROLE_PURCHASING => 'Dashboard Purchasing merangkum pekerjaan dari request sampai invoice supplier.',
+                \App\Models\User::ROLE_FINANCE => 'Dashboard pembayaran merangkum invoice supplier yang perlu dilunasi.',
+                \App\Models\User::ROLE_WAREHOUSE => 'Dashboard Gudang menampilkan kuantitas dan aktivitas penerimaan, pemakaian, dan opname tanpa nilai uang.',
+                \App\Models\User::ROLE_PRODUCTION => 'Dashboard Produksi menampilkan aktivitas gudang produksi yang di-assign ke Anda.',
+                default => 'Dashboard menampilkan pintasan dan ringkasan sesuai hak akses Anda.',
+            },
+            'steps' => match ($userType) {
+                \App\Models\User::ROLE_PURCHASING => [
+                    'Periksa request yang masih pending.',
+                    'Pantau PO yang belum diterima penuh.',
+                    'Tindak lanjuti penerimaan barang yang belum memiliki invoice.',
+                    'Perhatikan invoice jatuh tempo dan bahan di bawah planning.',
+                ],
+                \App\Models\User::ROLE_FINANCE => [
+                    'Dahulukan invoice yang terlambat atau segera jatuh tempo.',
+                    'Klik Bayar pada invoice yang dipilih.',
+                    'Pilih akun Kas/Bank dan isi komponen pembayaran.',
+                    'Periksa riwayat pembayaran setelah transaksi berhasil.',
+                ],
+                \App\Models\User::ROLE_WAREHOUSE => [
+                    'Gunakan Penerimaan untuk mencatat penerimaan barang atau penerimaan jasa.',
+                    'Gunakan Pemakaian Barang untuk mencatat barang yang dipakai atau dikeluarkan.',
+                    'Stock Opname digunakan untuk membandingkan stok sistem dengan hasil hitung fisik.',
+                    'Dashboard gudang hanya menampilkan kuantitas dan aktivitas, tanpa harga atau nilai uang.',
+                ],
+                \App\Models\User::ROLE_PRODUCTION => [
+                    'Transfer dari gudang utama ke gudang produksi dicatat melalui transfer gudang.',
+                    'Pemakaian barang dari gudang produksi menjadi titik mulai pengurangan stok dan pembebanan biaya.',
+                    'Stock opname tetap dilakukan per gudang agar saldo produksi tetap akurat.',
+                    'Dashboard produksi hanya menampilkan aktivitas gudang yang memang di-assign ke user ini.',
+                ],
+                default => [
+                    'Pilih modul melalui sidebar.',
+                    'Perhatikan indikator transaksi yang memerlukan tindakan.',
+                    'Gunakan menu profil untuk keluar dengan aman.',
+                ],
+            },
         ],
         'supplier.' => [
             'title' => 'Panduan Supplier',
@@ -50,6 +62,16 @@
                 'Tambah supplier dan lengkapi alamat serta kontak.',
                 'Gunakan Edit untuk memperbaiki data.',
                 'Supplier yang sudah dipakai transaksi sebaiknya tidak dihapus.',
+            ],
+        ],
+        'bahan.edit' => [
+            'title' => 'Panduan Konversi Satuan Bahan',
+            'intro' => 'Atur konversi satuan transaksi kecil terhadap satuan stok utama bahan ini.',
+            'steps' => [
+                'Stok dan layer tetap disimpan dalam satuan utama.',
+                'NPK otomatis menggunakan satuan kecil jika konversinya tersedia.',
+                'Mengubah konversi tidak mengubah stok lama; hanya cara input dan tampilan ekuivalennya.',
+                'Kategori bahan terhubung langsung dengan mapping COA pada master Kategori & Mapping.',
             ],
         ],
         'bahan.' => [
@@ -65,6 +87,35 @@
                 $userType === \App\Models\User::ROLE_ACCOUNTING
                     ? 'Accounting dapat melihat harga rata-rata dan nilai persediaan.'
                     : 'Harga satuan dan nilai persediaan hanya dapat dilihat role Accounting.',
+        ],
+        'pesanan-jasa.' => [
+            'title' => 'Panduan PO Jasa',
+            'intro' => 'Kelola pemesanan jasa kepada supplier, terpisah dari PO barang.',
+            'steps' => [
+                'PO jasa tidak boleh mencampur barang.',
+                'Jasa operasional dan produksi menggunakan mapping COA berbeda.',
+                'Penerimaan jasa menandai pekerjaan mulai; invoice menandai pekerjaan selesai 100%.',
+            ],
+        ],
+        'penerimaan-jasa.' => [
+            'title' => 'Panduan Penerimaan Jasa',
+            'intro' => 'Penerimaan jasa (BAP) menandai pekerjaan dalam PO Jasa mulai dikerjakan.',
+            'steps' => [
+                'Pilih PO Jasa dan tandai progres pekerjaan yang sudah berjalan.',
+                'Pembuatan penerimaan jasa tidak membentuk jurnal.',
+                'Saat penerimaan jasa masuk invoice, pekerjaan menjadi selesai 100% dan beban/WIP serta hutang dijurnal.',
+            ],
+            'note' => 'Penerimaan jasa yang belum di-invoice dapat dibatalkan oleh role Purchasing atau Accounting.',
+        ],
+        'kategori-jasa.' => [
+            'title' => 'Panduan Mapping Jasa',
+            'intro' => 'Setiap kategori jasa menentukan akun beban/WIP yang dipakai saat invoice.',
+            'steps' => [
+                'Kategori 98 wajib cost center/departemen.',
+                'Kategori 99 wajib alokasi Datapesanan 100%.',
+                'Penerimaan jasa menandai pekerjaan mulai dan tidak membentuk jurnal.',
+                'Mapping COA digunakan ketika penerimaan jasa masuk invoice dan pekerjaan menjadi selesai.',
+            ],
         ],
         'request.' => [
             'title' => 'Panduan Request Barang',
@@ -220,6 +271,28 @@
                 'Pastikan rentang aktif tidak tumpang tindih.',
                 'Invoice akan menyimpan snapshot tarif yang berlaku pada tanggalnya.',
             ],
+        ],
+        'retur-pembelian.' => [
+            'title' => 'Panduan Retur Pembelian',
+            'intro' => 'Catat pengembalian barang ke supplier, baik sebelum maupun sesudah invoice terbit.',
+            'steps' => [
+                'Pilih penerimaan barang yang akan diretur dan isi jumlah per barang.',
+                'Jika penerimaan barang belum ditagih, retur mengurangi stok dan GRNI seperti biasa.',
+                'Jika sudah ditagih, retur mengurangi sisa hutang invoice tersebut; jika invoice sudah lunas, nilainya menjadi uang muka supplier.',
+                'Uang muka dari retur dapat dipakai pada pembayaran invoice berikutnya ke supplier yang sama, sama seperti uang muka dari kelebihan pembayaran.',
+            ],
+            'note' => 'Retur yang dibalik akan mengembalikan stok, hutang invoice, dan uang muka terkait secara otomatis.',
+        ],
+        'aset.' => [
+            'title' => 'Panduan Aset Tetap',
+            'intro' => 'Kelola register aset, penyusutan, dan pelepasan aset perusahaan.',
+            'steps' => [
+                'Tambah aset dan lengkapi kategori, harga perolehan, umur ekonomis, serta nilai residu.',
+                'Gunakan "Penyusutan Otomatis" untuk memposting penyusutan garis lurus bulanan ke seluruh aset aktif sekaligus.',
+                'Kosongkan kolom nominal pada form penyusutan manual per aset untuk memakai saran garis lurus otomatis, atau isi manual untuk penyesuaian khusus.',
+                'Gunakan Penjualan/Penghapusan saat aset sudah tidak digunakan.',
+            ],
+            'note' => 'Aset yang sudah pernah disusutkan tidak dapat mengubah data perolehan; penyusutan otomatis melewati aset yang sudah disusutkan pada periode yang sama.',
         ],
         'debit.' => [
             'title' => 'Panduan Debit',

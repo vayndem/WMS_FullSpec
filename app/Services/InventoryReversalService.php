@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Models\PembalikanDokumen;
 use App\Models\Bahan;
+use App\Models\FakturPembelian;
 use App\Models\LayerPersediaan;
+use App\Models\PembayaranFaktur;
 use App\Models\PenerimaanBarang;
 use App\Models\PenerimaanBarangDetail;
 use App\Models\PemakaianBarang;
@@ -81,6 +83,12 @@ class InventoryReversalService
             $retur = ReturPembelian::with('details')->lockForUpdate()->findOrFail($retur->id);
             $this->assertNotReversed('RETUR_PEMBELIAN', $retur->id);
             if ($retur->status !== ReturPembelian::POSTED) throw new RuntimeException('Hanya retur pembelian posted yang dapat dibalik.');
+            if ($retur->advance_payment_id) {
+                $advance = PembayaranFaktur::lockForUpdate()->findOrFail($retur->advance_payment_id);
+                if ($advance->pemakaianUangMuka()->exists()) {
+                    throw new RuntimeException('Uang muka dari retur ini sudah dipakai pada pembayaran lain; batalkan pembayaran yang memakai uang muka tersebut terlebih dahulu.');
+                }
+            }
             $lpb = PenerimaanBarang::lockForUpdate()->findOrFail($retur->lpb_id);
 
             foreach ($retur->details as $detail) {
@@ -92,6 +100,25 @@ class InventoryReversalService
                     'jumlah_tersisa' => (float) $lpbDetail->jumlah_tersisa + (float) $detail->jumlah_retur,
                 ]);
                 $this->stock->masuk((int) $lpb->gudang_id, (int) $lpbDetail->id_bahan, (float) $detail->jumlah_retur, (float) $detail->harga, 'REVERSAL_RETUR_PEMBELIAN', 'RETUR_PEMBELIAN', $retur->id, $reason);
+            }
+
+            if ($retur->invoice_id) {
+                $invoice = FakturPembelian::lockForUpdate()->findOrFail($retur->invoice_id);
+                $restoredGrandTotal = round((float) $invoice->grand_total + (float) $retur->hutang_reduction, 2);
+                $restoredSisaTagihan = round((float) $invoice->sisa_tagihan + (float) $retur->hutang_reduction, 2);
+                $invoice->update([
+                    'grand_total' => $restoredGrandTotal,
+                    'sisa_tagihan' => $restoredSisaTagihan,
+                    'status' => FakturPembelian::paymentStatus($restoredGrandTotal, (float) $invoice->payments()->sum('total_transaksi_pengurang_hutang')),
+                ]);
+            }
+            if ($retur->advance_payment_id) {
+                PembayaranFaktur::whereKey($retur->advance_payment_id)->update([
+                    'status' => PembayaranFaktur::VOID,
+                    'voided_by' => Auth::id(),
+                    'voided_at' => now(),
+                    'void_reason' => "Retur pembelian {$retur->no_retur} dibalik: {$reason}",
+                ]);
             }
 
             $journal = $this->accounting->reverseAutomaticJournal('RETUR_PEMBELIAN', $retur->id, "Reversal retur pembelian {$retur->no_retur}: {$reason}");

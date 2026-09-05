@@ -17,10 +17,13 @@ class ReturPembelian extends Model
     protected $fillable = [
         'no_retur',
         'lpb_id',
+        'invoice_id',
         'tanggal',
         'alasan',
         'status',
         'total_nilai',
+        'hutang_reduction',
+        'advance_payment_id',
         'created_by',
         'posted_at',
     ];
@@ -28,12 +31,23 @@ class ReturPembelian extends Model
     protected $casts = [
         'tanggal' => 'date',
         'total_nilai' => 'decimal:2',
+        'hutang_reduction' => 'decimal:2',
         'posted_at' => 'datetime',
     ];
 
     public function lpb()
     {
         return $this->belongsTo(PenerimaanBarang::class, 'lpb_id');
+    }
+
+    public function invoice()
+    {
+        return $this->belongsTo(FakturPembelian::class, 'invoice_id');
+    }
+
+    public function advancePayment()
+    {
+        return $this->belongsTo(PembayaranFaktur::class, 'advance_payment_id');
     }
 
     public function details()

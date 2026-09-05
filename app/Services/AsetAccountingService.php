@@ -65,9 +65,12 @@ class AsetAccountingService
             $asset = Aset::with('category')->lockForUpdate()->findOrFail($asset->id);
             if ($asset->status !== 'ACTIVE') throw new RuntimeException('Hanya aset aktif yang dapat disusutkan.');
             $this->assertCategoryMapping($asset);
-            $amount = round((float) $data['amount'], 2);
+            $amount = round((float) ($data['amount'] ?? $asset->suggestedMonthlyDepreciation()), 2);
             $maximum = round((float) $asset->book_value - (float) $asset->residual_value, 2);
-            if ($amount <= 0 || $amount > $maximum) {
+            if ($amount <= 0) {
+                throw new RuntimeException('Nominal penyusutan tidak dapat dihitung otomatis (umur ekonomis belum diisi); masukkan nominal secara manual.');
+            }
+            if ($amount > $maximum) {
                 throw new RuntimeException("Penyusutan maksimal adalah {$maximum} agar tidak melewati nilai residu.");
             }
             $depreciation = $asset->depreciations()->create([
@@ -99,6 +102,39 @@ class AsetAccountingService
             ]);
             return $depreciation->fresh('journal');
         });
+    }
+
+    public function runAutomaticDepreciation(string $postingDate, string $periodLabel): array
+    {
+        $posted = [];
+        $skipped = [];
+        $failed = [];
+        $assets = Aset::where('status', 'ACTIVE')->where('depreciation_method', 'STRAIGHT_LINE')->get();
+        foreach ($assets as $asset) {
+            if ($asset->depreciations()->where('period_label', $periodLabel)->exists()) {
+                $skipped[] = ['nomor_aset' => $asset->nomor_aset, 'reason' => 'Sudah disusutkan pada periode ini.'];
+                continue;
+            }
+            $maximum = round((float) $asset->book_value - (float) $asset->residual_value, 2);
+            $suggested = $asset->suggestedMonthlyDepreciation();
+            if ($suggested <= 0 || $maximum <= 0.01) {
+                $skipped[] = ['nomor_aset' => $asset->nomor_aset, 'reason' => 'Nilai buku sudah mencapai residu atau umur ekonomis belum diisi.'];
+                continue;
+            }
+            $amount = min($suggested, $maximum);
+            try {
+                $this->depreciate($asset, [
+                    'posting_date' => $postingDate,
+                    'period_label' => $periodLabel,
+                    'amount' => $amount,
+                    'reason' => 'Penyusutan otomatis garis lurus',
+                ]);
+                $posted[] = ['nomor_aset' => $asset->nomor_aset, 'amount' => $amount];
+            } catch (RuntimeException $e) {
+                $failed[] = ['nomor_aset' => $asset->nomor_aset, 'reason' => $e->getMessage()];
+            }
+        }
+        return ['posted' => $posted, 'skipped' => $skipped, 'failed' => $failed];
     }
 
     public function dispose(Aset $asset, array $data): PelepasanAset

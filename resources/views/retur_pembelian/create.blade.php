@@ -12,13 +12,13 @@
                             <input type="text" class="input input-bordered bg-base-200" :value="documentNumber" readonly>
                         </div>
                         <div class="form-control">
-                            <label class="label"><span class="label-text font-semibold">Pilih Penerimaan Barang (belum ditagih) <span class="text-error">*</span></span></label>
+                            <label class="label"><span class="label-text font-semibold">Pilih Penerimaan Barang <span class="text-error">*</span></span></label>
                             <select class="select select-bordered" x-model="idLpb" @change="loadLpbDetail()" required
                                 data-app-picker data-placeholder="Cari nomor penerimaan barang, PO, atau supplier...">
                                 <option value=""></option>
                                 @foreach ($lpbs as $lpb)
                                     <option value="{{ $lpb->id_lpb }}" data-id="{{ $lpb->id }}">
-                                        {{ $lpb->id_lpb }} — {{ $lpb->pembelian->supplier->nama ?? '-' }} ({{ $lpb->tanggal?->format('d-m-Y') }})
+                                        {{ $lpb->id_lpb }} — {{ $lpb->pembelian->supplier->nama ?? '-' }} ({{ $lpb->tanggal?->format('d-m-Y') }}){{ $lpb->no_invoice ? ' — sudah ditagih' : '' }}
                                     </option>
                                 @endforeach
                             </select>
@@ -31,6 +31,17 @@
                             <label class="label"><span class="label-text font-semibold">Alasan Retur <span class="text-error">*</span></span></label>
                             <input type="text" x-model="alasan" class="input input-bordered" placeholder="Contoh: barang rusak, tidak sesuai spesifikasi" required maxlength="1000">
                         </div>
+                    </div>
+                    <div class="alert alert-info mt-4 text-sm" x-show="lpbInfo.no_invoice" x-cloak>
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span x-show="lpbInfo.invoice_sisa_tagihan > 0">
+                            Penerimaan barang ini sudah ditagih pada invoice <span x-text="lpbInfo.no_invoice" class="font-bold"></span>.
+                            Nilai retur akan mengurangi sisa hutang invoice tersebut; kelebihannya (jika ada) menjadi uang muka supplier.
+                        </span>
+                        <span x-show="!(lpbInfo.invoice_sisa_tagihan > 0)">
+                            Invoice <span x-text="lpbInfo.no_invoice" class="font-bold"></span> untuk penerimaan barang ini sudah lunas.
+                            Seluruh nilai retur akan dicatat sebagai uang muka supplier untuk pembayaran berikutnya.
+                        </span>
                     </div>
                 </div>
 
@@ -89,10 +100,12 @@
             tanggal: new Date().toISOString().substring(0, 10),
             alasan: '',
             items: [],
+            lpbInfo: {},
             submitting: false,
 
             async loadLpbDetail() {
                 this.items = [];
+                this.lpbInfo = {};
                 if (!this.idLpb) { this.lpbId = ''; return; }
                 const option = this.$root.querySelector(`option[value="${CSS.escape(this.idLpb)}"]`);
                 this.lpbId = option?.dataset.id || '';
@@ -102,6 +115,7 @@
                     const res = await response.json();
                     if (!res.success || !res.items.length) { this.items = []; return; }
                     this.items = res.items.map((item) => ({ ...item, jumlah_retur: 0 }));
+                    this.lpbInfo = res.lpb || {};
                 } catch (error) {
                     window.AppAlert.error('Gagal memuat detail penerimaan barang.');
                 }

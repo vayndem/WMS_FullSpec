@@ -122,13 +122,4 @@
         </div>
     </div>
 
-    @include('layouts.template.page-help', [
-        'title' => 'Dashboard Produksi',
-        'items' => [
-            'Transfer dari gudang utama ke gudang produksi dicatat melalui transfer gudang.',
-            'Pemakaian barang dari gudang produksi menjadi titik mulai pengurangan stok dan pembebanan biaya.',
-            'Stock opname tetap dilakukan per gudang agar saldo produksi tetap akurat.',
-            'Dashboard produksi hanya menampilkan aktivitas gudang yang memang di-assign ke user ini.',
-        ],
-    ])
 @endsection

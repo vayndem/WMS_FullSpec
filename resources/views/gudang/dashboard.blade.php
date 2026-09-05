@@ -123,13 +123,4 @@
         </div>
     </div>
 
-    @include('layouts.template.page-help', [
-        'title' => 'Dashboard Gudang',
-        'items' => [
-            'Gunakan Penerimaan untuk mencatat penerimaan barang atau penerimaan jasa.',
-            'Gunakan Pemakaian Barang untuk mencatat barang yang dipakai atau dikeluarkan.',
-            'Stock Opname digunakan untuk membandingkan stok sistem dengan hasil hitung fisik.',
-            'Dashboard gudang hanya menampilkan kuantitas dan aktivitas, tanpa harga atau nilai uang.',
-        ],
-    ])
 @endsection

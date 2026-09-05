@@ -41,13 +41,4 @@
             @endforeach
         </div>
     </div>
-    @include('layouts.template.page-help', [
-        'title' => 'Mapping Jasa',
-        'items' => [
-            'Kategori 98 wajib cost center/departemen.',
-            'Kategori 99 wajib alokasi Datapesanan 100%.',
-            'Penerimaan jasa menandai pekerjaan mulai dan tidak membentuk jurnal.',
-            'Mapping COA digunakan ketika penerimaan jasa masuk invoice dan pekerjaan menjadi selesai.',
-        ],
-    ])
 @endsection
