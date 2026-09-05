@@ -7,14 +7,14 @@ use App\Models\User;
 
 class MaterialRequestPolicy
 {
-    private function canViewRequests(User $user): bool
+    private function canReviewRequests(User $user): bool
     {
         return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_WAREHOUSE, User::ROLE_ACCOUNTING]);
     }
 
     private function canCreateRequests(User $user): bool
     {
-        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_WAREHOUSE]);
+        return !$user->isPurchasing();
     }
 
     private function canApproveRequests(User $user): bool
@@ -24,7 +24,7 @@ class MaterialRequestPolicy
 
     public function viewAny(User $user): bool
     {
-        return $this->canViewRequests($user);
+        return true;
     }
 
     public function create(User $user): bool
@@ -34,7 +34,7 @@ class MaterialRequestPolicy
 
     public function view(User $user, MaterialRequest $requestModel): bool
     {
-        return $this->canViewRequests($user);
+        return $this->canReviewRequests($user) || (int) $requestModel->requested_by === (int) $user->id;
     }
 
     public function approve(User $user, MaterialRequest $requestModel): bool

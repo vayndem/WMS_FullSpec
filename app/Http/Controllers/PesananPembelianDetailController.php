@@ -7,12 +7,15 @@ use App\Models\PesananPembelianDetail;
 use App\Models\RequestDetail;
 use App\Http\Requests\StorePesananPembelianDetailRequest;
 use App\Http\Requests\UpdatePesananPembelianDetailRequest;
+use App\Services\MaterialRequestFulfillmentService;
 use App\Traits\CalculatesPesananPembelianTotals;
 use Illuminate\Support\Facades\DB;
 
 class PesananPembelianDetailController extends Controller
 {
     use CalculatesPesananPembelianTotals;
+
+    public function __construct(private MaterialRequestFulfillmentService $fulfillment) {}
 
     public function index($no_po)
     {
@@ -53,9 +56,7 @@ class PesananPembelianDetailController extends Controller
             if (!empty($validated['request_detail_id'])) {
                 $reqDetail = RequestDetail::find($validated['request_detail_id']);
                 if ($reqDetail) {
-                    $reqDetail->update([
-                        'realisasi' => $reqDetail->pembelianDetails()->sum('jumlah')
-                    ]);
+                    $this->fulfillment->syncRealisasi($reqDetail);
                 }
             }
 
@@ -90,9 +91,7 @@ class PesananPembelianDetailController extends Controller
             if ($pembeliandetail->request_detail_id) {
                 $reqDetail = RequestDetail::find($pembeliandetail->request_detail_id);
                 if ($reqDetail) {
-                    $reqDetail->update([
-                        'realisasi' => $reqDetail->pembelianDetails()->sum('jumlah')
-                    ]);
+                    $this->fulfillment->syncRealisasi($reqDetail);
                 }
             }
 
@@ -119,9 +118,7 @@ class PesananPembelianDetailController extends Controller
             if ($reqDetailId) {
                 $reqDetail = RequestDetail::find($reqDetailId);
                 if ($reqDetail) {
-                    $reqDetail->update([
-                        'realisasi' => $reqDetail->pembelianDetails()->sum('jumlah')
-                    ]);
+                    $this->fulfillment->syncRealisasi($reqDetail);
                 }
             }
 

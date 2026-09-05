@@ -20,7 +20,7 @@
                 reportUrl: '{{ route('request.report.pdf') }}',
                 extraParams: { status: 'PENDING' },
                 columns: [
-                    { data: 'no_request' }, { data: 'status' },
+                    { data: 'no_request' }, { data: 'requester_nama' }, { data: 'status' },
                     { data: 'created_at' }, { data: 'aksi', orderable: false, searchable: false },
                 ],
             })"
@@ -33,6 +33,7 @@
                         <option value="">Semua Status</option>
                         <option value="PENDING">Pending</option>
                         <option value="APPROVED">Approved</option>
+                        <option value="FULFILLED">Terpenuhi</option>
                         <option value="REJECTED">Rejected</option>
                     </select>
                 </label>
@@ -51,22 +52,23 @@
                         <tr>
                             <th class="w-8"></th>
                             <th class="cursor-pointer select-none" @click="sortBy(0)">No Request</th>
-                            <th class="cursor-pointer select-none text-center" @click="sortBy(1)">Status</th>
-                            <th class="cursor-pointer select-none" @click="sortBy(2)">Tgl Request</th>
+                            <th class="cursor-pointer select-none" @click="sortBy(1)">Pemohon</th>
+                            <th class="cursor-pointer select-none text-center" @click="sortBy(2)">Status</th>
+                            <th class="cursor-pointer select-none" @click="sortBy(3)">Tgl Request</th>
                             <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         <template x-if="loading">
                             <tr>
-                                <td colspan="5" class="py-6 text-center text-base-content/50">
+                                <td colspan="6" class="py-6 text-center text-base-content/50">
                                     <span class="loading loading-spinner loading-sm"></span> Memuat data...
                                 </td>
                             </tr>
                         </template>
                         <template x-if="!loading && rows.length === 0">
                             <tr>
-                                <td colspan="5" class="py-6 text-center text-base-content/50">Data tidak ditemukan</td>
+                                <td colspan="6" class="py-6 text-center text-base-content/50">Data tidak ditemukan</td>
                             </tr>
                         </template>
                     </tbody>
@@ -79,14 +81,16 @@
                                     </button>
                                 </td>
                                 <td class="font-bold text-primary" x-text="row.no_request"></td>
+                                <td x-text="row.requester_nama"></td>
                                 <td class="text-center">
                                     <span class="badge text-white"
                                         :class="{
                                             'badge-warning': row.status === 'PENDING',
                                             'badge-success': row.status === 'APPROVED',
+                                            'badge-info': row.status === 'FULFILLED',
                                             'badge-error': row.status === 'REJECTED',
                                         }"
-                                        x-text="row.status === 'PENDING' ? 'Pending' : (row.status === 'APPROVED' ? 'Approved' : 'Rejected')"></span>
+                                        x-text="{ PENDING: 'Pending', APPROVED: 'Approved', FULFILLED: 'Terpenuhi', REJECTED: 'Rejected' }[row.status] || row.status"></span>
                                 </td>
                                 <td x-text="row.formatted_date"></td>
                                 <td class="text-center">
@@ -104,7 +108,7 @@
                             </tr>
                             <tr x-show="expanded[row.id]" x-cloak>
                                 <td></td>
-                                <td colspan="4" class="bg-base-200/40">
+                                <td colspan="5" class="bg-base-200/40">
                                     <div class="my-2 rounded-lg border-l-4 border-primary bg-base-100 p-4 shadow-sm">
                                         <h6 class="mb-3 font-bold">
                                             <i class="fa-solid fa-list-check text-primary"></i>
@@ -117,13 +121,15 @@
                                                         <th>Nama Barang</th>
                                                         <th class="text-center">Jumlah Minta</th>
                                                         <th class="text-center">Jumlah ACC</th>
+                                                        <th class="text-center">Sudah Dipesan (PO)</th>
                                                         <th>Keterangan</th>
+                                                        <th>Lacak</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     <template x-if="!row.details || row.details.length === 0">
                                                         <tr>
-                                                            <td colspan="4" class="text-center text-base-content/50">Tidak ada detail item.</td>
+                                                            <td colspan="6" class="text-center text-base-content/50">Tidak ada detail item.</td>
                                                         </tr>
                                                     </template>
                                                     <template x-for="item in row.details" :key="item.id">
@@ -131,7 +137,21 @@
                                                             <td class="font-semibold" x-text="item.nama_barang"></td>
                                                             <td class="text-center font-bold text-primary" x-text="item.jumlah_minta"></td>
                                                             <td class="text-center font-bold text-success" x-text="item.jumlah_acc ?? '-'"></td>
+                                                            <td class="text-center font-bold" x-text="item.realisasi ?? 0"></td>
                                                             <td x-text="item.keterangan ?? '-'"></td>
+                                                            <td>
+                                                                <template x-if="!item.pembelian_details || item.pembelian_details.length === 0">
+                                                                    <span class="badge badge-ghost">Belum dipesan</span>
+                                                                </template>
+                                                                <template x-for="po in (item.pembelian_details || [])" :key="po.id">
+                                                                    <div class="mb-1 text-xs">
+                                                                        <span class="font-semibold" x-text="po.no_po"></span>:
+                                                                        <span x-text="po.jumlah"></span> dipesan,
+                                                                        <span :class="Number(po.diterima) >= Number(po.jumlah) ? 'text-success font-semibold' : 'text-warning'"
+                                                                            x-text="Number(po.diterima) >= Number(po.jumlah) ? 'sudah diterima penuh' : `${po.diterima || 0} diterima`"></span>
+                                                                    </div>
+                                                                </template>
+                                                            </td>
                                                         </tr>
                                                     </template>
                                                 </tbody>

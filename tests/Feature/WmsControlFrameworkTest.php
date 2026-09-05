@@ -532,6 +532,78 @@ class WmsControlFrameworkTest extends TestCase
         $create->assertSee('function invoiceCreateForm', false);
     }
 
+    public function test_non_purchasing_role_can_submit_and_track_a_material_request_to_fulfillment(): void
+    {
+        $finance = User::factory()->create(['type' => User::ROLE_FINANCE]);
+        $purchasing = User::factory()->create(['type' => User::ROLE_PURCHASING]);
+        $numbers = app(DocumentNumberService::class);
+        $category = \App\Models\KategoriBahan::where('katnama', 'Bahan Baku Paper')->firstOrFail();
+        $gudang = Gudang::where('nama', 'Gudang Utama')->firstOrFail();
+        $supplier = Supplier::create(['nama' => 'Supplier Uji Request', 'alamat' => 'Jl. Request', 'telp' => '0800000098', 'pembayaran' => 'Transfer']);
+
+        $this->actingAs($purchasing)->getJson(route('request.create'))->assertStatus(403);
+
+        $this->actingAs($finance)->postJson(route('request.store'), [
+            'no_request' => $numbers->internal('REQ', 'PO'),
+            'items' => [[
+                'nama_barang' => 'Barang Uji Request Baru',
+                'jumlah_minta' => 10,
+                'satuan' => 'PCS',
+                'kategori' => $category->id,
+                'tipe_barang' => $category->id,
+                'tipe_gudang' => $gudang->id,
+            ]],
+        ])->assertOk();
+
+        $materialRequest = \App\Models\MaterialRequest::latest('id')->firstOrFail();
+        $this->assertSame($finance->id, $materialRequest->requested_by);
+        $this->assertSame(\App\Models\MaterialRequest::PENDING, $materialRequest->status);
+
+        $detail = $materialRequest->details()->firstOrFail();
+        $this->assertNull($detail->bahan_id);
+
+        $this->actingAs($finance)->postJson(route('request.processApprove', $materialRequest->id), [
+            'items' => [$detail->id => ['jumlah_acc' => 10]],
+        ])->assertStatus(403);
+
+        $this->actingAs($purchasing)->postJson(route('request.processApprove', $materialRequest->id), [
+            'items' => [$detail->id => ['jumlah_acc' => 10]],
+        ])->assertOk();
+
+        $materialRequest->refresh();
+        $detail->refresh();
+        $this->assertSame(\App\Models\MaterialRequest::APPROVED, $materialRequest->status);
+        $this->assertNotNull($detail->bahan_id);
+        $bahan = Bahan::findOrFail($detail->bahan_id);
+        $this->assertSame('Barang Uji Request Baru', $bahan->nama);
+
+        $ownIndex = $this->actingAs($finance)
+            ->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+            ->getJson(route('request.index'))
+            ->assertOk()->json('data');
+        $this->assertTrue(collect($ownIndex)->contains(fn ($row) => (int) $row['id'] === $materialRequest->id));
+
+        $poNumber = $numbers->financial('PO');
+        $this->actingAs($purchasing)->postJson(route('pembelian.store'), [
+            'no_po' => $poNumber,
+            'tanggal' => today()->toDateString(),
+            'supplier_id' => $supplier->id,
+            'gudang_id' => $gudang->id,
+            'is_ppn' => 0,
+            'details' => [[
+                'bahan_id' => $bahan->id,
+                'harga' => 5000,
+                'jumlah' => 10,
+                'request_detail_id' => $detail->id,
+            ]],
+        ])->assertCreated();
+
+        $materialRequest->refresh();
+        $detail->refresh();
+        $this->assertEqualsWithDelta(10.0, (float) $detail->realisasi, 0.000001);
+        $this->assertSame(\App\Models\MaterialRequest::FULFILLED, $materialRequest->status);
+    }
+
     public function test_invoice_requires_accounting_manager_approval_before_posting_or_payment(): void
     {
         $accounting = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);

@@ -10,6 +10,7 @@ use App\Http\Requests\StorePesananPembelianRequest;
 use App\Http\Requests\UpdatePesananPembelianRequest;
 use App\Policies\PesananPembelianPolicy;
 use App\Services\DocumentNumberService;
+use App\Services\MaterialRequestFulfillmentService;
 use App\Services\StokGudangService;
 use App\Traits\CalculatesPesananPembelianTotals;
 use Illuminate\Http\Request;
@@ -19,7 +20,11 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class PesananPembelianController extends Controller
 {
-    public function __construct(private DocumentNumberService $numbers, private StokGudangService $stokGudang) {}
+    public function __construct(
+        private DocumentNumberService $numbers,
+        private StokGudangService $stokGudang,
+        private MaterialRequestFulfillmentService $fulfillment
+    ) {}
     use CalculatesPesananPembelianTotals;
 
     public function index(Request $request)
@@ -156,9 +161,7 @@ class PesananPembelianController extends Controller
                 if (!empty($item['request_detail_id'])) {
                     $reqDetail = RequestDetail::find($item['request_detail_id']);
                     if ($reqDetail) {
-                        $reqDetail->update([
-                            'realisasi' => $reqDetail->pembelianDetails()->sum('jumlah')
-                        ]);
+                        $this->fulfillment->syncRealisasi($reqDetail);
                     }
                 }
             }
@@ -260,9 +263,7 @@ class PesananPembelianController extends Controller
             foreach ($affectedReqDetails as $reqId) {
                 $reqDetail = RequestDetail::find($reqId);
                 if ($reqDetail) {
-                    $reqDetail->update([
-                        'realisasi' => $reqDetail->pembelianDetails()->sum('jumlah')
-                    ]);
+                    $this->fulfillment->syncRealisasi($reqDetail);
                 }
             }
 
@@ -297,9 +298,7 @@ class PesananPembelianController extends Controller
             foreach ($reqDetails as $reqId) {
                 $reqDetail = RequestDetail::find($reqId);
                 if ($reqDetail) {
-                    $reqDetail->update([
-                        'realisasi' => $reqDetail->pembelianDetails()->sum('jumlah')
-                    ]);
+                    $this->fulfillment->syncRealisasi($reqDetail);
                 }
             }
         });

@@ -26,7 +26,8 @@ class MaterialRequestController extends Controller
         if ($request->ajax()) {
             $status = $request->input('status');
 
-            $query = MaterialRequest::with(['details'])
+            $query = MaterialRequest::with(['details.pembelianDetails', 'requester'])
+                ->when(!$request->user()->hasAnyRole([\App\Models\User::ROLE_PURCHASING, \App\Models\User::ROLE_WAREHOUSE, \App\Models\User::ROLE_ACCOUNTING]), fn($q) => $q->where('requested_by', $request->user()->id))
                 ->when(!empty($status), function ($q) use ($status) {
                     return $q->where('status', $status);
                 });
@@ -34,6 +35,9 @@ class MaterialRequestController extends Controller
             return datatables()->of($query)
                 ->addColumn('formatted_date', function ($row) {
                     return $row->created_at ? $row->created_at->format('d-m-Y H:i') : '-';
+                })
+                ->addColumn('requester_nama', function ($row) {
+                    return $row->requester->name ?? '-';
                 })
                 ->addColumn('can_approve', function ($row) use ($request) {
                     return $row->status === MaterialRequest::PENDING && $request->user()->can('approve', $row);
@@ -104,8 +108,9 @@ class MaterialRequestController extends Controller
 
         DB::transaction(function () use ($validated) {
             $reqHeader = MaterialRequest::create([
-                'no_request' => $validated['no_request'],
-                'status'     => MaterialRequest::PENDING,
+                'no_request'   => $validated['no_request'],
+                'status'       => MaterialRequest::PENDING,
+                'requested_by' => Auth::id(),
             ]);
 
             foreach ($validated['items'] as $item) {

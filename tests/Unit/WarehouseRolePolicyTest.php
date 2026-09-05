@@ -69,6 +69,6 @@ class WarehouseRolePolicyTest extends TestCase
         $this->assertFalse((new StockOpnamePolicy())->viewFinancials($user));
         $this->assertFalse((new PenerimaanBarangPolicy())->create($user));
         $this->assertFalse((new PenerimaanJasaPolicy())->create($user));
-        $this->assertFalse((new MaterialRequestPolicy())->create($user));
+        $this->assertTrue((new MaterialRequestPolicy())->create($user));
     }
 }
