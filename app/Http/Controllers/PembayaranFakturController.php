@@ -54,13 +54,15 @@ class PembayaranFakturController extends Controller
             $invoice = FakturPembelian::lockForUpdate()->findOrFail($validated['invoice_lpb_id']);
             abort_if($invoice->status === FakturPembelian::VOID || (float) $invoice->sisa_tagihan <= 0, 422, 'Invoice sudah batal atau tidak memiliki sisa tagihan.');
 
-            $cashAndTax = (float) $validated['jumlah_pembayaran'] + (float) $validated['potongan_pph23'];
+            $cashAndTax = (float) $validated['jumlah_pembayaran'] + (float) $validated['potongan_pph'];
             $maximumPph = round((float) $invoice->dasar_pph * (float) $invoice->tarif_pph / 100, 2);
-            $recordedPph = (float) $invoice->payments()->sum('potongan_pph23');
+            $recordedPph = (float) $invoice->payments()->sum('potongan_pph');
             abort_if(
-                $recordedPph + (float) $validated['potongan_pph23'] > $maximumPph + 0.01,
+                $recordedPph + (float) $validated['potongan_pph'] > $maximumPph + 0.01,
                 422,
-                'Akumulasi PPh 23 melebihi tarif snapshot invoice.'
+                $invoice->jenis_pph
+                    ? 'Akumulasi PPh melebihi tarif snapshot invoice.'
+                    : 'Invoice ini tidak menetapkan jenis PPh, sehingga tidak ada potongan PPh yang dapat dicatat.'
             );
             $difference = (float) $validated['selisih_bayar'];
             $differenceType = $validated['jenis_selisih'] ?? null;
@@ -107,14 +109,14 @@ class PembayaranFakturController extends Controller
             );
 
             $hasCashActivity = (float) $validated['jumlah_pembayaran'] > 0
-                || (float) $validated['potongan_pph23'] > 0
+                || (float) $validated['potongan_pph'] > 0
                 || $difference > 0;
 
             if ($hasCashActivity) {
                 $allocation = $this->paymentAllocation->calculate(
                     $remainingAfterAdvance,
                     (float) $validated['jumlah_pembayaran'],
-                    (float) $validated['potongan_pph23'],
+                    (float) $validated['potongan_pph'],
                     $difference,
                     $differenceType
                 );
@@ -140,7 +142,7 @@ class PembayaranFakturController extends Controller
                 'metode_pembayaran'                => $validated['metode_pembayaran'],
                 'coa_kas_bank_id'                  => $validated['coa_kas_bank_id'],
                 'jumlah_pembayaran'                => $validated['jumlah_pembayaran'],
-                'potongan_pph23'                   => $validated['potongan_pph23'],
+                'potongan_pph'                   => $validated['potongan_pph'],
                 'potongan_materai'                 => $validated['potongan_materai'],
                 'biaya_transfer_bank'              => $validated['biaya_transfer_bank'],
                 'selisih_bayar'                    => $validated['selisih_bayar'],
@@ -164,7 +166,7 @@ class PembayaranFakturController extends Controller
                 'total_pembayaran'  => $totalBayarAkumulasi,
                 'sisa_tagihan'      => $sisaTagihan,
                 'status'            => $statusCode,
-                'pph'               => $invoice->payments()->sum('potongan_pph23'),
+                'pph'               => $invoice->payments()->sum('potongan_pph'),
             ]);
 
             $this->accounting->postPayment($payment);
@@ -217,7 +219,7 @@ class PembayaranFakturController extends Controller
                 'total_pembayaran'  => $totalBayarAkumulasi,
                 'sisa_tagihan'      => $sisaTagihan,
                 'status'            => $statusCode,
-                'pph'               => $invoice->payments()->sum('potongan_pph23'),
+                'pph'               => $invoice->payments()->sum('potongan_pph'),
             ]);
         });
 

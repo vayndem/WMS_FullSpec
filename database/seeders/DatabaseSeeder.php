@@ -42,6 +42,14 @@ class DatabaseSeeder extends Seeder
             ['tax_type' => 'PPH23', 'effective_from' => '2025-01-01'],
             ['rate' => 2, 'is_active' => true, 'description' => 'Snapshot dasar PPh supplier; pengakuan tetap saat pembayaran.']
         );
+        TaxRate::updateOrCreate(
+            ['tax_type' => 'PPH22', 'effective_from' => '2025-01-01'],
+            ['rate' => 1.5, 'is_active' => true, 'description' => 'Tarif umum PPh 22 atas pembelian barang; sesuaikan per jenis barang bila diperlukan.']
+        );
+        TaxRate::updateOrCreate(
+            ['tax_type' => 'PPH4A2', 'effective_from' => '2025-01-01'],
+            ['rate' => 10, 'is_active' => true, 'description' => 'Contoh tarif PPh final 4(2) untuk sewa tanah/bangunan; sesuaikan per jenis transaksi final.']
+        );
         $coas = [
             ['kode_akun' => '1101', 'nama_akun' => 'Kas Utama', 'kategori_akun' => 'ASET', 'posisi_normal' => 'DEBIT', 'is_cash_bank' => true],
             ['kode_akun' => '1102', 'nama_akun' => 'Bank BCA', 'kategori_akun' => 'ASET', 'posisi_normal' => 'DEBIT', 'is_cash_bank' => true],
@@ -51,6 +59,8 @@ class DatabaseSeeder extends Seeder
             ['kode_akun' => '2101', 'nama_akun' => 'Hutang Usaha (Supplier)', 'kategori_akun' => 'LIABILITAS', 'posisi_normal' => 'KREDIT'],
             ['kode_akun' => '2102', 'nama_akun' => 'Hutang LPB Belum Ditagih', 'kategori_akun' => 'LIABILITAS', 'posisi_normal' => 'KREDIT'],
             ['kode_akun' => '2103', 'nama_akun' => 'Hutang PPh 23', 'kategori_akun' => 'LIABILITAS', 'posisi_normal' => 'KREDIT'],
+            ['kode_akun' => '2105', 'nama_akun' => 'Hutang PPh 22', 'kategori_akun' => 'LIABILITAS', 'posisi_normal' => 'KREDIT'],
+            ['kode_akun' => '2106', 'nama_akun' => 'Hutang PPh 4(2) Final', 'kategori_akun' => 'LIABILITAS', 'posisi_normal' => 'KREDIT'],
             ['kode_akun' => '5101', 'nama_akun' => 'Beban Bahan Baku Direct', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT'],
             ['kode_akun' => '5102', 'nama_akun' => 'Beban Perlengkapan Operasional', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT'],
             ['kode_akun' => '5103', 'nama_akun' => 'Beban Administrasi Bank', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT'],
@@ -85,6 +95,8 @@ class DatabaseSeeder extends Seeder
             AccountingSetting::HUTANG_USAHA => '2101',
             AccountingSetting::PPN_MASUKAN => '1103',
             AccountingSetting::HUTANG_PPH23 => '2103',
+            AccountingSetting::HUTANG_PPH22 => '2105',
+            AccountingSetting::HUTANG_PPH4A2 => '2106',
             AccountingSetting::BIAYA_BANK => '5103',
             AccountingSetting::BEBAN_MATERAI => '5104',
             AccountingSetting::SELISIH_BAYAR => '4201',

@@ -19,7 +19,7 @@ class StoreTaxRateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'tax_type' => ['required', Rule::in(['PPN', 'PPH23'])],
+            'tax_type' => ['required', Rule::in(['PPN', 'PPH23', 'PPH22', 'PPH4A2'])],
             'rate' => ['required', 'numeric', 'min:0', 'max:100'],
             'effective_from' => ['required', 'date'],
             'effective_until' => ['nullable', 'date', 'after_or_equal:effective_from'],

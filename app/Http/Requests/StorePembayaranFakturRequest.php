@@ -20,7 +20,7 @@ class StorePembayaranFakturRequest extends FormRequest
     {
         $this->merge([
             'jumlah_pembayaran'           => $this->jumlah_pembayaran ?? 0,
-            'potongan_pph23'              => $this->potongan_pph23 ?? 0,
+            'potongan_pph'              => $this->potongan_pph ?? 0,
             'potongan_materai'            => $this->potongan_materai ?? 0,
             'biaya_transfer_bank'         => $this->biaya_transfer_bank ?? 0,
             'selisih_bayar'               => $this->selisih_bayar ?? 0,
@@ -40,7 +40,7 @@ class StorePembayaranFakturRequest extends FormRequest
                 fn($query) => $query->where('is_active', 1)->where('is_postable', 1)->where('is_cash_bank', 1)
             )],
             'jumlah_pembayaran'            => 'nullable|numeric|min:0',
-            'potongan_pph23'               => 'nullable|numeric|min:0',
+            'potongan_pph'               => 'nullable|numeric|min:0',
             'potongan_materai'             => ['nullable', 'numeric', Rule::in([0, 10000])],
             'biaya_transfer_bank'          => 'nullable|numeric|min:0',
             'selisih_bayar'                => 'nullable|numeric|min:0',

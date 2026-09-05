@@ -134,7 +134,9 @@
                             <label class="label"><span class="label-text font-semibold">Jenis</span></label>
                             <select x-model="form.tax_type" class="select select-bordered">
                                 <option value="PPN">PPN</option>
-                                <option value="PPH23">PPH23</option>
+                                <option value="PPH23">PPh 23</option>
+                                <option value="PPH22">PPh 22</option>
+                                <option value="PPH4A2">PPh 4(2) Final</option>
                             </select>
                         </div>
                         <div class="form-control">

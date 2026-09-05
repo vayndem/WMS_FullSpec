@@ -188,7 +188,8 @@ class FakturPembelianController extends Controller
             $subTotal = $lpbs->sum(fn($lpb) => $this->receiptAmount($lpb));
 
             $ppnPercent = $validated['is_ppn'] ? TaxRate::rateFor('PPN', $validated['tanggal']) : 0;
-            $pphPercent = TaxRate::rateFor('PPH23', $validated['tanggal']);
+            $jenisPph = $validated['jenis_pph'] ?? null;
+            $pphPercent = $jenisPph ? TaxRate::rateFor($jenisPph, $validated['tanggal']) : 0;
             $ppnNominal = round(($subTotal * $ppnPercent) / 100, 2);
 
             $grandTotal = ($subTotal + $ppnNominal + $validated['ongkir']) - $validated['diskon'];
@@ -204,7 +205,8 @@ class FakturPembelianController extends Controller
                 'tarif_ppn'               => $ppnPercent,
                 'ppn'                     => $ppnNominal,
                 'no_faktur_pajak'         => $validated['no_faktur_pajak'] ?? null,
-                'dasar_pph'               => $subTotal,
+                'jenis_pph'               => $jenisPph,
+                'dasar_pph'               => $jenisPph ? $subTotal : 0,
                 'tarif_pph'               => $pphPercent,
                 'diskon'                  => $validated['diskon'],
                 'ongkir'                  => $validated['ongkir'],
@@ -292,7 +294,8 @@ class FakturPembelianController extends Controller
             }
             $subTotal = $lpbs->sum(fn($lpb) => $this->receiptAmount($lpb));
             $ppnPercent = $validated['is_ppn'] ? TaxRate::rateFor('PPN', $validated['tanggal']) : 0;
-            $pphPercent = TaxRate::rateFor('PPH23', $validated['tanggal']);
+            $jenisPph = $validated['jenis_pph'] ?? null;
+            $pphPercent = $jenisPph ? TaxRate::rateFor($jenisPph, $validated['tanggal']) : 0;
             $ppnNominal = round(($subTotal * $ppnPercent) / 100, 2);
 
             $grandTotal = ($subTotal + $ppnNominal + $validated['ongkir']) - $validated['diskon'];
@@ -312,7 +315,8 @@ class FakturPembelianController extends Controller
                 'tarif_ppn'               => $ppnPercent,
                 'ppn'                     => $ppnNominal,
                 'no_faktur_pajak'         => $validated['no_faktur_pajak'] ?? null,
-                'dasar_pph'               => $subTotal,
+                'jenis_pph'               => $jenisPph,
+                'dasar_pph'               => $jenisPph ? $subTotal : 0,
                 'tarif_pph'               => $pphPercent,
                 'diskon'                  => $validated['diskon'],
                 'ongkir'                  => $validated['ongkir'],

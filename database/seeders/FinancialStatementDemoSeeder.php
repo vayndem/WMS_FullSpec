@@ -229,7 +229,7 @@ class FinancialStatementDemoSeeder extends Seeder
             'metode_pembayaran' => 'Transfer Bank BCA',
             'coa_kas_bank_id' => $bank->id,
             'jumlah_pembayaran' => $cash,
-            'potongan_pph23' => 0,
+            'potongan_pph' => 0,
             'potongan_materai' => 0,
             'biaya_transfer_bank' => 0,
             'selisih_bayar' => $selisih,
@@ -247,7 +247,7 @@ class FinancialStatementDemoSeeder extends Seeder
             'total_pembayaran' => $totalPembayaran,
             'sisa_tagihan' => max(0, $invoice->grand_total - $totalPembayaran),
             'status' => FakturPembelian::paymentStatus((float) $invoice->grand_total, (float) $totalPembayaran),
-            'pph' => $invoice->payments()->sum('potongan_pph23'),
+            'pph' => $invoice->payments()->sum('potongan_pph'),
         ]);
         $accounting->postPayment($payment);
 

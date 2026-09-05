@@ -223,7 +223,8 @@ class WmsAccountingService
         $lines = [];
         $this->line($lines, AccountingSetting::accountId(AccountingSetting::HUTANG_USAHA), $apReduction, 0, "Pelunasan {$invoice->no_invoice}");
         $this->line($lines, $payment->coa_kas_bank_id, 0, (float) $payment->jumlah_pembayaran + (float) $payment->biaya_transfer_bank + (float) $payment->potongan_materai, 'Kas/bank keluar');
-        $this->line($lines, AccountingSetting::accountId(AccountingSetting::HUTANG_PPH23), 0, (float) $payment->potongan_pph23, 'PPh 23 dipotong saat pembayaran');
+        $pphAccountId = $invoice->jenis_pph ? AccountingSetting::accountId(AccountingSetting::PPH_LIABILITY_KEY[$invoice->jenis_pph]) : null;
+        $this->line($lines, $pphAccountId, 0, (float) $payment->potongan_pph, "{$invoice->jenis_pph} dipotong saat pembayaran");
         $this->line($lines, AccountingSetting::accountId(AccountingSetting::BEBAN_MATERAI), (float) $payment->potongan_materai, 0, 'Beban materai');
         if ($payment->jenis_selisih === 'PENDAPATAN_SELISIH') {
             $this->line($lines, $payment->coa_selisih_id, 0, (float) $payment->selisih_bayar, 'Pendapatan selisih pembayaran');

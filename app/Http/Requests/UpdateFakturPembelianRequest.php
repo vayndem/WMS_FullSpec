@@ -46,6 +46,7 @@ class UpdateFakturPembelianRequest extends FormRequest
             ],
             'diskon'                  => 'nullable|numeric|min:0',
             'ongkir'                  => 'nullable|numeric|min:0',
+            'jenis_pph'               => ['nullable', 'string', Rule::in(['PPH23', 'PPH22', 'PPH4A2'])],
             'note'                    => 'nullable|string',
         ];
     }

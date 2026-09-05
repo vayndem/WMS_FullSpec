@@ -303,6 +303,109 @@ class WmsControlFrameworkTest extends TestCase
         ])->assertStatus(422);
     }
 
+    public function test_pph22_withholding_is_posted_to_its_own_liability_account_on_payment(): void
+    {
+        $finance = User::factory()->create(['type' => User::ROLE_FINANCE]);
+        $supplier = Supplier::create(['nama' => 'Supplier PPh22', 'alamat' => 'Jl. PPh22', 'telp' => '0800000010', 'pembayaran' => 'Transfer']);
+        $invoice = FakturPembelian::create([
+            'no_invoice' => 'PPH22-TEST-1',
+            'kode_supplier' => $supplier->id,
+            'tanggal' => today(),
+            'sub_total' => 10000000,
+            'jenis_pph' => 'PPH22',
+            'dasar_pph' => 10000000,
+            'tarif_pph' => 1.5,
+            'grand_total' => 10000000,
+            'sisa_tagihan' => 10000000,
+            'status' => FakturPembelian::UNPAID,
+        ]);
+        $kasUtama = BaganAkun::where('kode_akun', '1101')->firstOrFail();
+        $hutangPph22 = BaganAkun::where('kode_akun', '2105')->firstOrFail();
+        $numbers = app(DocumentNumberService::class);
+
+        $response = $this->actingAs($finance)->postJson(route('pembayaran-faktur.store'), [
+            'payment_number' => $numbers->financial('PY'),
+            'invoice_lpb_id' => $invoice->id,
+            'tanggal_pembayaran' => today()->toDateString(),
+            'metode_pembayaran' => 'Transfer BCA',
+            'coa_kas_bank_id' => $kasUtama->id,
+            'jumlah_pembayaran' => 9850000,
+            'potongan_pph' => 150000,
+        ])->assertCreated();
+        $payment = PembayaranFaktur::findOrFail($response->json('data.id'));
+
+        $jurnal = \App\Models\Jurnal::with('details')->where('sumber_transaksi', 'PELUNASAN_HUTANG')->where('reff_id', $payment->id)->firstOrFail();
+        $this->assertEqualsWithDelta((float) $jurnal->total_debit, (float) $jurnal->total_kredit, 0.01);
+        $this->assertTrue($jurnal->details->contains(fn ($line) => (int) $line->coa_id === $hutangPph22->id && (float) $line->kredit === 150000.0));
+    }
+
+    public function test_pph4a2_final_withholding_is_posted_to_its_own_liability_account_on_payment(): void
+    {
+        $finance = User::factory()->create(['type' => User::ROLE_FINANCE]);
+        $supplier = Supplier::create(['nama' => 'Supplier PPh4a2', 'alamat' => 'Jl. PPh4a2', 'telp' => '0800000011', 'pembayaran' => 'Transfer']);
+        $invoice = FakturPembelian::create([
+            'no_invoice' => 'PPH4A2-TEST-1',
+            'kode_supplier' => $supplier->id,
+            'tanggal' => today(),
+            'sub_total' => 5000000,
+            'jenis_pph' => 'PPH4A2',
+            'dasar_pph' => 5000000,
+            'tarif_pph' => 10,
+            'grand_total' => 5000000,
+            'sisa_tagihan' => 5000000,
+            'status' => FakturPembelian::UNPAID,
+        ]);
+        $kasUtama = BaganAkun::where('kode_akun', '1101')->firstOrFail();
+        $hutangPph4a2 = BaganAkun::where('kode_akun', '2106')->firstOrFail();
+        $numbers = app(DocumentNumberService::class);
+
+        $response = $this->actingAs($finance)->postJson(route('pembayaran-faktur.store'), [
+            'payment_number' => $numbers->financial('PY'),
+            'invoice_lpb_id' => $invoice->id,
+            'tanggal_pembayaran' => today()->toDateString(),
+            'metode_pembayaran' => 'Transfer BCA',
+            'coa_kas_bank_id' => $kasUtama->id,
+            'jumlah_pembayaran' => 4500000,
+            'potongan_pph' => 500000,
+        ])->assertCreated();
+        $payment = PembayaranFaktur::findOrFail($response->json('data.id'));
+
+        $jurnal = \App\Models\Jurnal::with('details')->where('sumber_transaksi', 'PELUNASAN_HUTANG')->where('reff_id', $payment->id)->firstOrFail();
+        $this->assertEqualsWithDelta((float) $jurnal->total_debit, (float) $jurnal->total_kredit, 0.01);
+        $this->assertTrue($jurnal->details->contains(fn ($line) => (int) $line->coa_id === $hutangPph4a2->id && (float) $line->kredit === 500000.0));
+    }
+
+    public function test_payment_cannot_withhold_pph_when_invoice_has_no_pph_type(): void
+    {
+        $finance = User::factory()->create(['type' => User::ROLE_FINANCE]);
+        $supplier = Supplier::create(['nama' => 'Supplier Tanpa PPh', 'alamat' => 'Jl. Tanpa PPh', 'telp' => '0800000012', 'pembayaran' => 'Transfer']);
+        $invoice = FakturPembelian::create([
+            'no_invoice' => 'NOPPH-TEST-1',
+            'kode_supplier' => $supplier->id,
+            'tanggal' => today(),
+            'sub_total' => 2000000,
+            'jenis_pph' => null,
+            'dasar_pph' => 0,
+            'tarif_pph' => 0,
+            'grand_total' => 2000000,
+            'sisa_tagihan' => 2000000,
+            'status' => FakturPembelian::UNPAID,
+        ]);
+        $kasUtama = BaganAkun::where('kode_akun', '1101')->firstOrFail();
+        $numbers = app(DocumentNumberService::class);
+
+        $this->actingAs($finance)->postJson(route('pembayaran-faktur.store'), [
+            'payment_number' => $numbers->financial('PY'),
+            'invoice_lpb_id' => $invoice->id,
+            'tanggal_pembayaran' => today()->toDateString(),
+            'metode_pembayaran' => 'Transfer BCA',
+            'coa_kas_bank_id' => $kasUtama->id,
+            'jumlah_pembayaran' => 1900000,
+            'potongan_pph' => 100000,
+        ])->assertStatus(422)
+            ->assertJson(['message' => 'Invoice ini tidak menetapkan jenis PPh, sehingga tidak ada potongan PPh yang dapat dicatat.']);
+    }
+
     public function test_purchase_return_index_and_create_views_render(): void
     {
         $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);

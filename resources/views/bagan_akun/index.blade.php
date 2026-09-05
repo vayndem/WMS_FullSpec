@@ -30,7 +30,7 @@
                         @method('PUT')
                         <h6 class="mb-3 font-bold text-primary">Mapping Global</h6>
                         <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                            @foreach (['HUTANG_USAHA' => 'Hutang Supplier', 'PPN_MASUKAN' => 'PPN Masukan', 'HUTANG_PPH23' => 'Hutang PPh 23', 'BIAYA_BANK' => 'Biaya Bank', 'BEBAN_MATERAI' => 'Beban Materai', 'SELISIH_BAYAR' => 'Selisih Bayar', 'BIAYA_ONGKIR' => 'Biaya Angkut', 'DISKON_PEMBELIAN' => 'Diskon Pembelian'] as $key => $label)
+                            @foreach (['HUTANG_USAHA' => 'Hutang Supplier', 'PPN_MASUKAN' => 'PPN Masukan', 'HUTANG_PPH23' => 'Hutang PPh 23', 'HUTANG_PPH22' => 'Hutang PPh 22', 'HUTANG_PPH4A2' => 'Hutang PPh 4(2) Final', 'BIAYA_BANK' => 'Biaya Bank', 'BEBAN_MATERAI' => 'Beban Materai', 'SELISIH_BAYAR' => 'Selisih Bayar', 'BIAYA_ONGKIR' => 'Biaya Angkut', 'DISKON_PEMBELIAN' => 'Diskon Pembelian'] as $key => $label)
                                 <div class="form-control">
                                     <label class="label"><span class="label-text font-semibold">{{ $label }}</span></label>
                                     <select class="select select-bordered" name="global[{{ $key }}]" required>

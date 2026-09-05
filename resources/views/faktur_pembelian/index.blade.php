@@ -157,7 +157,7 @@
                                         <th>Metode</th>
                                         <th>Akun Kas/Bank (COA)</th>
                                         <th class="text-end">Jml Bayar</th>
-                                        <th class="text-end">PPh 23</th>
+                                        <th class="text-end" x-text="invoice?.jenis_pph ? pphLabel(invoice.jenis_pph) : 'PPh'"></th>
                                         <th class="text-end">Selisih</th>
                                         <th class="text-end">Total Pengurang</th>
                                         <th>User Finance</th>
@@ -177,7 +177,7 @@
                                             <td class="font-bold" x-text="item.metode_pembayaran"></td>
                                             <td class="font-bold text-info" x-text="item.coa_kas_bank ? `${item.coa_kas_bank.kode_akun} - ${item.coa_kas_bank.nama_akun}` : '-'"></td>
                                             <td class="text-end" x-text="formatRupiah(item.jumlah_pembayaran)"></td>
-                                            <td class="text-end" x-text="formatRupiah(item.potongan_pph23)"></td>
+                                            <td class="text-end" x-text="formatRupiah(item.potongan_pph)"></td>
                                             <td class="text-end">
                                                 <span x-text="formatRupiah(item.selisih_bayar)"></span>
                                                 <small class="block text-base-content/50" x-text="item.jenis_selisih ? item.jenis_selisih.replaceAll('_', ' ') : ''"></small>
@@ -225,8 +225,8 @@
                                         <input type="number" step="any" min="0" x-model.number="payment.jumlah_pembayaran" data-money-input class="input input-bordered">
                                     </div>
                                     <div class="form-control">
-                                        <label class="label"><span class="label-text font-semibold text-xs uppercase">Potongan PPh 23</span></label>
-                                        <input type="number" step="any" min="0" x-model.number="payment.potongan_pph23" data-money-input class="input input-bordered">
+                                        <label class="label"><span class="label-text font-semibold text-xs uppercase" x-text="invoice?.jenis_pph ? `Potongan ${pphLabel(invoice.jenis_pph)}` : 'Potongan PPh'"></span></label>
+                                        <input type="number" step="any" min="0" x-model.number="payment.potongan_pph" data-money-input class="input input-bordered" :disabled="!invoice?.jenis_pph">
                                     </div>
                                     <div class="form-control">
                                         <label class="label"><span class="label-text font-semibold text-xs uppercase">Materai Tambahan</span></label>
@@ -348,16 +348,20 @@
                 defaultPayment() {
                     return {
                         tanggal_pembayaran: new Date().toISOString().substring(0, 10), metode_pembayaran: '',
-                        coa_kas_bank_id: '', jumlah_pembayaran: 0, potongan_pph23: 0, potongan_materai: false,
+                        coa_kas_bank_id: '', jumlah_pembayaran: 0, potongan_pph: 0, potongan_materai: false,
                         biaya_transfer_bank: 0, selisih_bayar: 0, jenis_selisih: '', coa_selisih_id: '',
                         uang_muka_sumber_payment_id: '', uang_muka_dipakai: 0, keterangan: '',
                     };
                 },
 
+                pphLabel(type) {
+                    return { PPH23: 'PPh 23', PPH22: 'PPh 22', PPH4A2: 'PPh 4(2) Final' }[type] || type || '-';
+                },
+
                 get draft() {
                     const remaining = Number(this.invoice?.sisa_tagihan || 0);
                     const payment = Number(this.payment.jumlah_pembayaran) || 0;
-                    const pph = Number(this.payment.potongan_pph23) || 0;
+                    const pph = Number(this.payment.potongan_pph) || 0;
                     const stamp = this.payment.potongan_materai ? 10000 : 0;
                     const transfer = Number(this.payment.biaya_transfer_bank) || 0;
                     const difference = Number(this.payment.selisih_bayar) || 0;

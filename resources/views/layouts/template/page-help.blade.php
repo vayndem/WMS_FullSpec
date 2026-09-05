@@ -119,7 +119,7 @@
             'note' =>
                 $userType === \App\Models\User::ROLE_FINANCE
                     ? 'Anda hanya dapat mencatat atau membatalkan pembayaran. Header faktur dikelola Purchasing.'
-                    : 'PPh 23 diakui pada saat pembayaran, bukan saat faktur diterima.',
+                    : 'PPh (23/22/4(2) Final) diakui pada saat pembayaran, bukan saat faktur diterima.',
         ],
         'bagan-akun.' => [
             'title' => 'Panduan Bagan Akun',
@@ -213,7 +213,7 @@
         ],
         'tax-rate.' => [
             'title' => 'Panduan Tarif Pajak',
-            'intro' => 'Kelola tarif PPN dan PPh 23 berdasarkan tanggal efektif.',
+            'intro' => 'Kelola tarif PPN dan PPh (23, 22, 4(2) Final) berdasarkan tanggal efektif.',
             'steps' => [
                 'Tambahkan tarif dan tanggal mulai berlaku.',
                 'Tutup tarif lama dengan tanggal akhir sebelum mengaktifkan tarif baru.',

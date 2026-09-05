@@ -106,7 +106,16 @@
                             <label class="w-24 font-semibold">Ongkir:</label>
                             <input type="number" step="any" min="0" name="ongkir" x-model.number="ongkir" data-money-input class="input input-bordered input-sm flex-1 text-end">
                         </div>
-                        <div role="alert" class="alert alert-info mb-2 text-sm">PPh 23 dicatat saat pembayaran.</div>
+                        <div class="mb-2">
+                            <label class="label"><span class="label-text font-semibold">Jenis PPh</span></label>
+                            <select name="jenis_pph" class="select select-bordered select-sm w-full">
+                                <option value="" @selected(!$invoice->jenis_pph)>Tidak ada</option>
+                                <option value="PPH23" @selected($invoice->jenis_pph === 'PPH23')>PPh 23</option>
+                                <option value="PPH22" @selected($invoice->jenis_pph === 'PPH22')>PPh 22</option>
+                                <option value="PPH4A2" @selected($invoice->jenis_pph === 'PPH4A2')>PPh 4(2) Final</option>
+                            </select>
+                            <span class="label-text-alt mt-1 text-base-content/50">PPh dicatat dan dipotong saat pembayaran.</span>
+                        </div>
                         <div class="divider my-1"></div>
                         <div class="flex items-center justify-between">
                             <h5 class="text-lg font-bold">Grand Total:</h5>

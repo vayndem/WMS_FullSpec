@@ -21,7 +21,7 @@ class PembayaranFaktur extends Model
         'metode_pembayaran',
         'coa_kas_bank_id',
         'jumlah_pembayaran',
-        'potongan_pph23',
+        'potongan_pph',
         'potongan_materai',
         'biaya_transfer_bank',
         'selisih_bayar',
@@ -42,7 +42,7 @@ class PembayaranFaktur extends Model
     protected $casts = [
         'tanggal_pembayaran' => 'date',
         'jumlah_pembayaran' => 'decimal:2',
-        'potongan_pph23' => 'decimal:2',
+        'potongan_pph' => 'decimal:2',
         'potongan_materai' => 'decimal:2',
         'biaya_transfer_bank' => 'decimal:2',
         'selisih_bayar' => 'decimal:2',

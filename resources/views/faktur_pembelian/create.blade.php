@@ -154,7 +154,16 @@
                             <label class="w-24 font-semibold">Ongkir:</label>
                             <input type="number" step="any" min="0" x-model.number="form.ongkir" data-money-input class="input input-bordered input-sm flex-1 text-end">
                         </div>
-                        <div role="alert" class="alert alert-info mb-2 text-sm">PPh 23 dicatat saat pembayaran, bukan saat invoice diterima.</div>
+                        <div class="mb-2">
+                            <label class="label"><span class="label-text font-semibold">Jenis PPh</span></label>
+                            <select x-model="form.jenis_pph" class="select select-bordered select-sm w-full">
+                                <option value="">Tidak ada</option>
+                                <option value="PPH23">PPh 23</option>
+                                <option value="PPH22">PPh 22</option>
+                                <option value="PPH4A2">PPh 4(2) Final</option>
+                            </select>
+                            <span class="label-text-alt mt-1 text-base-content/50">PPh dicatat dan dipotong saat pembayaran, bukan saat invoice diterima.</span>
+                        </div>
                         <div class="divider my-1"></div>
                         <div class="flex items-center justify-between">
                             <h5 class="text-lg font-bold">Grand Total:</h5>
@@ -190,7 +199,7 @@
             submitting: false,
             form: {
                 no_invoice: '', tanggal: new Date().toISOString().substring(0, 10), tgl_deadline_pembayaran: '',
-                is_ppn: false, no_faktur_pajak: '', diskon: 0, ongkir: 0, note: '',
+                is_ppn: false, no_faktur_pajak: '', diskon: 0, ongkir: 0, jenis_pph: 'PPH23', note: '',
             },
 
             get selectedSupplier() {

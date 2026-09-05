@@ -11,11 +11,19 @@ class AccountingSetting extends Model
     public const HUTANG_USAHA = 'HUTANG_USAHA';
     public const PPN_MASUKAN = 'PPN_MASUKAN';
     public const HUTANG_PPH23 = 'HUTANG_PPH23';
+    public const HUTANG_PPH22 = 'HUTANG_PPH22';
+    public const HUTANG_PPH4A2 = 'HUTANG_PPH4A2';
     public const BIAYA_BANK = 'BIAYA_BANK';
     public const BEBAN_MATERAI = 'BEBAN_MATERAI';
     public const SELISIH_BAYAR = 'SELISIH_BAYAR';
     public const BIAYA_ONGKIR = 'BIAYA_ONGKIR';
     public const DISKON_PEMBELIAN = 'DISKON_PEMBELIAN';
+
+    public const PPH_LIABILITY_KEY = [
+        'PPH23' => self::HUTANG_PPH23,
+        'PPH22' => self::HUTANG_PPH22,
+        'PPH4A2' => self::HUTANG_PPH4A2,
+    ];
 
     protected $fillable = ['key', 'coa_id', 'description'];
 
@@ -31,6 +39,8 @@ class AccountingSetting extends Model
             self::HUTANG_USAHA => [['LIABILITAS', 'KREDIT']],
             self::PPN_MASUKAN => [['ASET', 'DEBIT']],
             self::HUTANG_PPH23 => [['LIABILITAS', 'KREDIT']],
+            self::HUTANG_PPH22 => [['LIABILITAS', 'KREDIT']],
+            self::HUTANG_PPH4A2 => [['LIABILITAS', 'KREDIT']],
             self::BIAYA_BANK => [['BEBAN', 'DEBIT']],
             self::BEBAN_MATERAI => [['BEBAN', 'DEBIT']],
             self::SELISIH_BAYAR => [['PENDAPATAN', 'KREDIT']],

@@ -28,6 +28,7 @@ class FakturPembelian extends Model
         'tarif_ppn',
         'ppn',
         'no_faktur_pajak',
+        'jenis_pph',
         'dasar_pph',
         'tarif_pph',
         'diskon',
