@@ -532,6 +532,42 @@ class WmsControlFrameworkTest extends TestCase
         $create->assertSee('function invoiceCreateForm', false);
     }
 
+    public function test_invoice_posts_ppn_impor_as_a_separate_creditable_line(): void
+    {
+        $accounting = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);
+        Auth::login($accounting);
+        $lpb = PenerimaanBarang::where('document_type', 'GOODS')
+            ->whereDoesntHave('invoiceReceipts')
+            ->whereNull('no_invoice')
+            ->where('status', PenerimaanBarang::POSTED)
+            ->with(['details', 'pembelian'])
+            ->firstOrFail();
+        $subTotal = $lpb->details->sum(fn ($d) => (float) $d->jumlah_barang_diterima * (float) $d->harga);
+
+        $invoice = FakturPembelian::create([
+            'no_invoice' => 'PPNIMPOR-TEST-1',
+            'kode_supplier' => $lpb->pembelian->supplier_id,
+            'tanggal' => today(),
+            'sub_total' => $subTotal,
+            'ppn_impor' => 150000,
+            'mata_uang_asing' => 'USD',
+            'kurs' => 15800,
+            'nilai_asing' => round($subTotal / 15800, 2),
+            'grand_total' => $subTotal + 150000,
+            'sisa_tagihan' => $subTotal + 150000,
+            'status' => FakturPembelian::UNPAID,
+        ]);
+        $invoice->receipts()->create(['lpb_id' => $lpb->id, 'amount' => $subTotal]);
+        $lpb->update(['no_invoice' => $invoice->no_invoice]);
+
+        app(WmsAccountingService::class)->postInvoice($invoice);
+
+        $jurnal = \App\Models\Jurnal::with('details')->where('sumber_transaksi', 'INVOICE_SUPPLIER')->where('reff_id', $invoice->id)->firstOrFail();
+        $this->assertEqualsWithDelta((float) $jurnal->total_debit, (float) $jurnal->total_kredit, 0.01);
+        $ppnImporAccount = BaganAkun::where('kode_akun', '1104')->firstOrFail();
+        $this->assertTrue($jurnal->details->contains(fn ($line) => (int) $line->coa_id === $ppnImporAccount->id && abs((float) $line->debit - 150000.0) < 0.01));
+    }
+
     public function test_purchase_return_after_partially_paid_invoice_reduces_invoice_balance(): void
     {
         $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);

@@ -22,6 +22,7 @@ class UpdateFakturPembelianRequest extends FormRequest
             'kode_supplier' => $this->kode_supplier ?? $this->supplier_id ?? $this->id_suplier,
             'diskon'        => $this->diskon ?? 0,
             'ongkir'        => $this->ongkir ?? 0,
+            'ppn_impor'     => $this->ppn_impor ?? 0,
             'pph'           => $this->pph ?? 0,
             'is_ppn'        => $this->boolean('is_ppn'),
         ]);
@@ -46,8 +47,12 @@ class UpdateFakturPembelianRequest extends FormRequest
             ],
             'diskon'                  => 'nullable|numeric|min:0',
             'ongkir'                  => 'nullable|numeric|min:0',
+            'ppn_impor'               => 'nullable|numeric|min:0',
             'jenis_pph'               => ['nullable', 'string', Rule::in(['PPH23', 'PPH22', 'PPH4A2'])],
             'note'                    => 'nullable|string',
+            'mata_uang_asing'         => ['nullable', 'string', 'regex:/^[A-Z]{3}$/'],
+            'kurs'                    => ['nullable', 'numeric', 'min:0.0001', Rule::requiredIf(fn () => filled($this->mata_uang_asing))],
+            'nilai_asing'             => ['nullable', 'numeric', 'min:0.01', Rule::requiredIf(fn () => filled($this->mata_uang_asing))],
         ];
     }
 }

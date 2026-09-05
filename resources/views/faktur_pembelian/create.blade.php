@@ -154,6 +154,26 @@
                             <label class="w-24 font-semibold">Ongkir:</label>
                             <input type="number" step="any" min="0" x-model.number="form.ongkir" data-money-input class="input input-bordered input-sm flex-1 text-end">
                         </div>
+                        <div class="mb-2 flex items-center gap-3">
+                            <label class="w-24 font-semibold">PPN Impor:</label>
+                            <input type="number" step="any" min="0" x-model.number="form.ppn_impor" data-money-input class="input input-bordered input-sm flex-1 text-end">
+                        </div>
+                        <div class="mb-2">
+                            <label class="label"><span class="label-text font-semibold">Mata Uang Asing (opsional)</span></label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <select x-model="form.mata_uang_asing" class="select select-bordered select-sm">
+                                    <option value="">Tidak ada (IDR)</option>
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="SGD">SGD</option>
+                                    <option value="JPY">JPY</option>
+                                    <option value="CNY">CNY</option>
+                                </select>
+                                <input type="number" step="any" min="0.0001" x-show="form.mata_uang_asing" x-cloak x-model.number="form.kurs" class="input input-bordered input-sm" placeholder="Kurs">
+                                <input type="number" step="any" min="0.01" x-show="form.mata_uang_asing" x-cloak x-model.number="form.nilai_asing" class="input input-bordered input-sm" placeholder="Nilai asing">
+                            </div>
+                            <span class="label-text-alt mt-1 text-base-content/50">Catatan referensi nilai asli invoice supplier dalam mata uang asing; seluruh perhitungan sistem tetap dalam Rupiah. Selisih kurs saat pembayaran dicatat lewat kolom Selisih Pembayaran di form pembayaran.</span>
+                        </div>
                         <div class="mb-2">
                             <label class="label"><span class="label-text font-semibold">Jenis PPh</span></label>
                             <select x-model="form.jenis_pph" class="select select-bordered select-sm w-full">
@@ -199,7 +219,8 @@
             submitting: false,
             form: {
                 no_invoice: '', tanggal: new Date().toISOString().substring(0, 10), tgl_deadline_pembayaran: '',
-                is_ppn: false, no_faktur_pajak: '', diskon: 0, ongkir: 0, jenis_pph: 'PPH23', note: '',
+                is_ppn: false, no_faktur_pajak: '', diskon: 0, ongkir: 0, ppn_impor: 0, jenis_pph: 'PPH23', note: '',
+                mata_uang_asing: '', kurs: '', nilai_asing: '',
             },
 
             get selectedSupplier() {
@@ -231,7 +252,7 @@
                 return this.form.is_ppn ? Math.round((this.subTotal * 11) / 100) : 0;
             },
             get grandTotal() {
-                return (this.subTotal + this.ppnNominal + (Number(this.form.ongkir) || 0)) - (Number(this.form.diskon) || 0);
+                return (this.subTotal + this.ppnNominal + (Number(this.form.ongkir) || 0) + (Number(this.form.ppn_impor) || 0)) - (Number(this.form.diskon) || 0);
             },
 
             pickSupplier(item) {

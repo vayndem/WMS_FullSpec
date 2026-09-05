@@ -54,6 +54,7 @@ class DatabaseSeeder extends Seeder
             ['kode_akun' => '1101', 'nama_akun' => 'Kas Utama', 'kategori_akun' => 'ASET', 'posisi_normal' => 'DEBIT', 'is_cash_bank' => true],
             ['kode_akun' => '1102', 'nama_akun' => 'Bank BCA', 'kategori_akun' => 'ASET', 'posisi_normal' => 'DEBIT', 'is_cash_bank' => true],
             ['kode_akun' => '1103', 'nama_akun' => 'PPN Masukan', 'kategori_akun' => 'ASET', 'posisi_normal' => 'DEBIT'],
+            ['kode_akun' => '1104', 'nama_akun' => 'PPN Masukan Impor', 'kategori_akun' => 'ASET', 'posisi_normal' => 'DEBIT'],
             ['kode_akun' => '1301', 'nama_akun' => 'Persediaan Bahan Baku', 'kategori_akun' => 'ASET', 'posisi_normal' => 'DEBIT'],
             ['kode_akun' => '1401', 'nama_akun' => 'Uang Muka Supplier', 'kategori_akun' => 'ASET', 'posisi_normal' => 'DEBIT'],
             ['kode_akun' => '2101', 'nama_akun' => 'Hutang Usaha (Supplier)', 'kategori_akun' => 'LIABILITAS', 'posisi_normal' => 'KREDIT'],
@@ -81,6 +82,8 @@ class DatabaseSeeder extends Seeder
             ['kode_akun' => '5202', 'nama_akun' => 'Beban Jasa Operasional', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT'],
             ['kode_akun' => '5301', 'nama_akun' => 'Beban Penyusutan Peralatan', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT'],
             ['kode_akun' => '5302', 'nama_akun' => 'Kerugian Pelepasan Asset', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT'],
+            ['kode_akun' => '4204', 'nama_akun' => 'Laba Selisih Kurs', 'kategori_akun' => 'PENDAPATAN', 'posisi_normal' => 'KREDIT'],
+            ['kode_akun' => '5303', 'nama_akun' => 'Rugi Selisih Kurs', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT'],
         ];
 
         foreach ($coas as $coa) {
@@ -94,6 +97,7 @@ class DatabaseSeeder extends Seeder
         $accountMappings = [
             AccountingSetting::HUTANG_USAHA => '2101',
             AccountingSetting::PPN_MASUKAN => '1103',
+            AccountingSetting::PPN_IMPOR => '1104',
             AccountingSetting::HUTANG_PPH23 => '2103',
             AccountingSetting::HUTANG_PPH22 => '2105',
             AccountingSetting::HUTANG_PPH4A2 => '2106',

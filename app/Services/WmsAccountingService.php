@@ -259,6 +259,9 @@ class WmsAccountingService
         if ((float) $invoice->ppn > 0) {
             $this->line($lines, AccountingSetting::accountId(AccountingSetting::PPN_MASUKAN), (float) $invoice->ppn, 0, 'PPN Masukan');
         }
+        if ((float) $invoice->ppn_impor > 0) {
+            $this->line($lines, AccountingSetting::accountId(AccountingSetting::PPN_IMPOR), (float) $invoice->ppn_impor, 0, 'PPN Masukan Impor');
+        }
         $this->line($lines, AccountingSetting::accountId(AccountingSetting::BIAYA_ONGKIR), (float) $invoice->ongkir, 0, 'Biaya angkut pembelian');
         $this->line($lines, AccountingSetting::accountId(AccountingSetting::DISKON_PEMBELIAN), 0, (float) $invoice->diskon, 'Diskon pembelian');
         $this->line($lines, AccountingSetting::accountId(AccountingSetting::HUTANG_USAHA), 0, (float) $invoice->grand_total, 'Hutang supplier');

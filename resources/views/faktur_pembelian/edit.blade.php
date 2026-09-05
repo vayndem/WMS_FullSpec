@@ -3,10 +3,11 @@
         isPpn: {{ $invoice->ppn > 0 ? 'true' : 'false' }},
         diskon: {{ $invoice->diskon }},
         ongkir: {{ $invoice->ongkir }},
+        ppnImpor: {{ $invoice->ppn_impor }},
         subTotal: {{ $invoice->sub_total }},
         submitting: false,
         get ppnNominal() { return this.isPpn ? Math.round((this.subTotal * 11) / 100) : 0; },
-        get grandTotal() { return (this.subTotal + this.ppnNominal + (Number(this.ongkir) || 0)) - (Number(this.diskon) || 0); },
+        get grandTotal() { return (this.subTotal + this.ppnNominal + (Number(this.ongkir) || 0) + (Number(this.ppnImpor) || 0)) - (Number(this.diskon) || 0); },
         async submit(event) {
             const form = event.target;
             if (this.isPpn && !/^\d{3}\.\d{3}-\d{2}\.\d{8}$/.test((form.no_faktur_pajak.value || '').trim())) {
@@ -105,6 +106,24 @@
                         <div class="mb-2 flex items-center gap-3">
                             <label class="w-24 font-semibold">Ongkir:</label>
                             <input type="number" step="any" min="0" name="ongkir" x-model.number="ongkir" data-money-input class="input input-bordered input-sm flex-1 text-end">
+                        </div>
+                        <div class="mb-2 flex items-center gap-3">
+                            <label class="w-24 font-semibold">PPN Impor:</label>
+                            <input type="number" step="any" min="0" name="ppn_impor" x-model.number="ppnImpor" data-money-input class="input input-bordered input-sm flex-1 text-end">
+                        </div>
+                        <div class="mb-2">
+                            <label class="label"><span class="label-text font-semibold">Mata Uang Asing (opsional)</span></label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <select name="mata_uang_asing" class="select select-bordered select-sm">
+                                    <option value="" @selected(!$invoice->mata_uang_asing)>Tidak ada (IDR)</option>
+                                    @foreach (['USD', 'EUR', 'SGD', 'JPY', 'CNY'] as $currency)
+                                        <option value="{{ $currency }}" @selected($invoice->mata_uang_asing === $currency)>{{ $currency }}</option>
+                                    @endforeach
+                                </select>
+                                <input type="number" step="any" min="0.0001" name="kurs" value="{{ $invoice->kurs }}" class="input input-bordered input-sm" placeholder="Kurs">
+                                <input type="number" step="any" min="0.01" name="nilai_asing" value="{{ $invoice->nilai_asing }}" class="input input-bordered input-sm" placeholder="Nilai asing">
+                            </div>
+                            <span class="label-text-alt mt-1 text-base-content/50">Catatan referensi nilai asli invoice supplier dalam mata uang asing; seluruh perhitungan sistem tetap dalam Rupiah.</span>
                         </div>
                         <div class="mb-2">
                             <label class="label"><span class="label-text font-semibold">Jenis PPh</span></label>

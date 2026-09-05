@@ -10,6 +10,7 @@ class AccountingSetting extends Model
 {
     public const HUTANG_USAHA = 'HUTANG_USAHA';
     public const PPN_MASUKAN = 'PPN_MASUKAN';
+    public const PPN_IMPOR = 'PPN_IMPOR';
     public const HUTANG_PPH23 = 'HUTANG_PPH23';
     public const HUTANG_PPH22 = 'HUTANG_PPH22';
     public const HUTANG_PPH4A2 = 'HUTANG_PPH4A2';
@@ -39,6 +40,7 @@ class AccountingSetting extends Model
         $expected = [
             self::HUTANG_USAHA => [['LIABILITAS', 'KREDIT']],
             self::PPN_MASUKAN => [['ASET', 'DEBIT']],
+            self::PPN_IMPOR => [['ASET', 'DEBIT']],
             self::HUTANG_PPH23 => [['LIABILITAS', 'KREDIT']],
             self::HUTANG_PPH22 => [['LIABILITAS', 'KREDIT']],
             self::HUTANG_PPH4A2 => [['LIABILITAS', 'KREDIT']],

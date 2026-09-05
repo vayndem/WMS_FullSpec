@@ -192,7 +192,7 @@ class FakturPembelianController extends Controller
             $pphPercent = $jenisPph ? TaxRate::rateFor($jenisPph, $validated['tanggal']) : 0;
             $ppnNominal = round(($subTotal * $ppnPercent) / 100, 2);
 
-            $grandTotal = ($subTotal + $ppnNominal + $validated['ongkir']) - $validated['diskon'];
+            $grandTotal = ($subTotal + $ppnNominal + $validated['ongkir'] + $validated['ppn_impor']) - $validated['diskon'];
 
             $createdInvoice = FakturPembelian::create([
                 'no_invoice'              => $validated['no_invoice'],
@@ -210,11 +210,15 @@ class FakturPembelianController extends Controller
                 'tarif_pph'               => $pphPercent,
                 'diskon'                  => $validated['diskon'],
                 'ongkir'                  => $validated['ongkir'],
+                'ppn_impor'               => $validated['ppn_impor'],
                 'pph'                     => 0,
                 'grand_total'             => $grandTotal,
                 'total_pembayaran'        => 0,
                 'sisa_tagihan'            => $grandTotal,
                 'note'                    => $validated['note'] ?? null,
+                'mata_uang_asing'         => $validated['mata_uang_asing'] ?? null,
+                'kurs'                    => $validated['kurs'] ?? null,
+                'nilai_asing'             => $validated['nilai_asing'] ?? null,
                 'status'                  => FakturPembelian::UNPAID,
             ]);
 
@@ -298,7 +302,7 @@ class FakturPembelianController extends Controller
             $pphPercent = $jenisPph ? TaxRate::rateFor($jenisPph, $validated['tanggal']) : 0;
             $ppnNominal = round(($subTotal * $ppnPercent) / 100, 2);
 
-            $grandTotal = ($subTotal + $ppnNominal + $validated['ongkir']) - $validated['diskon'];
+            $grandTotal = ($subTotal + $ppnNominal + $validated['ongkir'] + $validated['ppn_impor']) - $validated['diskon'];
             $sisaTagihan = $grandTotal - $invoice->total_pembayaran;
 
             $statusCode = FakturPembelian::paymentStatus($grandTotal, (float) $invoice->total_pembayaran);
@@ -320,11 +324,15 @@ class FakturPembelianController extends Controller
                 'tarif_pph'               => $pphPercent,
                 'diskon'                  => $validated['diskon'],
                 'ongkir'                  => $validated['ongkir'],
+                'ppn_impor'               => $validated['ppn_impor'],
                 'pph'                     => 0,
                 'grand_total'             => $grandTotal,
                 'sisa_tagihan'            => $sisaTagihan,
                 'status'                  => $statusCode,
                 'note'                    => $validated['note'] ?? null,
+                'mata_uang_asing'         => $validated['mata_uang_asing'] ?? null,
+                'kurs'                    => $validated['kurs'] ?? null,
+                'nilai_asing'             => $validated['nilai_asing'] ?? null,
             ]);
             $invoice->receipts()->delete();
             foreach ($lpbs as $lpb) {

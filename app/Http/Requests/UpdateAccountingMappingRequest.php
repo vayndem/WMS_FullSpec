@@ -22,6 +22,7 @@ class UpdateAccountingMappingRequest extends FormRequest
             'global' => 'required|array',
             'global.HUTANG_USAHA' => $account(),
             'global.PPN_MASUKAN' => $account(),
+            'global.PPN_IMPOR' => $account(),
             'global.HUTANG_PPH23' => $account(),
             'global.HUTANG_PPH22' => $account(),
             'global.HUTANG_PPH4A2' => $account(),
@@ -46,6 +47,7 @@ class UpdateAccountingMappingRequest extends FormRequest
             $expected = [
                 'HUTANG_USAHA' => ['LIABILITAS', 'KREDIT'],
                 'PPN_MASUKAN' => ['ASET', 'DEBIT'],
+                'PPN_IMPOR' => ['ASET', 'DEBIT'],
                 'HUTANG_PPH23' => ['LIABILITAS', 'KREDIT'],
                 'HUTANG_PPH22' => ['LIABILITAS', 'KREDIT'],
                 'HUTANG_PPH4A2' => ['LIABILITAS', 'KREDIT'],
