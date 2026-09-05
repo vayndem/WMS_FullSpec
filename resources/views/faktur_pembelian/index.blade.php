@@ -21,6 +21,9 @@
             })">
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 p-4">
                 <div role="tablist" class="tabs tabs-boxed">
+                    <a role="tab" class="tab" :class="extraParams.payment_status === 'PENDING_APPROVAL' && 'tab-active'" @click="extraParams.payment_status = 'PENDING_APPROVAL'">
+                        <i class="fa-solid fa-hourglass-half"></i>&nbsp;Menunggu Persetujuan
+                    </a>
                     <a role="tab" class="tab" :class="extraParams.payment_status === 'UNPAID' && 'tab-active'" @click="extraParams.payment_status = 'UNPAID'">
                         <i class="fa-regular fa-clock"></i>&nbsp;Belum Lunas
                     </a>
@@ -77,13 +80,17 @@
                                 <td class="text-end font-bold text-error" x-text="formatRupiah(row.sisa_tagihan)"></td>
                                 <td class="text-center">
                                     <span class="badge"
-                                        :class="{ 'badge-success': row.status === 'PAID', 'badge-warning': row.status === 'PARTIALLY_PAID', 'badge-ghost': row.status === 'UNPAID' }"
-                                        x-text="row.status === 'PAID' ? 'Lunas' : (row.status === 'PARTIALLY_PAID' ? 'Dibayar Sebagian' : 'Belum Dibayar')"></span>
+                                        :class="{ 'badge-success': row.status === 'PAID', 'badge-warning': row.status === 'PARTIALLY_PAID', 'badge-ghost': row.status === 'UNPAID', 'badge-info': row.status === 'PENDING_APPROVAL' }"
+                                        x-text="row.status === 'PAID' ? 'Lunas' : (row.status === 'PARTIALLY_PAID' ? 'Dibayar Sebagian' : (row.status === 'PENDING_APPROVAL' ? 'Menunggu Persetujuan' : 'Belum Dibayar'))"></span>
                                 </td>
                                 <td class="text-center">
                                     <div class="flex items-center justify-center gap-1">
                                         <button type="button" class="btn btn-outline btn-info btn-sm" title="Detail" @click="openShow(row.id)">
                                             <i class="fa-solid fa-eye"></i>
+                                        </button>
+                                        <button type="button" x-show="row.can_approve" class="btn btn-outline btn-success btn-sm" title="Setujui Invoice"
+                                            @click="approveInvoice(row.id)">
+                                            <i class="fa-solid fa-check"></i>
                                         </button>
                                         <button type="button" x-show="row.can_update" class="btn btn-outline btn-warning btn-sm" title="Edit Invoice"
                                             @click="openAjaxModal(`{{ url('faktur-pembelian') }}/${row.id}/edit`)">
@@ -140,6 +147,16 @@
                                 <div class="mt-2"><p class="text-sm text-base-content/50">No. Faktur Pajak</p><p class="font-bold" x-text="invoice?.no_faktur_pajak"></p></div>
                             </template>
                         </div>
+
+                        <template x-if="invoice?.status === 'PENDING_APPROVAL'">
+                            <div class="alert alert-info mb-3 text-sm">
+                                <i class="fa-solid fa-hourglass-half"></i>
+                                <span>Invoice ini menunggu persetujuan Accounting Manager sebelum dicatat ke Jurnal COA dan dapat dibayar.</span>
+                                <button type="button" x-show="invoice?.can_approve" class="btn btn-success btn-sm" @click="approveInvoice(invoice.id)">
+                                    <i class="fa-solid fa-check"></i> Setujui
+                                </button>
+                            </div>
+                        </template>
 
                         <div class="mb-3 mt-4 flex items-center justify-between">
                             <h6 class="font-bold"><i class="fa-solid fa-receipt text-info"></i> Riwayat Pembayaran</h6>
@@ -441,6 +458,24 @@
                         window.AppAlert.error('Gagal menyimpan pembayaran.');
                     } finally {
                         this.paymentSubmitting = false;
+                    }
+                },
+
+                async approveInvoice(id) {
+                    const result = await window.AppAlert.confirm('Setujui invoice ini? Setelah disetujui, invoice akan dicatat ke Jurnal COA dan tidak dapat diubah lagi.');
+                    if (!result.isConfirmed) return;
+                    try {
+                        const response = await fetch(`{{ url('faktur-pembelian') }}/${id}/approve`, {
+                            method: 'POST',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok) { window.AppAlert.ajaxError(data); return; }
+                        window.AppAlert.auto(data);
+                        this.fetchData();
+                        if (this.invoice?.id === id) this.openShow(id);
+                    } catch (error) {
+                        window.AppAlert.error('Gagal menyetujui invoice.');
                     }
                 },
 

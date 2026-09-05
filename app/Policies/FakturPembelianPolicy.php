@@ -9,7 +9,7 @@ class FakturPembelianPolicy
 {
     private function canViewInvoices(User $user): bool
     {
-        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_FINANCE, User::ROLE_ACCOUNTING]);
+        return $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_FINANCE, User::ROLE_ACCOUNTING, User::ROLE_ACCOUNTING_MANAGER]);
     }
 
     private function canManageInvoices(User $user): bool
@@ -20,6 +20,11 @@ class FakturPembelianPolicy
     private function canPayInvoices(User $user): bool
     {
         return $user->isFinance();
+    }
+
+    private function canApproveInvoices(User $user): bool
+    {
+        return $user->isAccountingManager();
     }
 
     public function viewAny(User $user): bool
@@ -53,11 +58,19 @@ class FakturPembelianPolicy
 
     public function pay(User $user, FakturPembelian $invoice): bool
     {
-        return $this->canPayInvoices($user) && $invoice->status !== FakturPembelian::VOID && (float) $invoice->sisa_tagihan > 0;
+        return $this->canPayInvoices($user)
+            && $invoice->status !== FakturPembelian::VOID
+            && $invoice->status !== FakturPembelian::PENDING_APPROVAL
+            && (float) $invoice->sisa_tagihan > 0;
     }
 
     public function voidPayment(User $user, FakturPembelian $invoice): bool
     {
         return $this->canPayInvoices($user) && $invoice->status !== FakturPembelian::VOID;
+    }
+
+    public function approve(User $user, FakturPembelian $invoice): bool
+    {
+        return $this->canApproveInvoices($user) && $invoice->status === FakturPembelian::PENDING_APPROVAL;
     }
 }

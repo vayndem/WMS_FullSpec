@@ -60,6 +60,9 @@ class WmsAccountingService
         if ($invoice && $invoice->status === FakturPembelian::VOID) {
             throw new RuntimeException('Invoice terkait retur ini sudah dibatalkan.');
         }
+        if ($invoice && $invoice->status === FakturPembelian::PENDING_APPROVAL) {
+            throw new RuntimeException('Invoice terkait retur ini masih menunggu persetujuan Accounting Manager.');
+        }
 
         $totalNilai = round((float) $retur->total_nilai, 2);
         $apPortion = 0.0;

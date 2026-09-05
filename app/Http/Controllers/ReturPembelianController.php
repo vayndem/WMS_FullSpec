@@ -51,7 +51,7 @@ class ReturPembelianController extends Controller
             ->get()
             ->reject(function (PenerimaanBarang $lpb) {
                 $invoice = $lpb->no_invoice ? FakturPembelian::where('no_invoice', $lpb->no_invoice)->first() : null;
-                return $invoice && $invoice->status === FakturPembelian::VOID;
+                return $invoice && in_array($invoice->status, [FakturPembelian::VOID, FakturPembelian::PENDING_APPROVAL], true);
             })
             ->values();
         $documentNumber = $this->numbers->external('RTV');
@@ -70,6 +70,7 @@ class ReturPembelianController extends Controller
 
         $invoice = $lpb->no_invoice ? FakturPembelian::where('no_invoice', $lpb->no_invoice)->first() : null;
         abort_if($invoice && $invoice->status === FakturPembelian::VOID, 422, 'Invoice terkait LPB ini sudah dibatalkan.');
+        abort_if($invoice && $invoice->status === FakturPembelian::PENDING_APPROVAL, 422, 'Invoice terkait LPB ini masih menunggu persetujuan Accounting Manager.');
 
         $items = $lpb->details->map(function (PenerimaanBarangDetail $detail) {
             return [
@@ -106,6 +107,7 @@ class ReturPembelianController extends Controller
             abort_if($lpb->document_type === 'SERVICE_BAP', 422, 'Retur pembelian hanya berlaku untuk penerimaan barang, bukan jasa.');
             $invoice = $lpb->no_invoice ? FakturPembelian::where('no_invoice', $lpb->no_invoice)->first() : null;
             abort_if($invoice && $invoice->status === FakturPembelian::VOID, 422, 'Invoice terkait LPB ini sudah dibatalkan.');
+            abort_if($invoice && $invoice->status === FakturPembelian::PENDING_APPROVAL, 422, 'Invoice terkait LPB ini masih menunggu persetujuan Accounting Manager.');
             $this->periods->assertOpen($validated['tanggal'], 'Retur pembelian');
 
             $retur = ReturPembelian::create([

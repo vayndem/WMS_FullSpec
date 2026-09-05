@@ -532,6 +532,60 @@ class WmsControlFrameworkTest extends TestCase
         $create->assertSee('function invoiceCreateForm', false);
     }
 
+    public function test_invoice_requires_accounting_manager_approval_before_posting_or_payment(): void
+    {
+        $accounting = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);
+        $manager = User::factory()->create(['type' => User::ROLE_ACCOUNTING_MANAGER]);
+        $finance = User::factory()->create(['type' => User::ROLE_FINANCE]);
+        $lpb = PenerimaanBarang::where('document_type', 'GOODS')
+            ->whereDoesntHave('invoiceReceipts')
+            ->whereNull('no_invoice')
+            ->where('status', PenerimaanBarang::POSTED)
+            ->with('pembelian')
+            ->firstOrFail();
+
+        $storeResponse = $this->actingAs($accounting)->postJson(route('faktur-pembelian.store'), [
+            'no_invoice' => 'MAKER-CHECKER-TEST-1',
+            'lpb_ids' => [$lpb->id],
+            'kode_supplier' => $lpb->pembelian->supplier_id,
+            'tanggal' => today()->toDateString(),
+            'is_ppn' => 0,
+        ])->assertCreated();
+        $invoice = FakturPembelian::findOrFail($storeResponse->json('data.id'));
+
+        $this->assertSame(FakturPembelian::PENDING_APPROVAL, $invoice->status);
+        $this->assertDatabaseMissing('wms_jurnal', ['sumber_transaksi' => 'INVOICE_SUPPLIER', 'reff_id' => $invoice->id]);
+
+        $this->actingAs($accounting)
+            ->get(route('reconciliation.index'))
+            ->assertOk()
+            ->assertDontSee('TIDAK VALID');
+
+        $kasUtama = BaganAkun::where('kode_akun', '1101')->firstOrFail();
+        $numbers = app(DocumentNumberService::class);
+        $this->actingAs($finance)->postJson(route('pembayaran-faktur.store'), [
+            'payment_number' => $numbers->financial('PY'),
+            'invoice_lpb_id' => $invoice->id,
+            'tanggal_pembayaran' => today()->toDateString(),
+            'metode_pembayaran' => 'Transfer BCA',
+            'coa_kas_bank_id' => $kasUtama->id,
+            'jumlah_pembayaran' => 100,
+        ])->assertStatus(403);
+
+        $this->actingAs($accounting)->postJson(route('faktur-pembelian.approve', $invoice->id))->assertStatus(403);
+
+        $this->actingAs($manager)->postJson(route('faktur-pembelian.approve', $invoice->id))->assertOk();
+
+        $invoice->refresh();
+        $this->assertSame(FakturPembelian::UNPAID, $invoice->status);
+        $this->assertSame($manager->id, $invoice->approved_by);
+        $this->assertNotNull($invoice->approved_at);
+        $jurnal = \App\Models\Jurnal::with('details')->where('sumber_transaksi', 'INVOICE_SUPPLIER')->where('reff_id', $invoice->id)->firstOrFail();
+        $this->assertEqualsWithDelta((float) $jurnal->total_debit, (float) $jurnal->total_kredit, 0.01);
+
+        $this->actingAs($manager)->postJson(route('faktur-pembelian.approve', $invoice->id))->assertStatus(403);
+    }
+
     public function test_invoice_posts_ppn_impor_as_a_separate_creditable_line(): void
     {
         $accounting = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);

@@ -20,6 +20,7 @@ class User extends Authenticatable
     public const ROLE_WAREHOUSE = 3;
     public const ROLE_ACCOUNTING = 4;
     public const ROLE_PRODUCTION = 5;
+    public const ROLE_ACCOUNTING_MANAGER = 6;
 
     public const ROLE_NAMES = [
         self::ROLE_SUPER_ADMIN => 'Super Admin',
@@ -28,6 +29,7 @@ class User extends Authenticatable
         self::ROLE_WAREHOUSE => 'Warehouse',
         self::ROLE_ACCOUNTING => 'Accounting',
         self::ROLE_PRODUCTION => 'Produksi',
+        self::ROLE_ACCOUNTING_MANAGER => 'Accounting Manager',
     ];
 
     /**
@@ -101,6 +103,11 @@ class User extends Authenticatable
     public function isProduction(): bool
     {
         return (int) $this->type === self::ROLE_PRODUCTION;
+    }
+
+    public function isAccountingManager(): bool
+    {
+        return (int) $this->type === self::ROLE_ACCOUNTING_MANAGER;
     }
 
     public function isWarehouseOperator(): bool

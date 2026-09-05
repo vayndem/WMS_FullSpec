@@ -38,6 +38,7 @@ class AccountingReconciliationController extends Controller
             ->first();
 
         $invoice = DB::table('wms_faktur_pembelian')->where('status', '!=', FakturPembelian::VOID)
+            ->where('status', '!=', FakturPembelian::PENDING_APPROVAL)
             ->selectRaw('COUNT(*) total_rows')
             ->selectRaw('SUM(CASE WHEN ABS(COALESCE(sisa_tagihan,0) - GREATEST(COALESCE(grand_total,0)-COALESCE(total_pembayaran,0),0)) <= 0.01 THEN 0 ELSE 1 END) invalid_rows')
             ->selectRaw('SUM(COALESCE(sisa_tagihan,0)) outstanding')
@@ -46,7 +47,9 @@ class AccountingReconciliationController extends Controller
         $grniExpected = (float) DB::table('wms_penerimaan_barang_detail')
             ->join('wms_penerimaan_barang', 'wms_penerimaan_barang.id_lpb', '=', 'wms_penerimaan_barang_detail.id_lpb')
             ->leftJoin('wms_faktur_pembelian_penerimaan', 'wms_faktur_pembelian_penerimaan.lpb_id', '=', 'wms_penerimaan_barang.id')
-            ->whereNull('wms_faktur_pembelian_penerimaan.id')
+            ->leftJoin('wms_faktur_pembelian', 'wms_faktur_pembelian.id', '=', 'wms_faktur_pembelian_penerimaan.invoice_lpb_id')
+            ->where(fn($query) => $query->whereNull('wms_faktur_pembelian_penerimaan.id')
+                ->orWhere('wms_faktur_pembelian.status', FakturPembelian::PENDING_APPROVAL))
             ->sum(DB::raw('wms_penerimaan_barang_detail.jumlah_barang_diterima * wms_penerimaan_barang_detail.harga'));
         $grniAccounts = DB::table('kategori_bahans')->whereNotNull('coa_clearing_lpb_id')
             ->distinct()->pluck('coa_clearing_lpb_id');
@@ -131,12 +134,15 @@ class AccountingReconciliationController extends Controller
                 ->selectRaw('total_debit-total_kredit difference')->latest('tanggal')->get();
         } elseif ($check === 'invoice' || $check === 'ap') {
             $rows = DB::table('wms_faktur_pembelian')->where('status', '!=', FakturPembelian::VOID)
+                ->where('status', '!=', FakturPembelian::PENDING_APPROVAL)
                 ->select('id', 'no_invoice', 'tanggal', 'grand_total', 'total_pembayaran', 'sisa_tagihan', 'status')
                 ->selectRaw('sisa_tagihan-GREATEST(grand_total-total_pembayaran,0) difference')->orderByDesc('tanggal')->get();
         } else {
             $goods = DB::table('wms_penerimaan_barang')->join('wms_penerimaan_barang_detail', 'wms_penerimaan_barang_detail.id_lpb', '=', 'wms_penerimaan_barang.id_lpb')
                 ->leftJoin('wms_faktur_pembelian_penerimaan', 'wms_faktur_pembelian_penerimaan.lpb_id', '=', 'wms_penerimaan_barang.id')
-                ->whereNull('wms_faktur_pembelian_penerimaan.id')
+                ->leftJoin('wms_faktur_pembelian', 'wms_faktur_pembelian.id', '=', 'wms_faktur_pembelian_penerimaan.invoice_lpb_id')
+                ->where(fn($query) => $query->whereNull('wms_faktur_pembelian_penerimaan.id')
+                    ->orWhere('wms_faktur_pembelian.status', FakturPembelian::PENDING_APPROVAL))
                 ->select('wms_penerimaan_barang.id', 'wms_penerimaan_barang.id_lpb', 'wms_penerimaan_barang.tanggal', 'wms_penerimaan_barang.no_po')
                 ->selectRaw('SUM(wms_penerimaan_barang_detail.jumlah_barang_diterima * wms_penerimaan_barang_detail.harga) amount')
                 ->groupBy('wms_penerimaan_barang.id', 'wms_penerimaan_barang.id_lpb', 'wms_penerimaan_barang.tanggal', 'wms_penerimaan_barang.no_po')->get();

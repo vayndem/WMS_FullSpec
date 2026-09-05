@@ -66,7 +66,7 @@ class AuthController extends Controller
                 compact('user'),
                 $this->productionDashboardData($user)
             ));
-        } else if ($user->isAccounting()) {
+        } else if ($user->isAccounting() || $user->isAccountingManager()) {
             return view('accounting.dashboard', compact('user'));
         } else {
             return view('dashboard', compact('user'));
@@ -192,7 +192,9 @@ class AuthController extends Controller
 
     private function paymentDashboardData(): array
     {
-        $activeInvoices = FakturPembelian::query()->where('status', '!=', FakturPembelian::VOID)->where('sisa_tagihan', '>', 0);
+        $activeInvoices = FakturPembelian::query()
+            ->whereNotIn('status', [FakturPembelian::VOID, FakturPembelian::PENDING_APPROVAL])
+            ->where('sisa_tagihan', '>', 0);
         $metrics = [
             'unpaid_count' => (clone $activeInvoices)->count(),
             'outstanding_value' => (float) (clone $activeInvoices)->sum('sisa_tagihan'),
@@ -207,7 +209,8 @@ class AuthController extends Controller
                 ->count(),
         ];
 
-        $priorityInvoices = FakturPembelian::with('supplier')->where('status', '!=', FakturPembelian::VOID)
+        $priorityInvoices = FakturPembelian::with('supplier')
+            ->whereNotIn('status', [FakturPembelian::VOID, FakturPembelian::PENDING_APPROVAL])
             ->where('sisa_tagihan', '>', 0)
             ->orderByRaw('tgl_deadline_pembayaran IS NULL')
             ->orderBy('tgl_deadline_pembayaran')

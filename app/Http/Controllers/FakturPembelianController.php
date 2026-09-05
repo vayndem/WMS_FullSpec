@@ -28,7 +28,7 @@ class FakturPembelianController extends Controller
             $paymentStatus = $request->input('payment_status');
             $query = FakturPembelian::with(['supplier'])
                 ->when(
-                    in_array((string) $paymentStatus, [FakturPembelian::UNPAID, FakturPembelian::PARTIALLY_PAID, FakturPembelian::PAID], true),
+                    in_array((string) $paymentStatus, [FakturPembelian::PENDING_APPROVAL, FakturPembelian::UNPAID, FakturPembelian::PARTIALLY_PAID, FakturPembelian::PAID], true),
                     fn($query) => $query->where('status', $paymentStatus)
                 )
                 ->when($request->filled('focus'), fn($query) => $query->whereKey($request->integer('focus')));
@@ -51,6 +51,9 @@ class FakturPembelianController extends Controller
                 })
                 ->addColumn('can_pay', function ($row) use ($request) {
                     return $request->user()->can('pay', $row);
+                })
+                ->addColumn('can_approve', function ($row) use ($request) {
+                    return $request->user()->can('approve', $row);
                 })
                 ->make(true);
         }
@@ -219,7 +222,7 @@ class FakturPembelianController extends Controller
                 'mata_uang_asing'         => $validated['mata_uang_asing'] ?? null,
                 'kurs'                    => $validated['kurs'] ?? null,
                 'nilai_asing'             => $validated['nilai_asing'] ?? null,
-                'status'                  => FakturPembelian::UNPAID,
+                'status'                  => FakturPembelian::PENDING_APPROVAL,
             ]);
 
             foreach ($lpbs as $lpb) {
@@ -233,14 +236,12 @@ class FakturPembelianController extends Controller
             $match = $this->matching->evaluate($createdInvoice);
             if ($match['status'] === 'BLOCKED') throw new \RuntimeException('Invoice gagal three-way matching dan diblokir.');
 
-            $this->accounting->postInvoice($createdInvoice);
-
             return $createdInvoice;
         });
 
         return response()->json([
             'success' => true,
-            'message' => 'Faktur pembelian berhasil dibuat dan dicatat ke Jurnal COA (Hutang Usaha).',
+            'message' => 'Faktur pembelian berhasil dibuat, menunggu persetujuan Accounting Manager sebelum dicatat ke Jurnal COA.',
             'data'    => $invoice
         ], 201);
     }
@@ -256,6 +257,7 @@ class FakturPembelianController extends Controller
                 'can_update' => request()->user()->can('update', $invoice),
                 'can_delete' => request()->user()->can('delete', $invoice),
                 'can_pay' => request()->user()->can('pay', $invoice),
+                'can_approve' => request()->user()->can('approve', $invoice),
             ])
         ]);
     }
@@ -303,10 +305,7 @@ class FakturPembelianController extends Controller
             $ppnNominal = round(($subTotal * $ppnPercent) / 100, 2);
 
             $grandTotal = ($subTotal + $ppnNominal + $validated['ongkir'] + $validated['ppn_impor']) - $validated['diskon'];
-            $sisaTagihan = $grandTotal - $invoice->total_pembayaran;
-
-            $statusCode = FakturPembelian::paymentStatus($grandTotal, (float) $invoice->total_pembayaran);
-            $sisaTagihan = max(0, $sisaTagihan);
+            $sisaTagihan = max(0, $grandTotal - $invoice->total_pembayaran);
 
             $invoice->update([
                 'no_invoice'              => $validated['no_invoice'],
@@ -328,7 +327,7 @@ class FakturPembelianController extends Controller
                 'pph'                     => 0,
                 'grand_total'             => $grandTotal,
                 'sisa_tagihan'            => $sisaTagihan,
-                'status'                  => $statusCode,
+                'status'                  => FakturPembelian::PENDING_APPROVAL,
                 'note'                    => $validated['note'] ?? null,
                 'mata_uang_asing'         => $validated['mata_uang_asing'] ?? null,
                 'kurs'                    => $validated['kurs'] ?? null,
@@ -344,12 +343,37 @@ class FakturPembelianController extends Controller
             }
             $match = $this->matching->evaluate($invoice);
             if ($match['status'] === 'BLOCKED') throw new \RuntimeException('Invoice gagal three-way matching dan diblokir.');
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Faktur pembelian berhasil diperbarui, menunggu persetujuan Accounting Manager.'
+        ]);
+    }
+
+    public function approve($id)
+    {
+        $invoice = FakturPembelian::findOrFail($id);
+        $this->authorize('approve', $invoice);
+
+        DB::transaction(function () use ($invoice) {
+            $invoice = FakturPembelian::lockForUpdate()->findOrFail($invoice->id);
+            abort_if($invoice->status !== FakturPembelian::PENDING_APPROVAL, 422, 'Invoice ini tidak menunggu persetujuan.');
+
+            $match = $this->matching->evaluate($invoice);
+            if ($match['status'] === 'BLOCKED') throw new \RuntimeException('Invoice gagal three-way matching dan diblokir.');
+
+            $invoice->update([
+                'status' => FakturPembelian::UNPAID,
+                'approved_by' => auth()->id(),
+                'approved_at' => now(),
+            ]);
             $this->accounting->postInvoice($invoice->fresh());
         });
 
         return response()->json([
             'success' => true,
-            'message' => 'Faktur pembelian berhasil diperbarui.'
+            'message' => 'Faktur pembelian disetujui dan dicatat ke Jurnal COA (Hutang Usaha).',
         ]);
     }
 
@@ -367,11 +391,13 @@ class FakturPembelianController extends Controller
                 $receipt->update(['no_invoice' => null]);
             }
 
-            $this->accounting->reverseAutomaticJournal(
-                'INVOICE_SUPPLIER',
-                $invoice->id,
-                'Pembatalan invoice supplier ' . $invoice->no_invoice
-            );
+            if ($invoice->status !== FakturPembelian::PENDING_APPROVAL) {
+                $this->accounting->reverseAutomaticJournal(
+                    'INVOICE_SUPPLIER',
+                    $invoice->id,
+                    'Pembatalan invoice supplier ' . $invoice->no_invoice
+                );
+            }
             $invoice->receipts()->delete();
             $invoice->update([
                 'voided_by' => auth()->id(),

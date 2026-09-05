@@ -10,6 +10,7 @@ class FakturPembelian extends Model
 {
     use HasFactory, Auditable;
 
+    public const PENDING_APPROVAL = 'PENDING_APPROVAL';
     public const UNPAID = 'UNPAID';
     public const PARTIALLY_PAID = 'PARTIALLY_PAID';
     public const PAID = 'PAID';
@@ -50,6 +51,8 @@ class FakturPembelian extends Model
         'voided_by',
         'voided_at',
         'void_reason',
+        'approved_by',
+        'approved_at',
     ];
 
     protected $appends = ['status_pembayaran'];
@@ -66,6 +69,7 @@ class FakturPembelian extends Model
     public function getStatusPembayaranAttribute(): string
     {
         return match ($this->status) {
+            self::PENDING_APPROVAL => 'Menunggu Persetujuan',
             self::PAID => 'Lunas',
             self::PARTIALLY_PAID => 'Dibayar Sebagian',
             self::VOID => 'Dibatalkan',
@@ -76,6 +80,11 @@ class FakturPembelian extends Model
     public function supplier()
     {
         return $this->belongsTo(Supplier::class, 'kode_supplier');
+    }
+
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function payments()

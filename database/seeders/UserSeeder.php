@@ -16,6 +16,7 @@ class UserSeeder extends Seeder
             ['name' => 'Warehouse Demo', 'email' => 'warehouse@wms.local', 'type' => User::ROLE_WAREHOUSE],
             ['name' => 'Accounting Demo', 'email' => 'accounting@wms.local', 'type' => User::ROLE_ACCOUNTING],
             ['name' => 'Produksi Demo', 'email' => 'produksi@wms.local', 'type' => User::ROLE_PRODUCTION],
+            ['name' => 'Accounting Manager Demo', 'email' => 'accounting-manager@wms.local', 'type' => User::ROLE_ACCOUNTING_MANAGER],
         ];
 
         foreach ($users as $attributes) {

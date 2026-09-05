@@ -165,13 +165,16 @@
                 'Pilih seluruh penerimaan barang yang tercantum dalam faktur.',
                 'Periksa PPN, diskon, ongkir, PPN Impor, dan nilai tagihan.',
                 'Untuk invoice supplier luar negeri, isi mata uang asing, kurs, dan nilai asing sebagai referensi; seluruh perhitungan sistem tetap dalam Rupiah.',
-                'Simpan faktur untuk memindahkan GRNI menjadi hutang supplier.',
-                'Catat pembayaran menggunakan akun yang ditandai sebagai Kas/Bank.',
+                'Simpan faktur — invoice akan berstatus "Menunggu Persetujuan" dan belum masuk Jurnal COA sampai disetujui Accounting Manager.',
+                'Catat pembayaran menggunakan akun yang ditandai sebagai Kas/Bank, hanya tersedia setelah invoice disetujui.',
             ],
-            'note' =>
+            'note' => match (true) {
                 $userType === \App\Models\User::ROLE_FINANCE
-                    ? 'Anda hanya dapat mencatat atau membatalkan pembayaran. Header faktur dikelola Purchasing. Jika kurs saat pembayaran berbeda dari kurs invoice, catat selisihnya lewat kolom Selisih Pembayaran (akun Laba/Rugi Selisih Kurs).'
-                    : 'PPh (23/22/4(2) Final) diakui pada saat pembayaran, bukan saat faktur diterima.',
+                    => 'Anda hanya dapat mencatat atau membatalkan pembayaran. Header faktur dikelola Purchasing. Jika kurs saat pembayaran berbeda dari kurs invoice, catat selisihnya lewat kolom Selisih Pembayaran (akun Laba/Rugi Selisih Kurs).',
+                $userType === \App\Models\User::ROLE_ACCOUNTING_MANAGER
+                    => 'Sebagai Accounting Manager, Anda menyetujui invoice pada tab "Menunggu Persetujuan" sebelum dicatat ke Jurnal COA (Hutang Usaha) dan dapat dibayar.',
+                default => 'PPh (23/22/4(2) Final) diakui pada saat pembayaran, bukan saat faktur diterima.',
+            },
         ],
         'bagan-akun.' => [
             'title' => 'Panduan Bagan Akun',
