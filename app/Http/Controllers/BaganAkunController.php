@@ -11,6 +11,8 @@ use App\Models\AccountingSetting;
 use App\Models\KategoriBahan;
 use App\Http\Requests\UpdateAccountingMappingRequest;
 use Illuminate\Support\Facades\DB;
+use App\Exports\GenericTableExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class BaganAkunController extends Controller
 {
@@ -84,6 +86,48 @@ class BaganAkunController extends Controller
             'filters' => $filters,
             'generatedAt' => now(),
         ])->setPaper('a4', 'landscape')->stream('daftar-coa.pdf');
+    }
+
+    public function reportExcel(Request $request)
+    {
+        $this->authorize('viewAny', BaganAkun::class);
+
+        $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
+        $search = trim((string) $request->input('search', ''));
+        $fields = ['kode_akun', 'nama_akun', 'kategori_akun', 'posisi_normal', 'keterangan'];
+        $query = BaganAkun::query()->orderBy('kode_akun');
+
+        if ($search !== '') {
+            $query->where(function ($builder) use ($fields, $search) {
+                foreach ($fields as $field) {
+                    $builder->orWhere($field, 'like', "%{$search}%");
+                }
+            });
+        }
+
+        foreach ($filters as $field => $value) {
+            if (in_array($field, $fields, true)) {
+                $query->where($field, 'like', "%{$value}%");
+            }
+        }
+
+        $rows = $query->limit(5000)->get()->map(fn($row) => [
+            'kode_akun' => $row->kode_akun,
+            'nama_akun' => $row->nama_akun,
+            'kategori_akun' => $row->kategori_akun,
+            'posisi_normal' => $row->posisi_normal,
+            'keterangan' => $row->keterangan ?: '-',
+        ]);
+
+        $columns = [
+            ['key' => 'kode_akun', 'label' => 'Kode Akun'],
+            ['key' => 'nama_akun', 'label' => 'Nama Akun'],
+            ['key' => 'kategori_akun', 'label' => 'Kategori'],
+            ['key' => 'posisi_normal', 'label' => 'Posisi Normal'],
+            ['key' => 'keterangan', 'label' => 'Keterangan'],
+        ];
+
+        return Excel::download(new GenericTableExport($columns, $rows), 'daftar-coa-' . now()->format('Ymd-His') . '.xlsx');
     }
 
     public function create()

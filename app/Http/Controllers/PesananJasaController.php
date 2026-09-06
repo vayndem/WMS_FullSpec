@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\DocumentNumberService;
+use App\Exports\GenericTableExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PesananJasaController extends Controller
 {
@@ -35,6 +37,16 @@ class PesananJasaController extends Controller
         $rows = PesananJasa::with('supplier')->withSum('serviceDetails', 'subtotal')->when($request->filled('q'), fn($q) => $q->where('no_po', 'like', '%' . $request->q . '%'))->get()->map(fn($po) => ['number' => $po->no_po, 'date' => $po->tanggal, 'supplier' => $po->supplier->nama, 'amount' => 'Rp ' . number_format($po->service_details_sum_subtotal, 0, ',', '.')]);
         return Pdf::loadView('reports.table-pdf', ['title' => 'Daftar PO Jasa', 'columns' => [['key' => 'number', 'label' => 'No PO'], ['key' => 'date', 'label' => 'Tanggal'], ['key' => 'supplier', 'label' => 'Supplier'], ['key' => 'amount', 'label' => 'Nilai', 'align' => 'right']], 'rows' => $rows, 'search' => $request->q, 'filters' => collect(), 'generatedAt' => now()])->setPaper('a4', 'landscape')->stream('po-jasa.pdf');
     }
+
+    public function reportExcel(Request $request)
+    {
+        $this->authorize('viewAny', PesananJasa::class);
+        $rows = PesananJasa::with('supplier')->withSum('serviceDetails', 'subtotal')->when($request->filled('q'), fn($q) => $q->where('no_po', 'like', '%' . $request->q . '%'))->get()->map(fn($po) => ['number' => $po->no_po, 'date' => $po->tanggal, 'supplier' => $po->supplier->nama, 'amount' => (float) $po->service_details_sum_subtotal]);
+        $columns = [['key' => 'number', 'label' => 'No PO'], ['key' => 'date', 'label' => 'Tanggal'], ['key' => 'supplier', 'label' => 'Supplier'], ['key' => 'amount', 'label' => 'Nilai']];
+
+        return Excel::download(new GenericTableExport($columns, $rows), 'po-jasa-' . now()->format('Ymd-His') . '.xlsx');
+    }
+
     public function create()
     {
         $this->authorize('create', PesananJasa::class);

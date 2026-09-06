@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth')->group(function () {
     Route::get('faktur-pembelian/lpb-detail/{id_lpb}', [FakturPembelianController::class, 'getLpbDetail'])->name('faktur-pembelian.get-lpb-detail');
     Route::get('faktur-pembelian-report/pdf', [FakturPembelianController::class, 'reportPdf'])->name('faktur-pembelian.report.pdf');
+    Route::get('faktur-pembelian-report/excel', [FakturPembelianController::class, 'reportExcel'])->name('faktur-pembelian.report.excel');
     Route::post('faktur-pembelian/{id}/approve', [FakturPembelianController::class, 'approve'])->name('faktur-pembelian.approve');
     Route::resource('faktur-pembelian', FakturPembelianController::class);
     Route::get('pembayaran-faktur/available-advances/{supplier}', [PembayaranFakturController::class, 'availableAdvances'])->name('pembayaran-faktur.available-advances');

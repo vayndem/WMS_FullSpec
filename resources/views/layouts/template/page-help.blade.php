@@ -287,6 +287,17 @@
             ],
             'note' => 'Retur yang dibalik akan mengembalikan stok, hutang invoice, dan uang muka terkait secara otomatis.',
         ],
+        'executive-dashboard.' => [
+            'title' => 'Panduan Dashboard Eksekutif',
+            'intro' => 'Ringkasan tren dan komposisi keuangan untuk pengambilan keputusan manajemen.',
+            'steps' => [
+                'Tren Nilai Persediaan menunjukkan saldo akun persediaan pada akhir tiap bulan, 6 bulan terakhir.',
+                'Aging Hutang Supplier mengelompokkan sisa tagihan invoice berdasarkan seberapa lewat jatuh temponya.',
+                'Top Supplier menunjukkan lima supplier dengan total nilai invoice terbesar sepanjang waktu.',
+                'Biaya per Kategori Bahan menunjukkan total beban tahun berjalan per kategori bahan.',
+            ],
+            'note' => 'Data dihitung langsung dari jurnal yang sudah diposting; invoice yang masih menunggu persetujuan tidak dihitung.',
+        ],
         'aset.' => [
             'title' => 'Panduan Aset Tetap',
             'intro' => 'Kelola register aset, penyusutan, dan pelepasan aset perusahaan.',

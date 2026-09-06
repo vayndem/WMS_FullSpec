@@ -7,6 +7,8 @@ use App\Http\Requests\StoreSupplierRequest;
 use App\Http\Requests\UpdateSupplierRequest;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Exports\GenericTableExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class SupplierController extends Controller
 {
@@ -91,6 +93,39 @@ class SupplierController extends Controller
             'filters' => $filters,
             'generatedAt' => now(),
         ])->setPaper('a4', 'landscape')->stream('daftar-supplier.pdf');
+    }
+
+    public function reportExcel(Request $request)
+    {
+        $this->authorize('viewAny', Supplier::class);
+
+        $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
+        $search = trim((string) $request->input('search', ''));
+        $fields = ['nama', 'alamat', 'npwp', 'telp', 'up', 'pembayaran'];
+        $query = Supplier::query()->orderBy('nama');
+
+        if ($search !== '') {
+            $query->where(function ($builder) use ($fields, $search) {
+                foreach ($fields as $field) {
+                    $builder->orWhere($field, 'like', "%{$search}%");
+                }
+            });
+        }
+
+        foreach ($filters as $field => $value) {
+            if (in_array($field, $fields, true)) {
+                $query->where($field, 'like', "%{$value}%");
+            }
+        }
+
+        $columns = collect($fields)->map(fn($field) => [
+            'key' => $field,
+            'label' => $field === 'telp' ? 'Telepon' : ucfirst($field),
+        ])->all();
+        $rows = $query->limit(5000)->get()->map(fn($row) => collect($fields)
+            ->mapWithKeys(fn($field) => [$field => $row->{$field} ?: '-'])->all());
+
+        return Excel::download(new GenericTableExport($columns, $rows), 'daftar-supplier-' . now()->format('Ymd-His') . '.xlsx');
     }
 
     public function create()

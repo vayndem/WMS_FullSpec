@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use App\Services\AccountingPeriodService;
 use App\Services\DocumentNumberService;
 use App\Exports\StockOpnameInventoryExport;
+use App\Exports\GenericTableExport;
 use Maatwebsite\Excel\Facades\Excel;
 
 class StockOpnameController extends Controller
@@ -256,6 +257,44 @@ class StockOpnameController extends Controller
             'filters' => $filters,
             'generatedAt' => now(),
         ])->setPaper('a4', 'landscape')->stream('daftar-stock-opname.pdf');
+    }
+
+    public function reportListExcel(Request $request)
+    {
+        $this->authorize('viewAny', StockOpname::class);
+        $search = trim((string) $request->input('search', ''));
+        $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
+        $query = StockOpname::with('warehouse')->withCount('details')->latest('cutoff_at');
+        if ($request->user()->isProduction()) {
+            $query->whereIn('warehouse_id', $request->user()->accessibleGudangIds('opname'));
+        }
+        if ($search !== '') {
+            $query->where(fn($q) => $q->where('number', 'like', "%{$search}%")
+                ->orWhere('status', 'like', "%{$search}%")
+                ->orWhereHas('warehouse', fn($warehouse) => $warehouse->where('nama', 'like', "%{$search}%")));
+        }
+        foreach (['number', 'cutoff_at', 'status'] as $field) {
+            if ($filters->has($field)) $query->where($field, 'like', "%{$filters[$field]}%");
+        }
+        if ($filters->has('warehouse_name')) {
+            $query->whereHas('warehouse', fn($warehouse) => $warehouse->where('nama', 'like', "%{$filters['warehouse_name']}%"));
+        }
+        $rows = $query->limit(5000)->get()->map(fn($row) => [
+            'number' => $row->number,
+            'cutoff_at' => $row->cutoff_at->format('d-m-Y H:i'),
+            'warehouse' => $row->warehouse->nama ?? '-',
+            'items' => $row->details_count,
+            'status' => $row->status,
+        ]);
+        $columns = [
+            ['key' => 'number', 'label' => 'Nomor'],
+            ['key' => 'cutoff_at', 'label' => 'Cut-off'],
+            ['key' => 'warehouse', 'label' => 'Gudang'],
+            ['key' => 'items', 'label' => 'Jumlah Item'],
+            ['key' => 'status', 'label' => 'Status'],
+        ];
+
+        return Excel::download(new GenericTableExport($columns, $rows), 'daftar-stock-opname-' . now()->format('Ymd-His') . '.xlsx');
     }
 
     private function replaceDetails(StockOpname $opname, array $items): void

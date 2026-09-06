@@ -17,6 +17,8 @@ use App\Services\DocumentNumberService;
 use App\Services\StokGudangService;
 use App\Services\WarehouseExecutionService;
 use App\Models\ReservasiPersediaan;
+use App\Exports\GenericTableExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PemakaianBarangController extends Controller
 {
@@ -148,6 +150,71 @@ class PemakaianBarangController extends Controller
             'filters' => $filters,
             'generatedAt' => now(),
         ])->setPaper('a4', 'landscape')->stream('daftar-npk.pdf');
+    }
+
+    public function reportExcel(Request $request)
+    {
+        $this->authorize('viewAny', PemakaianBarang::class);
+        $financial = $request->user()->can('viewFinancials', PemakaianBarang::class);
+
+        $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
+        $search = trim((string) $request->input('search', ''));
+        $query = PemakaianBarang::with('barang')
+            ->when($request->user()->isProduction(), fn ($q) => $q->whereIn('id_gudang_asal', $request->user()->accessibleGudangIds('npk')))
+            ->when($request->filled('status'), fn($q) => $q->where('status', $request->status))
+            ->latest('tanggal');
+
+        if ($search !== '') {
+            $query->where(fn($q) => $q->where('kode', 'like', "%{$search}%")
+                ->orWhere('kode_datapesanan', 'like', "%{$search}%")
+                ->orWhere('tanggal', 'like', "%{$search}%")
+                ->orWhere('operator', 'like', "%{$search}%")
+                ->orWhereHas('barang', fn($barang) => $barang->where('nama', 'like', "%{$search}%")));
+        }
+
+        foreach (['kode', 'kode_datapesanan', 'tanggal', 'jumlah', 'status', 'operator'] as $field) {
+            if ($filters->has($field)) {
+                $query->where($field, 'like', "%{$filters[$field]}%");
+            }
+        }
+        if ($filters->has('nama_barang')) {
+            $query->whereHas('barang', fn($barang) => $barang->where('nama', 'like', "%{$filters['nama_barang']}%"));
+        }
+
+        $rows = $query->limit(5000)->get()->map(function ($row) use ($financial) {
+            $data = [
+                'kode' => $row->kode,
+                'kode_datapesanan' => $row->kode_datapesanan ?: '-',
+                'tanggal' => $row->tanggal,
+                'nama_barang' => $row->barang->nama ?? '-',
+                'jumlah' => (float) $row->jumlah,
+                'satuan' => $row->satuan_transaksi ?: ($row->barang->satuan ?? ''),
+                'status' => $row->status === PemakaianBarang::POSTED ? 'Keluar' : ($row->status === PemakaianBarang::REVERSED ? 'Reversed' : 'Draft'),
+                'operator' => $row->operator ?: '-',
+            ];
+            if ($financial) {
+                $data['harga_satuan'] = (float) $row->harga_satuan;
+                $data['total_nilai'] = (float) $row->total_nilai;
+            }
+            return $data;
+        });
+
+        $columns = [
+            ['key' => 'kode', 'label' => 'Kode NPK'],
+            ['key' => 'kode_datapesanan', 'label' => 'Kode Pesanan'],
+            ['key' => 'tanggal', 'label' => 'Tanggal'],
+            ['key' => 'nama_barang', 'label' => 'Nama Barang'],
+            ['key' => 'jumlah', 'label' => 'Jumlah'],
+            ['key' => 'satuan', 'label' => 'Satuan'],
+        ];
+        if ($financial) {
+            $columns[] = ['key' => 'harga_satuan', 'label' => 'Harga Rata-rata'];
+            $columns[] = ['key' => 'total_nilai', 'label' => 'Nilai Pemakaian'];
+        }
+        $columns[] = ['key' => 'status', 'label' => 'Status'];
+        $columns[] = ['key' => 'operator', 'label' => 'Operator'];
+
+        return Excel::download(new GenericTableExport($columns, $rows), 'daftar-npk-' . now()->format('Ymd-His') . '.xlsx');
     }
 
     public function create()

@@ -7,6 +7,8 @@ use App\Http\Requests\StoreTipePembebananRequest;
 use App\Http\Requests\UpdateTipePembebananRequest;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Exports\GenericTableExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class TipePembebananController extends Controller
 {
@@ -66,6 +68,38 @@ class TipePembebananController extends Controller
             'filters' => $filters,
             'generatedAt' => now(),
         ])->stream('daftar-tipe-pembebanan.pdf');
+    }
+
+    public function reportExcel(Request $request)
+    {
+        $this->authorize('viewAny', TipePembebanan::class);
+
+        $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
+        $search = trim((string) $request->input('search', ''));
+        $query = TipePembebanan::query()->orderBy('nama_tipe');
+
+        if ($search !== '') {
+            $query->where(fn($q) => $q->where('nama_tipe', 'like', "%{$search}%")
+                ->orWhere('keterangan', 'like', "%{$search}%"));
+        }
+
+        foreach (['nama_tipe', 'keterangan'] as $field) {
+            if ($filters->has($field)) {
+                $query->where($field, 'like', "%{$filters[$field]}%");
+            }
+        }
+
+        $rows = $query->limit(5000)->get()->map(fn($row) => [
+            'nama_tipe' => $row->nama_tipe,
+            'keterangan' => $row->keterangan ?: '-',
+        ]);
+
+        $columns = [
+            ['key' => 'nama_tipe', 'label' => 'Nama Tipe'],
+            ['key' => 'keterangan', 'label' => 'Keterangan'],
+        ];
+
+        return Excel::download(new GenericTableExport($columns, $rows), 'daftar-tipe-pembebanan-' . now()->format('Ymd-His') . '.xlsx');
     }
 
     public function create()

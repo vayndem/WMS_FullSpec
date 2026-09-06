@@ -23,6 +23,8 @@ use App\Models\LayerPersediaan;
 use App\Models\LotPersediaan;
 use App\Services\DocumentNumberService;
 use App\Services\StokGudangService;
+use App\Exports\GenericTableExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PenerimaanBarangController extends Controller
 {
@@ -210,6 +212,75 @@ class PenerimaanBarangController extends Controller
             'filters' => $filters,
             'generatedAt' => now(),
         ])->setPaper('a4', 'landscape')->stream('daftar-lpb.pdf');
+    }
+
+    public function reportExcel(Request $request)
+    {
+        $this->authorize('viewAny', PenerimaanBarang::class);
+
+        $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
+        $search = trim((string) $request->input('search', ''));
+        $query = PenerimaanBarang::with(['pembelian.supplier', 'gudang', 'user'])->latest('tanggal');
+
+        $receiptType = strtoupper((string) $request->input('jenis_lpb', ''));
+        if (in_array($receiptType, ['3', 'SERVICE_BAP'], true)) {
+            $query->where(fn($builder) => $builder
+                ->where('jenis_lpb', 3)
+                ->orWhere('document_type', 'SERVICE_BAP'));
+        } elseif (in_array($receiptType, ['1', 'GOODS'], true)) {
+            $query->where(fn($builder) => $builder
+                ->where('jenis_lpb', 1)
+                ->orWhere('document_type', 'GOODS')
+                ->orWhereNull('document_type'));
+        }
+
+        if ($search !== '') {
+            $query->where(fn($q) => $q->where('id_lpb', 'like', "%{$search}%")
+                ->orWhere('tanggal', 'like', "%{$search}%")
+                ->orWhere('no_po', 'like', "%{$search}%")
+                ->orWhere('no_sj', 'like', "%{$search}%")
+                ->orWhereHas('pembelian.supplier', fn($supplier) => $supplier->where('nama', 'like', "%{$search}%"))
+                ->orWhereHas('user', fn($user) => $user->where('name', 'like', "%{$search}%")));
+        }
+
+        foreach (['id_lpb', 'tanggal', 'no_po', 'no_sj'] as $field) {
+            if ($filters->has($field)) {
+                $query->where($field, 'like', "%{$filters[$field]}%");
+            }
+        }
+        if ($filters->has('supplier_nama')) {
+            $query->whereHas('pembelian.supplier', fn($supplier) => $supplier->where('nama', 'like', "%{$filters['supplier_nama']}%"));
+        }
+        if ($filters->has('gudang_nama')) {
+            $query->whereHas('gudang', fn($gudang) => $gudang->where('nama', 'like', "%{$filters['gudang_nama']}%"));
+        }
+        if ($filters->has('user_nama')) {
+            $query->whereHas('user', fn($user) => $user->where('name', 'like', "%{$filters['user_nama']}%"));
+        }
+
+        $rows = $query->limit(5000)->get()->map(fn($row) => [
+            'id_lpb' => $row->id_lpb,
+            'jenis_lpb' => $row->document_type === 'SERVICE_BAP' ? 'BAP Jasa' : 'LPB Barang',
+            'tanggal' => $row->tanggal,
+            'no_po' => $row->no_po,
+            'supplier_nama' => $row->pembelian->supplier->nama ?? '-',
+            'gudang_nama' => $row->gudang->nama ?? '-',
+            'no_sj' => $row->no_sj ?: '-',
+            'user_nama' => $row->user->name ?? "User #{$row->id_user}",
+        ]);
+
+        $columns = [
+            ['key' => 'id_lpb', 'label' => 'No LPB'],
+            ['key' => 'jenis_lpb', 'label' => 'Jenis'],
+            ['key' => 'tanggal', 'label' => 'Tanggal'],
+            ['key' => 'no_po', 'label' => 'No PO'],
+            ['key' => 'supplier_nama', 'label' => 'Supplier'],
+            ['key' => 'gudang_nama', 'label' => 'Gudang'],
+            ['key' => 'no_sj', 'label' => 'No SJ'],
+            ['key' => 'user_nama', 'label' => 'Petugas'],
+        ];
+
+        return Excel::download(new GenericTableExport($columns, $rows), 'daftar-lpb-' . now()->format('Ymd-His') . '.xlsx');
     }
 
     public function create()

@@ -7,9 +7,14 @@
                 <h3 class="text-2xl font-bold">Laporan Keuangan</h3>
                 <p class="text-base-content/60">Neraca Saldo, Buku Besar, Laba Rugi, dan Neraca berdasarkan jurnal yang sudah diposting.</p>
             </div>
-            <a href="{{ route('financial-statements.neraca.pdf', ['as_of' => $asOf->format('Y-m-d')]) }}" target="_blank" rel="noopener" class="btn btn-error btn-sm">
-                <i class="fa-solid fa-file-pdf"></i> PDF
-            </a>
+            <div class="flex gap-2">
+                <a href="{{ route('financial-statements.neraca.pdf', ['as_of' => $asOf->format('Y-m-d')]) }}" target="_blank" rel="noopener" class="btn btn-error btn-sm">
+                    <i class="fa-solid fa-file-pdf"></i> PDF
+                </a>
+                <a href="{{ route('financial-statements.neraca.excel', ['as_of' => $asOf->format('Y-m-d')]) }}" target="_blank" rel="noopener" class="btn btn-success btn-sm">
+                    <i class="fa-solid fa-file-excel"></i> Excel
+                </a>
+            </div>
         </div>
 
         @include('financial_statements._tabs')

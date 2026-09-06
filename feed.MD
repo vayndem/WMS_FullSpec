@@ -1,6 +1,6 @@
-# WMS FullSpec Technical Reference
+# ERP - Modul WMS Technical Reference
 
-Dokumen ini adalah referensi teknis untuk developer, QA, DBA, dan maintainer. Isinya disesuaikan dengan codebase aktif per 10 Agustus 2026.
+Dokumen ini adalah referensi teknis untuk developer, QA, DBA, dan maintainer. **Refresh terakhir: 6 September 2026** — mencakup rename sweep baku Indonesia (tabel `wms_*`, class model/controller Indonesia), migrasi Tailwind CSS + daisyUI + Alpine.js, role `accounting_manager` (maker-checker approval invoice), Material Request yang dibuka untuk semua role, dashboard "all tasks" + chart per role, Dashboard Eksekutif, export Excel di seluruh laporan, depresiasi aset otomatis, PPh 22/4(2) Final, dan field multi-currency ringan pada faktur pembelian. Jika ada detail yang meleset, `CLAUDE.md` di root repo adalah sumber kebenaran paling mutakhir.
 
 Untuk gambaran produk dan alur bisnis yang lebih singkat, lihat [README.md](README.md).
 
@@ -8,14 +8,15 @@ Untuk gambaran produk dan alur bisnis yang lebih singkat, lihat [README.md](READ
 
 | Komponen | Implementasi |
 |---|---|
-| Backend | PHP 8.1+, Laravel 10 |
+| Backend | PHP 8.2+, Laravel 12 |
 | Database | MySQL |
 | Web auth | Laravel session auth |
 | API auth | Laravel Sanctum |
-| UI | Blade, Bootstrap 5, jQuery, DataTables |
-| Build | Vite 5 |
-| Report | DomPDF, TCPDF, Laravel Excel |
-| Test | PHPUnit 10 |
+| UI | Blade, Tailwind CSS, daisyUI, Alpine.js |
+| Build | Vite |
+| Chart | Chart.js (via `taskChart` Alpine component) |
+| Report | DomPDF, TCPDF, Laravel Excel (Maatwebsite) |
+| Test | PHPUnit 11 |
 
 Arsitektur aplikasi berbentuk modular monolith Laravel.
 
@@ -23,17 +24,17 @@ Arsitektur aplikasi berbentuk modular monolith Laravel.
 
 | Lapisan | Lokasi | Tanggung jawab |
 |---|---|---|
-| Routes | `routes/web.php`, `routes/api.php` | endpoint dan middleware |
-| Controllers | `app/Http/Controllers` | orkestrasi use case |
+| Routes | `routes/*.php` (dipisah per domain: `auth.php`, `warehouse.php`, `procurement.php`, `finance.php`, `accounting.php`, `assets-and-services.php`, di-require dari `routes/web.php`) | endpoint dan middleware |
+| Controllers | `app/Http/Controllers` | orkestrasi use case, HTTP-only |
 | Form Requests | `app/Http/Requests` | validasi dan sebagian authorization |
-| Policies | `app/Policies` | role dan state guard |
-| Services | `app/Services` | FIFO, accounting, numbering, opname, asset |
+| Policies | `app/Policies` | role dan state guard, auto-discovered |
+| Services | `app/Services` | FIFO, accounting, numbering, opname, asset, reconciliation, transfer, three-way match, landed cost, reversal |
 | Models | `app/Models` | relasi, cast, helper domain |
 | Migrations | `database/migrations` | schema dan constraint |
 | Seeders | `database/seeders` | role, user, master data, demo data |
-| Views | `resources/views` | halaman dan template report |
+| Views | `resources/views` | Blade + Tailwind CSS + daisyUI + Alpine.js |
 
-Perubahan stok dan akuntansi penting dibungkus `DB::transaction()`. Operasi yang rawan race condition memakai `lockForUpdate()`.
+Perubahan stok dan akuntansi penting dibungkus `DB::transaction()`. Operasi yang rawan race condition memakai `lockForUpdate()`. Controller tidak boleh memanggil `->validate()` langsung — semua validasi wajib lewat Form Request (diperiksa `tests/Unit/ArchitectureConventionTest.php`).
 
 ## 3. Authentication
 
@@ -65,6 +66,7 @@ Role aktif:
 | 3 | `warehouse` | operasional gudang umum |
 | 4 | `accounting` | akuntansi dan kontrol |
 | 5 | `production` | operasional gudang produksi |
+| 6 | `accounting_manager` | approve faktur pembelian saja (maker-checker), ditambahkan 2026-09-05 |
 
 Helper penting pada `User`:
 
@@ -74,6 +76,7 @@ Helper penting pada `User`:
 - `isWarehouse()`
 - `isAccounting()`
 - `isProduction()`
+- `isAccountingManager()`
 - `isWarehouseOperator()`
 - `accessibleGudangIds($ability)`
 - `canAccessGudang($gudangId, $ability)`
@@ -100,23 +103,27 @@ Artinya:
 | `warehouse@wms.local` | `Wms12345!` | 3 | Warehouse |
 | `accounting@wms.local` | `Wms12345!` | 4 | Accounting |
 | `produksi@wms.local` | `Wms12345!` | 5 | Produksi |
+| `accounting-manager@wms.local` | `Wms12345!` | 6 | Accounting Manager |
 
 ## 4. Authorization
 
 ### 4.1 Gambaran role
 
-| Capability | 0 | 1 | 2 | 3 | 4 | 5 |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|
-| Bypass policy | yes | no | no | no | no | no |
-| Supplier | yes | yes | no | no | no | no |
-| Request | yes | yes | no | yes | yes | no |
-| LPB | yes | yes | no | yes | no | no |
-| NPK | yes | yes | no | yes | yes | yes |
-| Transfer Gudang | yes | no | no | yes | no | yes |
-| Stock Opname physical | yes | no | no | yes | no | yes |
-| Stock Opname valuation/posting | yes | no | no | no | yes | no |
-| Payment | yes | no | yes | no | no | no |
-| COA/Jurnal/Tax/Period Lock | yes | no | no | no | yes | no |
+| Capability | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Bypass policy | yes | no | no | no | no | no | no |
+| Supplier | yes | yes | no | no | no | no | no |
+| Request (semua role kecuali Purchasing bisa buat) | yes | approve | yes | yes | approve | yes | yes |
+| LPB | yes | yes | no | yes | no | no | no |
+| NPK | yes | yes | no | yes | yes | yes | no |
+| Transfer Gudang | yes | no | no | yes | no | yes | no |
+| Stock Opname physical | yes | no | no | yes | no | yes | no |
+| Stock Opname valuation/posting | yes | no | no | no | yes | no | no |
+| Faktur Pembelian — create | yes | yes | no | no | no | no | no |
+| Faktur Pembelian — approve (maker-checker) | yes | no | no | no | no | no | yes |
+| Payment | yes | no | yes | no | no | no | no |
+| COA/Jurnal/Tax/Period Lock | yes | no | no | no | yes | no | no |
+| Dashboard Eksekutif | yes | no | no | no | yes | no | yes |
 
 ### 4.2 Produksi
 
@@ -126,7 +133,7 @@ Karakteristiknya:
 
 - bisa masuk dashboard produksi
 - bisa melihat saldo stok dan mutasi gudang yang di-assign
-- bisa membuat dan melihat `NPK` dari gudang yang di-assign
+- bisa membuat dan melihat `NPK` (Pemakaian Barang) dari gudang yang di-assign
 - bisa membuat dan melihat `Transfer Gudang` yang melibatkan gudang yang di-assign
 - bisa membuat dan submit `Stock Opname` pada gudang yang di-assign
 - tidak punya visibilitas finansial
@@ -144,10 +151,20 @@ Policy sekarang diarahkan mengikuti pola helper private di atas, misalnya:
 
 Contoh file yang sudah mengikuti pola ini:
 
-- `NpkPolicy`
+- `PemakaianBarangPolicy`
 - `TransferGudangPolicy`
 - `StockOpnamePolicy`
 - beberapa policy accounting/procurement lain
+
+### 4.4 Maker-checker faktur pembelian (2026-09-05)
+
+Supplier invoice sekarang tidak langsung diposting saat dibuat:
+
+- `FakturPembelianController::store()`/`update()` menyimpan invoice dengan `status = PENDING_APPROVAL`, tanpa memanggil `postInvoice()`.
+- Hanya role `accounting_manager` yang bisa approve, lewat `POST faktur-pembelian/{id}/approve` (`FakturPembelianController::approve()`, gated `FakturPembelianPolicy::approve()`). Approve inilah yang memicu posting jurnal ke GL.
+- Invoice berstatus `PENDING_APPROVAL` tidak bisa dibayar (`FakturPembelianPolicy::pay()`) atau diretur (`ReturPembelianController` menolak LPB dari invoice yang masih pending).
+- Cek rekonsiliasi (`AccountingReconciliationService`) dan dashboard Finance mengecualikan invoice `PENDING_APPROVAL` supaya tidak muncul sebagai temuan/aksi palsu.
+- Gate lain (COA/jurnal manual, period lock, controlled reversal) **belum** ikut pola maker-checker ini — masih dipegang penuh oleh `accounting`.
 
 ## 5. Gudang dan multi-warehouse
 
@@ -207,21 +224,21 @@ Belum ada WIP manufacturing khusus. Sistem masih memakai pola pemakaian bahan la
 
 ## 6. Domain flow penting
 
-### 6.1 LPB
+### 6.1 LPB (Penerimaan Barang)
 
 - LPB mengacu ke PO
 - posting LPB menambah `stok_gudangs`
 - posting LPB membuat `wms_layer_persediaan`
 - jurnal LPB: debit persediaan, kredit GRNI
 
-### 6.2 NPK
+### 6.2 NPK (Pemakaian Barang)
 
 - input bisa memakai satuan kecil bila bahan punya konversi
 - sistem menyimpan:
   - `jumlah` sebagai jumlah transaksi
   - `jumlah_stok` sebagai jumlah dalam satuan stok utama
   - `satuan_transaksi` sebagai snapshot unit input
-- FIFO layer dikonsumsi dari gudang asal
+- FIFO layer dikonsumsi dari gudang asal (hanya layer `AVAILABLE`, tidak blocked, tidak expired)
 - jurnal NPK: debit beban, kredit persediaan
 
 Catatan untuk produksi:
@@ -251,6 +268,32 @@ Role:
 - `Warehouse` dan `Produksi`: hitung fisik, update, submit
 - `Accounting`: approve, reject, post
 
+### 6.5 Retur Pembelian (termasuk pasca-invoice, 2026-09-05)
+
+- Retur bisa dibuat terhadap LPB yang belum di-invoice (mengurangi GRNI) **atau** yang sudah di-invoice/dibayar.
+- Jika invoice masih punya `sisa_tagihan`, nilai retur langsung mengurangi `grand_total`/`sisa_tagihan` invoice tersebut (debit Hutang Usaha, bukan GRNI).
+- Jika nilai retur melebihi sisa tagihan (termasuk kasus sudah lunas penuh), kelebihannya dicatat sebagai uang muka supplier (`jenis_selisih=UANG_MUKA_SUPPLIER`, tanpa kas keluar) yang bisa dipakai di pembayaran berikutnya lewat `available-advances/{supplier}`.
+- Reversal retur (`InventoryReversalService::reverseReturPembelian()`) memulihkan saldo invoice dan membatalkan uang muka terkait (ditolak bila uang muka sudah terpakai).
+
+### 6.6 Faktur Pembelian — approval, PPh, dan multi-currency ringan
+
+- Alur approval: lihat [4.4](#44-maker-checker-faktur-pembelian-2026-09-05).
+- `jenis_pph` (`PPH23`/`PPH22`/`PPH4A2`, nullable) dipilih saat input invoice; masing-masing punya akun hutang sendiri (`HUTANG_PPH23`/`HUTANG_PPH22`/`HUTANG_PPH4A2`). Pembayaran menolak potongan PPh bila invoice tidak punya `jenis_pph`.
+- `mata_uang_asing`/`kurs`/`nilai_asing` menyimpan referensi kurs asal invoice supplier luar negeri — **bukan** ledger multi-currency sungguhan; `grand_total` tetap IDR, dihitung dari nilai yang sudah dikonversi saat LPB. Selisih kurs saat pembayaran memakai mekanisme umum `jenis_selisih`/`coa_selisih_id` (akun baru: `4204` Laba Selisih Kurs, `5303` Rugi Selisih Kurs).
+- `ppn_impor` diposting sebagai baris nyata ke `AccountingSetting::PPN_IMPOR` (akun aset, `1104`), dikreditkan ke Hutang Usaha bersama `grand_total`.
+
+### 6.7 Depresiasi aset otomatis (2026-09-05)
+
+- `AsetAccountingService::runAutomaticDepreciation()` (`POST aset/penyusutan-otomatis`) menjalankan depresiasi garis lurus untuk semua aset aktif pada satu periode, melewati aset yang sudah didepresiasi di periode itu atau tidak punya umur manfaat.
+- Form manual (`StorePenyusutanAsetRequest`) tetap ada untuk penyesuaian, default ke nilai garis lurus yang disarankan bila `amount` dikosongkan.
+- Metode declining-balance belum diimplementasikan.
+
+### 6.8 Material Request (dibuka untuk semua role, 2026-09-05)
+
+- Semua role kecuali Purchasing sekarang bisa membuat Material Request (`MaterialRequestPolicy::create()`); Purchasing dan Accounting tetap yang approve.
+- `requests.requested_by` mencatat pembuat; non-reviewer hanya melihat request miliknya sendiri di `request.index`.
+- Status baru `FULFILLED` otomatis aktif begitu setiap baris `realisasi` mencapai `jumlah_acc` — dihitung terpusat di `MaterialRequestFulfillmentService::syncRealisasi()`, dipanggil dari setiap tempat yang dulu meng-update `realisasi` secara manual (`PesananPembelianController`/`PesananPembelianDetailController`). Status kembali ke `APPROVED` bila baris PO terkait diedit/dihapus di bawah kuota penuh.
+
 ## 7. Dashboard
 
 Dashboard aktif:
@@ -261,6 +304,7 @@ Dashboard aktif:
 - `gudang.dashboard`
 - `accounting.dashboard`
 - `produksi.dashboard`
+- `executive-dashboard.index` — khusus Accounting dan Accounting Manager
 
 Dashboard produksi menampilkan:
 
@@ -270,6 +314,21 @@ Dashboard produksi menampilkan:
 - opname aktif
 - transfer terbaru
 - NPK terbaru
+
+### 7.1 "All tasks" grid + chart per role (2026-09-05)
+
+Setiap dashboard role (lewat `AuthController::dashboard()`) sekarang juga menampilkan koleksi `tasks` — setiap item outstanding yang relevan untuk role tersebut sebagai kartu klik (`task-grid.blade.php`) plus chart bar/doughnut (`task-chart.blade.php` + `resources/js/task-chart.js`, Alpine component `taskChart`). Ini murni tambahan — stat-card dan daftar top-5/top-8 yang sudah ada sebelumnya tidak dihapus. Setiap kartu tugas mengarah ke halaman index terkait (kebanyakan tidak otomatis ter-filter ke status spesifik itu).
+
+### 7.2 Dashboard Eksekutif (2026-09-06)
+
+`App\Http\Controllers\ExecutiveDashboardController` + `App\Services\ExecutiveDashboardService`, gate `viewExecutiveDashboard` (Accounting + Accounting Manager). Menyajikan 4 chart langsung dari data GL yang sudah posted, tanpa tabel baru:
+
+1. Tren nilai persediaan — saldo GL akhir bulan (6 bulan terakhir) pada setiap akun `KategoriBahan.coa_persediaan_id`.
+2. Aging hutang (AP aging) — `sisa_tagihan` dikelompokkan per bucket hari terlambat dari `tgl_deadline_pembayaran`, mengecualikan invoice `VOID`/`PENDING_APPROVAL`.
+3. Top 5 supplier berdasarkan total invoice sepanjang waktu.
+4. Biaya per kategori bahan tahun berjalan — debit GL pada `KategoriBahan.coa_beban_id`.
+
+Chart memakai komponen `taskChart` yang sama (diperluas dengan tipe `line` dan opsi `beginAtZero`) lewat partial baru `metric-chart.blade.php` (label/data-driven, bukan task-count-driven).
 
 ## 8. Database aktif
 
@@ -294,11 +353,14 @@ Dashboard produksi menampilkan:
 | Service | `wms_kategori_jasa`, `wms_pesanan_jasa_detail`, `wms_penerimaan_jasa_detail`, `wms_penerimaan_jasa_alokasi` |
 | WMS control | `wms_log_audit`, `wms_kunci_operasi_dokumen`, `wms_pembalikan_dokumen`, `wms_lokasi_gudang`, `wms_lot_persediaan`, `wms_serial_persediaan`, `wms_reservasi_persediaan`, `wms_pesanan_pengambilan`, `wms_pesanan_pengambilan_detail`, `wms_pemeriksaan_kualitas`, `wms_pemeriksaan_kualitas_detail`, `wms_biaya_tambahan`, `wms_biaya_tambahan_alokasi`, `wms_saran_pengisian_ulang` |
 
+Penambahan kolom penting sejak refresh sebelumnya (semua di tabel yang sudah ada, bukan tabel baru): `wms_faktur_pembelian.jenis_pph`/`mata_uang_asing`/`kurs`/`nilai_asing`/`ppn_impor`/`approved_by`/`approved_at`, `wms_pembayaran_faktur.potongan_pph` (rename dari `potongan_pph23`)/`uang_muka_sumber_payment_id`/`uang_muka_dipakai`, `wms_retur_pembelian.invoice_id`/`hutang_reduction`/`advance_payment_id`, `requests.requested_by`.
+
 ### 8.2 Migration yang relevan dengan role
 
 - `2026_08_07_000001_add_type_to_users_table.php`
 - `2026_08_10_000001_create_user_roles_table.php`
 - `2026_08_10_000002_add_production_role_to_user_roles.php`
+- `2026_09_05_000003_add_accounting_manager_role_to_user_roles.php`
 
 ## 9. Seeder
 
@@ -317,6 +379,8 @@ Pada sinkronisasi multi-warehouse:
 
 - user `Warehouse` mendapat akses ke semua gudang
 - user `Produksi` otomatis di-assign ke `Gudang Produksi`
+
+`UserRoleSeeder`/`UserSeeder` sekarang juga membuat role dan akun `accounting_manager` (lihat [3.4](#34-development-accounts)).
 
 ## 10. Installation
 
@@ -339,54 +403,57 @@ npm run dev
 
 Catatan:
 
-- repository belum menyediakan `.env.example`
+- `.env.example` sudah tersedia di root repo
 - `migrate --seed` dipakai untuk development/test
 - production sebaiknya memisahkan master seeder dan demo seeder
 
 ## 11. Testing
 
-Status terakhir:
+Status terakhir (6 September 2026):
 
-- 44 tests passed, 150 assertions
-- 125 assertions
+- 79 tests passed, 2.499+ assertions
 
 Perintah:
 
 ```bash
-php artisan test
+php artisan test                              # full suite
+php artisan test --filter=TestClassName       # satu class
+composer test:case-sensitive                  # cek casing ala Linux CI, dari Windows
 ```
 
 Cakupan utama:
 
-- accounting control policy
-- asset and service policy
-- chart of account safety
-- inventory cost calculator
-- material unit conversion
-- multi-warehouse policy
-- payment allocation
-- stock opname policy
-- warehouse role policy
-- feature auth dasar
-
-Tambahan test terbaru mencakup role `Produksi`.
+- accounting control policy, chart of account safety, financial statement (Neraca Saldo/Buku Besar/Laba Rugi/Neraca)
+- asset and service policy, depresiasi otomatis
+- inventory cost calculator, material unit conversion
+- multi-warehouse policy, transfer in-transit, reservation/picking, three-way match, landed cost, reversal, rekonsiliasi
+- payment allocation, PPh 23/22/4(2) Final, supplier advance generation & consumption
+- stock opname policy, retur pembelian pasca-invoice
+- warehouse role policy, feature auth dasar
+- role `Produksi`
+- maker-checker approval invoice (`accounting_manager`)
+- Material Request lintas role + auto-`FULFILLED`
+- dashboard per role (task grid + chart), Dashboard Eksekutif
+- export Excel (generic table + financial statement)
 
 ## 12. Technical debt
 
 Daftar yang masih relevan:
 
-1. `.env.example` sudah tersedia; secret production tetap wajib dikelola di luar repository
-2. belum ada UI admin user dan reset password
-3. `DatabaseSeeder` masih mencampur master dan demo
-4. integration test inventory control sudah mencakup rekonsiliasi, matching, transfer transit, reservation/picking, landed cost, dan reversal; workflow procurement penuh masih dapat diperluas
-5. belum ada token management UI/API untuk Sanctum
-6. beberapa file lama masih punya encoding teks yang jelek
-7. CI GitHub Actions sudah tersedia untuk build, fresh migration+seed, dan test
-8. belum ada model manufacturing/WIP khusus untuk produksi
+1. belum ada UI admin user dan reset password
+2. `DatabaseSeeder` masih mencampur master dan demo
+3. belum ada token management UI/API untuk Sanctum
+4. beberapa file lama masih punya encoding teks yang jelek
+5. CI GitHub Actions sudah tersedia untuk build, fresh migration+seed, dan test
+6. belum ada model manufacturing/WIP khusus untuk produksi
+7. maker-checker baru mencakup faktur pembelian — COA/jurnal manual, period lock, dan controlled reversal masih dipegang penuh oleh `accounting` tanpa checker kedua
+8. "Lacak Pembelian" (laporan disposisi per-pembelian: sisa di gudang vs jadi beban vs jadi selisih opname) sudah didesain (lihat `CLAUDE.md`) tapi belum dibangun
 
-## 15. WMS control standard (12 Agustus 2026)
+Sudah selesai (dipertahankan sebagai catatan historis, bukan tugas aktif lagi): `.env.example`, NSFP pada faktur pembelian, laporan keuangan statutori, PPh 22/4(2) Final, depresiasi otomatis, field multi-currency ringan + PPN Impor, retur pembelian pasca-invoice, rename sweep baku Indonesia, migrasi Tailwind/daisyUI/Alpine, maker-checker invoice, Material Request lintas role, dashboard task grid + chart, Dashboard Eksekutif, export Excel di seluruh laporan.
 
-Framework kontrol baru mencakup:
+## 13. WMS control standard (12 Agustus 2026)
+
+Framework kontrol mencakup:
 
 - `wms_log_audit` untuk histori perubahan dokumen kritis
 - `wms_kunci_operasi_dokumen` untuk idempotency
@@ -401,18 +468,20 @@ Framework kontrol baru mencakup:
 
 Urutan transfer standar adalah `DRAFT -> DIAJUKAN -> DIKIRIM -> DITERIMA`. Urutan receiving adalah `RECEIVED -> QC_COMPLETED/QC_COMPLETED_WITH_HOLD -> PUTAWAY`. Dokumen posted tidak boleh diedit; gunakan workflow reversal atau void sumber transaksi.
 
-## 13. Next development yang masuk akal
+## 14. Next development yang masuk akal
 
-Setelah tahap 1 `Produksi`, pengembangan berikut yang paling natural:
+Berdasarkan "Known gaps" di `CLAUDE.md` (paling relevan per 2026-09-06), yang paling natural dikerjakan berikutnya:
 
-1. validasi transfer masuk khusus gudang produksi
-2. pembatasan list gudang lebih konsisten di seluruh form dan report
-3. flow WIP / barang dalam proses bila produksi ingin dihitung sebagai aset sementara
-4. approval transfer antar gudang yang lebih ketat
-5. dashboard dan laporan khusus produksi per gudang
-6. integration test untuk role `Produksi` pada controller
+1. Sisi outbound-to-customer (Sales Order, Surat Jalan/Delivery Order, retur penjualan, AR/piutang) — belum ada sama sekali, butuh sesi desain/scoping sendiri sebelum dibangun.
+2. Barcode/RF scanning sungguhan untuk putaway/picking (saat ini murni form web manual).
+3. Wave/batch picking, cross-docking, slotting/ABC analysis.
+4. Model BOM/manufacturing order/WIP untuk `Gudang Produksi` (saat ini masih direct-consumption via NPK).
+5. Layer integrasi eksternal (API/EDI ke supplier, marketplace, ERP lain) di luar base Sanctum.
+6. Kitting/bundling.
+7. Perluasan pola maker-checker ke COA/jurnal manual, period lock, dan controlled reversal, bila kebutuhan "dual control" itu masih dianggap relevan.
+8. "Lacak Pembelian" — laporan tiga-arah (sisa stok vs beban NPK vs selisih opname) per LPB/invoice; data sudah ada dan saling terhubung, tinggal disatukan dalam satu view.
 
-## 14. Source of truth
+## 15. Source of truth
 
 Jika dokumentasi dan kode berbeda, gunakan urutan berikut:
 

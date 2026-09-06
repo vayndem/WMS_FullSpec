@@ -16,6 +16,8 @@ use App\Models\TaxRate;
 use App\Models\Supplier;
 use App\Services\DocumentNumberService;
 use App\Services\ThreeWayMatchService;
+use App\Exports\GenericTableExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class FakturPembelianController extends Controller
 {
@@ -118,6 +120,57 @@ class FakturPembelianController extends Controller
             'filters' => $filters,
             'generatedAt' => now(),
         ])->setPaper('a4', 'landscape')->stream('daftar-invoice-lpb.pdf');
+    }
+
+    public function reportExcel(Request $request)
+    {
+        $this->authorize('viewAny', FakturPembelian::class);
+
+        $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
+        $search = trim((string) $request->input('search', ''));
+        $query = FakturPembelian::with('supplier')->latest('tanggal');
+
+        if ($search !== '') {
+            $query->where(fn($q) => $q->where('no_invoice', 'like', "%{$search}%")
+                ->orWhere('tanggal', 'like', "%{$search}%")
+                ->orWhere('tgl_deadline_pembayaran', 'like', "%{$search}%")
+                ->orWhere('status', 'like', "%{$search}%")
+                ->orWhereHas('supplier', fn($supplier) => $supplier->where('nama', 'like', "%{$search}%")));
+        }
+
+        foreach (['no_invoice', 'tanggal', 'tgl_deadline_pembayaran', 'grand_total', 'sisa_tagihan'] as $field) {
+            if ($filters->has($field)) {
+                $query->where($field, 'like', "%{$filters[$field]}%");
+            }
+        }
+        if ($filters->has('status_pembayaran')) {
+            $query->where('status', 'like', "%{$filters['status_pembayaran']}%");
+        }
+        if ($filters->has('supplier_nama')) {
+            $query->whereHas('supplier', fn($supplier) => $supplier->where('nama', 'like', "%{$filters['supplier_nama']}%"));
+        }
+
+        $rows = $query->limit(5000)->get()->map(fn($row) => [
+            'no_invoice' => $row->no_invoice,
+            'tanggal' => $row->tanggal,
+            'supplier_nama' => $row->supplier->nama ?? '-',
+            'tgl_deadline_pembayaran' => $row->tgl_deadline_pembayaran ?: '-',
+            'grand_total' => (float) $row->grand_total,
+            'sisa_tagihan' => (float) $row->sisa_tagihan,
+            'status_pembayaran' => $row->status_pembayaran,
+        ]);
+
+        $columns = [
+            ['key' => 'no_invoice', 'label' => 'No Invoice'],
+            ['key' => 'tanggal', 'label' => 'Tanggal'],
+            ['key' => 'supplier_nama', 'label' => 'Supplier'],
+            ['key' => 'tgl_deadline_pembayaran', 'label' => 'Deadline'],
+            ['key' => 'grand_total', 'label' => 'Grand Total'],
+            ['key' => 'sisa_tagihan', 'label' => 'Sisa Tagihan'],
+            ['key' => 'status_pembayaran', 'label' => 'Status'],
+        ];
+
+        return Excel::download(new GenericTableExport($columns, $rows), 'daftar-faktur-pembelian-' . now()->format('Ymd-His') . '.xlsx');
     }
 
     public function create()

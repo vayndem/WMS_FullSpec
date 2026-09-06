@@ -15,6 +15,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\DocumentNumberService;
 use App\Models\KategoriBahan;
 use Illuminate\Validation\ValidationException;
+use App\Exports\GenericTableExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class MaterialRequestController extends Controller
 {
@@ -88,6 +90,43 @@ class MaterialRequestController extends Controller
             'filters' => $filters,
             'generatedAt' => now(),
         ])->stream('daftar-request.pdf');
+    }
+
+    public function reportExcel(Request $request)
+    {
+        $this->authorize('viewAny', MaterialRequest::class);
+
+        $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
+        $search = trim((string) $request->input('search', ''));
+        $query = MaterialRequest::query()
+            ->when($request->filled('status'), fn($q) => $q->where('status', $request->status))
+            ->latest();
+
+        if ($search !== '') {
+            $query->where(fn($q) => $q->where('no_request', 'like', "%{$search}%")
+                ->orWhere('status', 'like', "%{$search}%")
+                ->orWhere('created_at', 'like', "%{$search}%"));
+        }
+
+        foreach (['no_request', 'status', 'created_at'] as $field) {
+            if ($filters->has($field)) {
+                $query->where($field, 'like', "%{$filters[$field]}%");
+            }
+        }
+
+        $rows = $query->limit(5000)->get()->map(fn($row) => [
+            'no_request' => $row->no_request,
+            'status' => ucfirst($row->status),
+            'created_at' => optional($row->created_at)->format('d-m-Y H:i'),
+        ]);
+
+        $columns = [
+            ['key' => 'no_request', 'label' => 'No Request'],
+            ['key' => 'status', 'label' => 'Status'],
+            ['key' => 'created_at', 'label' => 'Tanggal Request'],
+        ];
+
+        return Excel::download(new GenericTableExport($columns, $rows), 'daftar-request-' . now()->format('Ymd-His') . '.xlsx');
     }
 
     public function create()

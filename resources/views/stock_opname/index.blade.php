@@ -25,11 +25,17 @@
                     { data: 'details_count' }, { data: 'status' }, { data: 'aksi', orderable: false, searchable: false },
                 ],
             })">
-            <div class="flex items-center justify-end border-b border-base-300 p-4">
+            <div class="flex flex-wrap items-center justify-end gap-2 border-b border-base-300 p-4">
                 <label class="input input-bordered flex w-full max-w-xs items-center gap-2">
                     <i class="fa-solid fa-magnifying-glass text-base-content/40"></i>
                     <input type="search" class="grow" placeholder="Cari opname..." x-model="search">
                 </label>
+                <a :href="buildReportUrl()" target="_blank" rel="noopener" class="btn btn-error btn-sm">
+                    <i class="fa-solid fa-file-pdf"></i> PDF
+                </a>
+                <a :href="buildReportUrl('excel')" target="_blank" rel="noopener" class="btn btn-success btn-sm">
+                    <i class="fa-solid fa-file-excel"></i> Excel
+                </a>
             </div>
             <div class="overflow-x-auto">
                 <table class="table">

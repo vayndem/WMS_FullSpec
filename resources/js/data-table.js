@@ -143,9 +143,10 @@ export default function wmsDataTable(config) {
             return Math.min(this.start + this.length, this.recordsFiltered);
         },
 
-        buildReportUrl() {
+        buildReportUrl(format = 'pdf') {
             if (!this.reportUrl) return '#';
-            const url = new URL(this.reportUrl, window.location.origin);
+            const base = format === 'pdf' ? this.reportUrl : this.reportUrl.replace(/\/pdf$/, '/' + format);
+            const url = new URL(base, window.location.origin);
             if (this.search) url.searchParams.set('search', this.search);
             Object.entries(this.filters).forEach(([key, value]) => {
                 if (value) url.searchParams.set(`filters[${key}]`, value);

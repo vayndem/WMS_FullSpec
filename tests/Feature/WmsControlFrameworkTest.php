@@ -713,6 +713,52 @@ class WmsControlFrameworkTest extends TestCase
         $this->assertTrue($jurnal->details->contains(fn ($line) => (int) $line->coa_id === $ppnImporAccount->id && abs((float) $line->debit - 150000.0) < 0.01));
     }
 
+    public function test_generic_and_financial_statement_excel_exports_download_successfully(): void
+    {
+        \Maatwebsite\Excel\Facades\Excel::fake();
+
+        $finance = User::factory()->create(['type' => User::ROLE_FINANCE]);
+        $accounting = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);
+        $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
+
+        $this->actingAs($finance)->get(route('request.report.excel'))->assertOk();
+        $this->actingAs($accounting)->get(route('aset.report.excel'))->assertOk();
+        $this->actingAs($accounting)->get(route('financial-statements.neraca-saldo.excel'))->assertOk();
+        $this->actingAs($warehouse)->get(route('stock-opname.report.excel'))->assertOk();
+    }
+
+    public function test_generic_table_export_actually_generates_a_valid_spreadsheet(): void
+    {
+        $finance = User::factory()->create(['type' => User::ROLE_FINANCE]);
+
+        $response = $this->actingAs($finance)->get(route('faktur-pembelian.report.excel'));
+
+        $response->assertOk();
+        $this->assertStringContainsString(
+            'spreadsheetml.sheet',
+            $response->headers->get('content-type')
+        );
+    }
+
+    public function test_executive_dashboard_renders_for_accounting_and_manager_but_not_other_roles(): void
+    {
+        $accounting = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);
+        $manager = User::factory()->create(['type' => User::ROLE_ACCOUNTING_MANAGER]);
+        $purchasing = User::factory()->create(['type' => User::ROLE_PURCHASING]);
+
+        $this->actingAs($accounting)->get(route('executive-dashboard.index'))
+            ->assertOk()
+            ->assertSee('Dashboard Eksekutif')
+            ->assertSee('Tren Nilai Persediaan')
+            ->assertSee('Aging Hutang Supplier')
+            ->assertSee('Top 5 Supplier')
+            ->assertSee('Biaya per Kategori Bahan');
+
+        $this->actingAs($manager)->get(route('executive-dashboard.index'))->assertOk();
+
+        $this->actingAs($purchasing)->get(route('executive-dashboard.index'))->assertForbidden();
+    }
+
     public function test_purchase_return_after_partially_paid_invoice_reduces_invoice_balance(): void
     {
         $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);

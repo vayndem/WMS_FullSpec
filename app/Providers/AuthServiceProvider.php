@@ -21,5 +21,6 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('controlInventoryFinance', fn (User $user) => $user->isAccounting());
         Gate::define('matchSupplierInvoice', fn (User $user) => $user->isPurchasing() || $user->isAccounting());
         Gate::define('viewFinancialStatements', fn (User $user) => $user->isAccounting());
+        Gate::define('viewExecutiveDashboard', fn (User $user) => $user->isAccounting() || $user->isAccountingManager());
     }
 }

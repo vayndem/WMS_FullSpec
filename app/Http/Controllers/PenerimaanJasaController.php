@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\DocumentNumberService;
+use App\Exports\GenericTableExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PenerimaanJasaController extends Controller
 {
@@ -54,6 +56,31 @@ class PenerimaanJasaController extends Controller
         $columns[] = ['key' => 'status', 'label' => 'Status'];
         return Pdf::loadView('reports.table-pdf', ['title' => 'Daftar BAP Jasa', 'columns' => $columns, 'rows' => $rows, 'search' => $request->q, 'filters' => collect(), 'generatedAt' => now()])->setPaper('a4', 'landscape')->stream('bap-jasa.pdf');
     }
+
+    public function reportExcel(Request $request)
+    {
+        $this->authorize('viewAny', PenerimaanJasa::class);
+        $financial = $request->user()->can('viewFinancials', PenerimaanJasa::class);
+        $query = PenerimaanJasa::with(['pembelian.supplier', 'invoiceReceipts'])->when($request->filled('q'), fn($q) => $q->where('id_lpb', 'like', '%' . $request->q . '%'));
+        if ($financial) $query->withSum('serviceDetails', 'amount');
+        $rows = $query->get()->map(function ($b) use ($financial) {
+            $row = [
+                'number' => $b->id_lpb,
+                'date' => $b->tanggal->format('d-m-Y'),
+                'po' => $b->no_po,
+                'supplier' => $b->pembelian->supplier->nama,
+                'status' => $b->status === PenerimaanBarang::CANCELLED ? 'Dibatalkan' : ($b->invoiceReceipts->isNotEmpty() ? 'Selesai / Sudah Invoice' : 'Sedang Dikerjakan'),
+            ];
+            if ($financial) $row['amount'] = (float) $b->service_details_sum_amount;
+            return $row;
+        });
+        $columns = [['key' => 'number', 'label' => 'No BAP'], ['key' => 'date', 'label' => 'Tanggal'], ['key' => 'po', 'label' => 'PO Jasa'], ['key' => 'supplier', 'label' => 'Supplier']];
+        if ($financial) $columns[] = ['key' => 'amount', 'label' => 'Nilai'];
+        $columns[] = ['key' => 'status', 'label' => 'Status'];
+
+        return Excel::download(new GenericTableExport($columns, $rows), 'bap-jasa-' . now()->format('Ymd-His') . '.xlsx');
+    }
+
     public function create()
     {
         $this->authorize('create', PenerimaanJasa::class);

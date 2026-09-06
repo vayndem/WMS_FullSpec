@@ -22,6 +22,7 @@
                         @endforeach
                     </select>
                     <a class="btn btn-error" href="{{ route('pesanan-jasa.report.pdf', request()->query()) }}"><i class="fa-solid fa-file-pdf"></i> PDF</a>
+                    <a class="btn btn-success" href="{{ route('pesanan-jasa.report.excel', request()->query()) }}"><i class="fa-solid fa-file-excel"></i> Excel</a>
                     <input name="q" value="{{ request('q') }}" onchange="this.form.submit()" class="input input-bordered max-w-xs" placeholder="Cari PO/supplier...">
                 </form>
             </div>

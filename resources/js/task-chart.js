@@ -26,11 +26,11 @@ export default function taskChart(config) {
                     maintainAspectRatio: false,
                     indexAxis: config.horizontal ? 'y' : 'x',
                     plugins: {
-                        legend: { display: type !== 'bar', position: 'bottom' },
+                        legend: { display: type !== 'bar' && type !== 'line', position: 'bottom' },
                     },
-                    scales: type === 'bar' ? {
+                    scales: (type === 'bar' || type === 'line') ? {
                         x: config.horizontal ? { beginAtZero: true, ticks: { precision: 0 } } : {},
-                        y: config.horizontal ? {} : { beginAtZero: true, ticks: { precision: 0 } },
+                        y: config.horizontal ? {} : { beginAtZero: !!config.beginAtZero, ticks: { precision: 0 } },
                     } : {},
                 },
             });

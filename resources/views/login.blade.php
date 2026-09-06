@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>WMS</title>
+    <title>ERP - Modul WMS</title>
 
     <script>
         (() => {
@@ -30,9 +30,9 @@
                 <span class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-content text-3xl">
                     <i class="fa-solid fa-warehouse"></i>
                 </span>
-                <h1 class="text-xl font-bold">WMS</h1>
-                <h2 class="text-2xl font-bold">Masuk</h2>
-                <p class="mt-1 text-sm text-base-content/60">Gunakan akun perusahaan untuk mengakses WMS.</p>
+                <h1 class="text-xl font-bold">ERP <span class="text-base-content/40">-</span> Modul WMS</h1>
+                <h2 class="mt-2 text-2xl font-bold">Masuk</h2>
+                <p class="mt-1 text-sm text-base-content/60">Gunakan akun perusahaan untuk mengakses ERP - Modul WMS.</p>
             </div>
 
             <form action="{{ url('/login') }}" method="POST" class="flex flex-col gap-4">

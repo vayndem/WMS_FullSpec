@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\DocumentNumberService;
+use App\Exports\GenericTableExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class AsetController extends Controller
 {
@@ -57,6 +59,30 @@ class AsetController extends Controller
         $columns[] = ['key' => 'status', 'label' => 'Status'];
         return Pdf::loadView('reports.table-pdf', compact('columns', 'rows') + ['title' => 'Daftar Aset Tetap', 'search' => $request->q, 'filters' => collect(['status' => $request->status]), 'generatedAt' => now()])->setPaper('a4', 'landscape')->stream('aset-tetap.pdf');
     }
+
+    public function reportExcel(Request $request)
+    {
+        $this->authorize('viewAny', Aset::class);
+        $financial = $request->user()->can('viewFinancials', Aset::class);
+        $rows = Aset::with('category')->when($request->filled('q'), fn($q) => $q->where(fn($x) => $x->where('nomor_aset', 'like', '%' . $request->q . '%')->orWhere('name', 'like', '%' . $request->q . '%')))
+            ->when($request->filled('status'), fn($q) => $q->where('status', $request->status))->get()->map(function ($a) use ($financial) {
+                $row = ['number' => $a->nomor_aset, 'name' => $a->name, 'category' => $a->category->name, 'location' => $a->location ?: '-', 'status' => $a->status];
+                if ($financial) {
+                    $row['cost'] = (float) $a->acquisition_cost;
+                    $row['book'] = (float) $a->book_value;
+                }
+                return $row;
+            });
+        $columns = [['key' => 'number', 'label' => 'No Aset'], ['key' => 'name', 'label' => 'Nama'], ['key' => 'category', 'label' => 'Kategori'], ['key' => 'location', 'label' => 'Lokasi']];
+        if ($financial) {
+            $columns[] = ['key' => 'cost', 'label' => 'Harga Perolehan'];
+            $columns[] = ['key' => 'book', 'label' => 'Nilai Buku'];
+        }
+        $columns[] = ['key' => 'status', 'label' => 'Status'];
+
+        return Excel::download(new GenericTableExport($columns, $rows), 'aset-tetap-' . now()->format('Ymd-His') . '.xlsx');
+    }
+
     public function create()
     {
         $this->authorize('create', Aset::class);

@@ -8,9 +8,14 @@
                 <p class="text-base-content/60">Neraca Saldo, Buku Besar, Laba Rugi, dan Neraca berdasarkan jurnal yang sudah diposting.</p>
             </div>
             @if ($account)
-                <a href="{{ route('financial-statements.buku-besar.pdf', ['coa_id' => $account->id, 'from' => $from->format('Y-m-d'), 'to' => $to->format('Y-m-d')]) }}" target="_blank" rel="noopener" class="btn btn-error btn-sm">
-                    <i class="fa-solid fa-file-pdf"></i> PDF
-                </a>
+                <div class="flex gap-2">
+                    <a href="{{ route('financial-statements.buku-besar.pdf', ['coa_id' => $account->id, 'from' => $from->format('Y-m-d'), 'to' => $to->format('Y-m-d')]) }}" target="_blank" rel="noopener" class="btn btn-error btn-sm">
+                        <i class="fa-solid fa-file-pdf"></i> PDF
+                    </a>
+                    <a href="{{ route('financial-statements.buku-besar.excel', ['coa_id' => $account->id, 'from' => $from->format('Y-m-d'), 'to' => $to->format('Y-m-d')]) }}" target="_blank" rel="noopener" class="btn btn-success btn-sm">
+                        <i class="fa-solid fa-file-excel"></i> Excel
+                    </a>
+                </div>
             @endif
         </div>
 

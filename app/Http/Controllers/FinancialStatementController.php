@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\BaganAkun;
 use App\Services\FinancialStatementService;
+use App\Exports\FinancialStatementExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
 
 class FinancialStatementController extends Controller
 {
@@ -53,6 +55,37 @@ class FinancialStatementController extends Controller
             ],
             'generatedAt' => now(),
         ])->setPaper('a4', 'portrait')->stream('neraca-saldo.pdf');
+    }
+
+    public function neracaSaldoExcel(Request $request)
+    {
+        $this->authorize('viewFinancialStatements');
+
+        $asOf = $this->parseDate($request->input('as_of'), today());
+        $data = $this->statements->trialBalance($asOf);
+
+        $rows = $data['rows']->map(fn ($row) => [
+            'kode_akun' => $row['account']->kode_akun,
+            'nama_akun' => $row['account']->nama_akun,
+            'debit' => (float) $row['debit'],
+            'kredit' => (float) $row['kredit'],
+        ]);
+
+        $columns = [
+            ['key' => 'kode_akun', 'label' => 'Kode Akun'],
+            ['key' => 'nama_akun', 'label' => 'Nama Akun'],
+            ['key' => 'debit', 'label' => 'Debit'],
+            ['key' => 'kredit', 'label' => 'Kredit'],
+        ];
+        $sections = [
+            ['label' => null, 'rows' => $rows, 'subtotal' => [
+                'nama_akun' => 'Total',
+                'debit' => (float) $data['total_debit'],
+                'kredit' => (float) $data['total_kredit'],
+            ]],
+        ];
+
+        return Excel::download(new FinancialStatementExport($columns, $sections), 'neraca-saldo-' . $asOf->format('Ymd') . '.xlsx');
     }
 
     public function bukuBesar(Request $request)
@@ -113,6 +146,42 @@ class FinancialStatementController extends Controller
         ])->setPaper('a4', 'portrait')->stream('buku-besar.pdf');
     }
 
+    public function bukuBesarExcel(Request $request)
+    {
+        $this->authorize('viewFinancialStatements');
+
+        $account = BaganAkun::findOrFail($request->integer('coa_id'));
+        $from = $this->parseDate($request->input('from'), today()->startOfMonth());
+        $to = $this->parseDate($request->input('to'), today());
+        $data = $this->statements->generalLedger($account, $from, $to);
+
+        $rows = $data['rows']->map(fn ($row) => [
+            'tanggal' => $row['tanggal']->format('d-m-Y'),
+            'no_jurnal' => $row['no_jurnal'],
+            'keterangan' => $row['keterangan'] ?: '-',
+            'debit' => (float) $row['debit'],
+            'kredit' => (float) $row['kredit'],
+            'balance' => (float) $row['balance'],
+        ]);
+
+        $columns = [
+            ['key' => 'tanggal', 'label' => 'Tanggal'],
+            ['key' => 'no_jurnal', 'label' => 'No Jurnal'],
+            ['key' => 'keterangan', 'label' => 'Keterangan'],
+            ['key' => 'debit', 'label' => 'Debit'],
+            ['key' => 'kredit', 'label' => 'Kredit'],
+            ['key' => 'balance', 'label' => 'Saldo'],
+        ];
+        $sections = [
+            ['label' => 'Saldo Awal: ' . number_format($data['opening_balance'], 0, ',', '.'), 'rows' => $rows, 'subtotal' => [
+                'keterangan' => 'Saldo Akhir',
+                'balance' => (float) $data['closing_balance'],
+            ]],
+        ];
+
+        return Excel::download(new FinancialStatementExport($columns, $sections), "buku-besar-{$account->kode_akun}-" . now()->format('Ymd') . '.xlsx');
+    }
+
     public function labaRugi(Request $request)
     {
         $this->authorize('viewFinancialStatements');
@@ -158,6 +227,40 @@ class FinancialStatementController extends Controller
             'footer' => 'Laba (Rugi) Bersih: Rp ' . number_format($data['laba_bersih'], 0, ',', '.'),
             'generatedAt' => now(),
         ])->setPaper('a4', 'portrait')->stream('laba-rugi.pdf');
+    }
+
+    public function labaRugiExcel(Request $request)
+    {
+        $this->authorize('viewFinancialStatements');
+
+        $from = $this->parseDate($request->input('from'), today()->startOfMonth());
+        $to = $this->parseDate($request->input('to'), today());
+        $data = $this->statements->incomeStatement($from, $to);
+
+        $mapRows = fn ($rows) => $rows->map(fn ($row) => [
+            'kode_akun' => $row['account']->kode_akun,
+            'nama_akun' => $row['account']->nama_akun,
+            'jumlah' => (float) $row['amount'],
+        ]);
+
+        $columns = [
+            ['key' => 'kode_akun', 'label' => 'Kode Akun'],
+            ['key' => 'nama_akun', 'label' => 'Nama Akun'],
+            ['key' => 'jumlah', 'label' => 'Jumlah'],
+        ];
+        $sections = [
+            ['label' => 'Pendapatan', 'rows' => $mapRows($data['pendapatan']), 'subtotal' => [
+                'nama_akun' => 'Total Pendapatan',
+                'jumlah' => (float) $data['total_pendapatan'],
+            ]],
+            ['label' => 'Beban', 'rows' => $mapRows($data['beban']), 'subtotal' => [
+                'nama_akun' => 'Total Beban',
+                'jumlah' => (float) $data['total_beban'],
+            ]],
+        ];
+        $footer = 'Laba (Rugi) Bersih: ' . number_format($data['laba_bersih'], 0, ',', '.');
+
+        return Excel::download(new FinancialStatementExport($columns, $sections, $footer), 'laba-rugi-' . now()->format('Ymd') . '.xlsx');
     }
 
     public function neraca(Request $request)
@@ -213,6 +316,49 @@ class FinancialStatementController extends Controller
             'footer' => 'Total Liabilitas + Ekuitas: Rp ' . number_format($data['total_liabilitas'] + $data['total_ekuitas'], 0, ',', '.'),
             'generatedAt' => now(),
         ])->setPaper('a4', 'portrait')->stream('neraca.pdf');
+    }
+
+    public function neracaExcel(Request $request)
+    {
+        $this->authorize('viewFinancialStatements');
+
+        $asOf = $this->parseDate($request->input('as_of'), today());
+        $data = $this->statements->balanceSheet($asOf);
+
+        $mapRows = fn ($rows) => $rows->map(fn ($row) => [
+            'kode_akun' => $row['account']->kode_akun,
+            'nama_akun' => $row['account']->nama_akun,
+            'jumlah' => (float) $row['amount'],
+        ]);
+
+        $ekuitasRows = $mapRows($data['ekuitas'])->push([
+            'kode_akun' => '-',
+            'nama_akun' => 'Laba Ditahan Berjalan (belum ditutup buku)',
+            'jumlah' => (float) $data['laba_ditahan_berjalan'],
+        ]);
+
+        $columns = [
+            ['key' => 'kode_akun', 'label' => 'Kode Akun'],
+            ['key' => 'nama_akun', 'label' => 'Nama Akun'],
+            ['key' => 'jumlah', 'label' => 'Jumlah'],
+        ];
+        $sections = [
+            ['label' => 'Aset', 'rows' => $mapRows($data['aset']), 'subtotal' => [
+                'nama_akun' => 'Total Aset',
+                'jumlah' => (float) $data['total_aset'],
+            ]],
+            ['label' => 'Liabilitas', 'rows' => $mapRows($data['liabilitas']), 'subtotal' => [
+                'nama_akun' => 'Total Liabilitas',
+                'jumlah' => (float) $data['total_liabilitas'],
+            ]],
+            ['label' => 'Ekuitas', 'rows' => $ekuitasRows, 'subtotal' => [
+                'nama_akun' => 'Total Ekuitas',
+                'jumlah' => (float) $data['total_ekuitas'],
+            ]],
+        ];
+        $footer = 'Total Liabilitas + Ekuitas: ' . number_format($data['total_liabilitas'] + $data['total_ekuitas'], 0, ',', '.');
+
+        return Excel::download(new FinancialStatementExport($columns, $sections, $footer), 'neraca-' . $asOf->format('Ymd') . '.xlsx');
     }
 
     private function parseDate(?string $value, Carbon $default): Carbon

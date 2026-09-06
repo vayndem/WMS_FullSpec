@@ -17,6 +17,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use TCPDF;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Exports\GenericTableExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PesananPembelianController extends Controller
 {
@@ -112,6 +114,52 @@ class PesananPembelianController extends Controller
             'filters' => $filters,
             'generatedAt' => now(),
         ])->setPaper('a4', 'landscape')->stream('daftar-pembelian.pdf');
+    }
+
+    public function reportExcel(Request $request)
+    {
+        $this->authorize('viewAny', PesananPembelian::class);
+
+        $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
+        $search = trim((string) $request->input('search', ''));
+        $query = PesananPembelian::with('supplier')
+            ->when($request->filled('bulan') && $request->bulan !== '0', fn($q) => $q->whereMonth('tanggal', $request->bulan))
+            ->when($request->filled('tahun'), fn($q) => $q->whereYear('tanggal', $request->tahun))
+            ->latest('tanggal');
+
+        if ($search !== '') {
+            $query->where(fn($q) => $q->where('no_po', 'like', "%{$search}%")
+                ->orWhere('tanggal', 'like', "%{$search}%")
+                ->orWhere('grand_total', 'like', "%{$search}%")
+                ->orWhereHas('supplier', fn($supplier) => $supplier->where('nama', 'like', "%{$search}%")));
+        }
+
+        foreach (['no_po', 'tanggal', 'grand_total', 'status'] as $field) {
+            if ($filters->has($field)) {
+                $query->where($field, 'like', "%{$filters[$field]}%");
+            }
+        }
+        if ($filters->has('nama')) {
+            $query->whereHas('supplier', fn($supplier) => $supplier->where('nama', 'like', "%{$filters['nama']}%"));
+        }
+
+        $rows = $query->limit(5000)->get()->map(fn($row) => [
+            'no_po' => $row->no_po,
+            'tanggal' => $row->tanggal,
+            'nama' => $row->supplier->nama ?? '-',
+            'grand_total' => (float) $row->grand_total,
+            'status' => $row->status === PesananPembelian::CLOSED ? 'Closed' : 'Open',
+        ]);
+
+        $columns = [
+            ['key' => 'no_po', 'label' => 'No PO'],
+            ['key' => 'tanggal', 'label' => 'Tanggal'],
+            ['key' => 'nama', 'label' => 'Supplier'],
+            ['key' => 'grand_total', 'label' => 'Grand Total'],
+            ['key' => 'status', 'label' => 'Status'],
+        ];
+
+        return Excel::download(new GenericTableExport($columns, $rows), 'daftar-pembelian-' . now()->format('Ymd-His') . '.xlsx');
     }
 
     public function store(StorePesananPembelianRequest $request)

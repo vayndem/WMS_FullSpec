@@ -59,7 +59,8 @@
                 </div>
                 <div class="flex items-end gap-2">
                     <button type="button" class="btn btn-outline btn-sm flex-1" @click="extraParams = { sumber_transaksi: '', status: '', date_from: '', date_to: '' }">Reset Filter</button>
-                    <a :href="buildReportUrl()" target="_blank" rel="noopener" class="btn btn-error btn-sm"><i class="fa-solid fa-file-pdf"></i></a>
+                    <a :href="buildReportUrl()" target="_blank" rel="noopener" class="btn btn-error btn-sm" title="PDF"><i class="fa-solid fa-file-pdf"></i></a>
+                    <a :href="buildReportUrl('excel')" target="_blank" rel="noopener" class="btn btn-success btn-sm" title="Excel"><i class="fa-solid fa-file-excel"></i></a>
                 </div>
             </div>
 

@@ -50,7 +50,8 @@
                             <option value="{{ $k }}" @selected(request('status', 'ACTIVE') === $k)>{{ $v }}</option>
                         @endforeach
                     </select>
-                    <a class="btn btn-error md:col-span-2" href="{{ route('aset.report.pdf', request()->query()) }}"><i class="fa-solid fa-file-pdf"></i> PDF</a>
+                    <a class="btn btn-error" href="{{ route('aset.report.pdf', request()->query()) }}"><i class="fa-solid fa-file-pdf"></i> PDF</a>
+                    <a class="btn btn-success" href="{{ route('aset.report.excel', request()->query()) }}"><i class="fa-solid fa-file-excel"></i> Excel</a>
                 </form>
             </div>
             <div class="overflow-x-auto">

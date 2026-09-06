@@ -4,7 +4,7 @@
             <span class="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-primary text-primary-content">
                 <i class="fa-solid fa-warehouse"></i>
             </span>
-            <span class="text-lg font-bold">WMS</span>
+            <span class="text-lg font-bold">ERP <span class="font-normal text-neutral-content/60">·</span> WMS</span>
         </a>
     </div>
     <div class="data-scrollbar" data-scroll="1">
@@ -86,11 +86,12 @@
                 @if (Auth::user()->can('viewAny', App\Models\TipePembebanan::class) ||
                         Auth::user()->can('viewAny', App\Models\BaganAkun::class) ||
                         Auth::user()->can('viewAny', App\Models\Jurnal::class) ||
-                        Auth::user()->can('viewFinancialStatements'))
+                        Auth::user()->can('viewFinancialStatements') ||
+                        Auth::user()->can('viewExecutiveDashboard'))
                     <li
-                        class="{{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('bagan-akun.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') || request()->routeIs('financial-statements.*') ? 'active' : '' }}">
+                        class="{{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('bagan-akun.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') || request()->routeIs('financial-statements.*') || request()->routeIs('executive-dashboard.*') ? 'active' : '' }}">
                         <a href="#akuntansi" class="svg-icon"
-                            aria-expanded="{{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('bagan-akun.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') || request()->routeIs('financial-statements.*') ? 'true' : 'false' }}">
+                            aria-expanded="{{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('bagan-akun.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') || request()->routeIs('financial-statements.*') || request()->routeIs('executive-dashboard.*') ? 'true' : 'false' }}">
                             <i>
                                 <svg class="svg-icon" id="mm-akuntansi-1" width="20"
                                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -104,7 +105,7 @@
                             <i class="fa-solid fa-chevron-down mm-arrow-right arrow-hover"></i>
                         </a>
                         <ul id="akuntansi"
-                            class="submenu {{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('bagan-akun.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') || request()->routeIs('financial-statements.*') ? 'show' : '' }}">
+                            class="submenu {{ request()->routeIs('tipe-pembebanan.*') || request()->routeIs('kategori-bahan.*') || request()->routeIs('bagan-akun.*') || request()->routeIs('jurnal.*') || request()->routeIs('period-lock.*') || request()->routeIs('tax-rate.*') || request()->routeIs('financial-statements.*') || request()->routeIs('executive-dashboard.*') ? 'show' : '' }}">
 
                             @can('viewAny', App\Models\TipePembebanan::class)
                                 <li class="{{ request()->routeIs('tipe-pembebanan.*') ? 'active' : '' }}">
@@ -177,6 +178,13 @@
                                 <li class="{{ request()->routeIs('financial-statements.*') ? 'active' : '' }}">
                                     <a href="{{ route('financial-statements.neraca-saldo') }}" class="svg-icon">
                                         <i class="fa-solid fa-file-invoice-dollar"></i><span>Laporan Keuangan</span>
+                                    </a>
+                                </li>
+                            @endcan
+                            @can('viewExecutiveDashboard')
+                                <li class="{{ request()->routeIs('executive-dashboard.*') ? 'active' : '' }}">
+                                    <a href="{{ route('executive-dashboard.index') }}" class="svg-icon">
+                                        <i class="fa-solid fa-chart-line"></i><span>Dashboard Eksekutif</span>
                                     </a>
                                 </li>
                             @endcan

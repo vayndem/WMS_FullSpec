@@ -52,9 +52,12 @@
                         <input type="search" class="grow" placeholder="Cari PO / supplier..." x-model="search">
                     </label>
                 </div>
-                <div>
+                <div class="flex gap-2">
                     <a :href="buildReportUrl()" target="_blank" rel="noopener" class="btn btn-error btn-sm">
                         <i class="fa-solid fa-file-pdf"></i> PDF
+                    </a>
+                    <a :href="buildReportUrl('excel')" target="_blank" rel="noopener" class="btn btn-success btn-sm">
+                        <i class="fa-solid fa-file-excel"></i> Excel
                     </a>
                 </div>
             </div>

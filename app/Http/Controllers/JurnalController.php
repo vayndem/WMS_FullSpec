@@ -12,6 +12,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
 use App\Services\AccountingPeriodService;
 use App\Services\DocumentNumberService;
+use App\Exports\GenericTableExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class JurnalController extends Controller
 {
@@ -103,6 +105,58 @@ class JurnalController extends Controller
             'filters' => $filters,
             'generatedAt' => now(),
         ])->setPaper('a4', 'landscape')->stream('daftar-jurnal.pdf');
+    }
+
+    public function reportExcel(Request $request)
+    {
+        $this->authorize('viewAny', Jurnal::class);
+
+        $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
+        $search = trim((string) $request->input('search', ''));
+        $fields = ['no_jurnal', 'tanggal', 'sumber_transaksi', 'keterangan', 'total_debit', 'total_kredit'];
+        $query = Jurnal::query()
+            ->orderByDesc('tanggal')
+            ->orderByDesc('id');
+
+        $query
+            ->when($request->filled('sumber_transaksi'), fn($builder) => $builder->where('sumber_transaksi', $request->input('sumber_transaksi')))
+            ->when($request->filled('status'), fn($builder) => $builder->where('status', $request->input('status')))
+            ->when($request->filled('date_from'), fn($builder) => $builder->whereDate('tanggal', '>=', $request->input('date_from')))
+            ->when($request->filled('date_to'), fn($builder) => $builder->whereDate('tanggal', '<=', $request->input('date_to')));
+
+        if ($search !== '') {
+            $query->where(function ($builder) use ($fields, $search) {
+                foreach ($fields as $field) {
+                    $builder->orWhere($field, 'like', "%{$search}%");
+                }
+            });
+        }
+
+        foreach ($filters as $field => $value) {
+            if (in_array($field, $fields, true)) {
+                $query->where($field, 'like', "%{$value}%");
+            }
+        }
+
+        $rows = $query->limit(5000)->get()->map(fn($row) => [
+            'no_jurnal' => $row->no_jurnal,
+            'tanggal' => $row->tanggal,
+            'sumber_transaksi' => $row->sumber_transaksi,
+            'keterangan' => $row->keterangan ?: '-',
+            'total_debit' => (float) $row->total_debit,
+            'total_kredit' => (float) $row->total_kredit,
+        ]);
+
+        $columns = [
+            ['key' => 'no_jurnal', 'label' => 'No Jurnal'],
+            ['key' => 'tanggal', 'label' => 'Tanggal'],
+            ['key' => 'sumber_transaksi', 'label' => 'Sumber'],
+            ['key' => 'keterangan', 'label' => 'Keterangan'],
+            ['key' => 'total_debit', 'label' => 'Total Debit'],
+            ['key' => 'total_kredit', 'label' => 'Total Kredit'],
+        ];
+
+        return Excel::download(new GenericTableExport($columns, $rows), 'daftar-jurnal-' . now()->format('Ymd-His') . '.xlsx');
     }
 
     public function create()

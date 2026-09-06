@@ -36,6 +36,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('penerimaan-barang/po/{no_po}', [PenerimaanBarangController::class, 'getPoDetail'])->name('penerimaan-barang.get-po-detail');
     Route::get('penerimaan-barang-report/pdf', [PenerimaanBarangController::class, 'reportPdf'])->name('penerimaan-barang.report.pdf');
+    Route::get('penerimaan-barang-report/excel', [PenerimaanBarangController::class, 'reportExcel'])->name('penerimaan-barang.report.excel');
     Route::post('penerimaan-barang/{lpb}/details', [PenerimaanBarangController::class, 'storeDetail'])->name('penerimaan-barang.details.store');
     Route::put('penerimaan-barang/{lpb}/details/{detail}', [PenerimaanBarangController::class, 'updateDetail'])->name('penerimaan-barang.details.update');
     Route::delete('penerimaan-barang/{lpb}/details/{detail}', [PenerimaanBarangController::class, 'destroyDetail'])->name('penerimaan-barang.details.destroy');
@@ -45,9 +46,11 @@ Route::middleware('auth')->group(function () {
     Route::resource('retur-pembelian', ReturPembelianController::class)->only(['index', 'create', 'store', 'show']);
 
     Route::get('pemakaian-barang-report/pdf', [PemakaianBarangController::class, 'reportPdf'])->name('pemakaian-barang.report.pdf');
+    Route::get('pemakaian-barang-report/excel', [PemakaianBarangController::class, 'reportExcel'])->name('pemakaian-barang.report.excel');
     Route::resource('pemakaian-barang', PemakaianBarangController::class)->parameters(['pemakaian-barang' => 'npk']);
 
     Route::get('stock-opname-report/pdf', [StockOpnameController::class, 'reportListPdf'])->name('stock-opname.report.pdf');
+    Route::get('stock-opname-report/excel', [StockOpnameController::class, 'reportListExcel'])->name('stock-opname.report.excel');
     Route::get('stock-opname-export/excel', [StockOpnameController::class, 'exportInventory'])->name('stock-opname.export.excel');
     Route::get('stock-opname/{stock_opname}/detail-data', [StockOpnameController::class, 'detailData'])->name('stock-opname.detail-data');
     Route::get('stock-opname/{stock_opname}/pdf', [StockOpnameController::class, 'reportPdf'])->name('stock-opname.pdf');
