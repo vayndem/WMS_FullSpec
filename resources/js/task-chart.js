@@ -30,7 +30,7 @@ export default function taskChart(config) {
                     },
                     scales: (type === 'bar' || type === 'line') ? {
                         x: config.horizontal ? { beginAtZero: true, ticks: { precision: 0 } } : {},
-                        y: config.horizontal ? {} : { beginAtZero: !!config.beginAtZero, ticks: { precision: 0 } },
+                        y: config.horizontal ? {} : { beginAtZero: config.beginAtZero !== false, ticks: { precision: 0 } },
                     } : {},
                 },
             });

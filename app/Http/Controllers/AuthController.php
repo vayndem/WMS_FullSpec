@@ -17,6 +17,8 @@ use App\Models\PenerimaanJasa;
 use App\Models\ReturPembelian;
 use App\Models\Jurnal;
 use App\Models\Aset;
+use App\Models\LayerPersediaan;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
@@ -43,6 +45,7 @@ class AuthController extends Controller
 
     public function dashboard()
     {
+        /** @var User $user */
         $user = Auth::user();
 
         if ($user->isSuperAdmin()) {
@@ -79,6 +82,22 @@ class AuthController extends Controller
         }
     }
 
+    private function expiryCounts(?array $warehouseIds = null): array
+    {
+        $base = fn() => LayerPersediaan::where('remaining_quantity', '>', 0)
+            ->where('stock_status', 'AVAILABLE')
+            ->when($warehouseIds !== null, fn($query) => $query->whereIn('gudang_id', $warehouseIds));
+
+        return [
+            'expired' => $base()->whereHas('lot', fn($lot) => $lot
+                ->whereNotNull('expires_at')->whereDate('expires_at', '<', today()))->count(),
+            'near_expiry' => $base()->whereHas('lot', fn($lot) => $lot
+                ->whereNotNull('expires_at')
+                ->whereDate('expires_at', '>=', today())
+                ->whereDate('expires_at', '<=', today()->addDays(30)))->count(),
+        ];
+    }
+
     private function warehouseDashboardData(): array
     {
         $stockAttention = Bahan::whereColumn('stok_onhand', '<=', 'planning')->count();
@@ -93,8 +112,11 @@ class AuthController extends Controller
         $serviceBapsToday = PenerimaanJasa::whereDate('tanggal', today())->count();
         $transfersInProgress = DB::table('transfer_gudangs')->whereIn('status', ['DRAFT', 'DIAJUKAN', 'DIKIRIM'])->count();
         $myPendingRequests = MaterialRequest::where('requested_by', Auth::id())->where('status', MaterialRequest::PENDING)->count();
+        $expiry = $this->expiryCounts();
 
         $tasks = collect([
+            ['label' => 'Stok Kedaluwarsa', 'count' => $expiry['expired'], 'url' => route('wms-control.index'), 'icon' => 'fa-circle-exclamation', 'tone' => 'error'],
+            ['label' => 'Mendekati Kedaluwarsa (30 Hari)', 'count' => $expiry['near_expiry'], 'url' => route('wms-control.index'), 'icon' => 'fa-hourglass-half', 'tone' => 'warning'],
             ['label' => 'Bahan Perlu Perhatian Stok', 'count' => $stockAttention, 'url' => route('bahan.index'), 'icon' => 'fa-triangle-exclamation', 'tone' => 'warning'],
             ['label' => 'Penerimaan Hari Ini', 'count' => $receiptsToday, 'url' => route('penerimaan-barang.index'), 'icon' => 'fa-truck-ramp-box', 'tone' => 'info'],
             ['label' => 'Pemakaian Hari Ini', 'count' => $issuesToday, 'url' => route('pemakaian-barang.index'), 'icon' => 'fa-boxes-packing', 'tone' => 'info'],
@@ -121,7 +143,7 @@ class AuthController extends Controller
         ];
     }
 
-    private function productionDashboardData($user): array
+    private function productionDashboardData(User $user): array
     {
         $warehouseIds = $user->accessibleGudangIds('npk');
         $issuesToday = PemakaianBarang::whereIn('id_gudang_asal', $warehouseIds)->whereDate('tanggal', today())->count();
@@ -140,8 +162,11 @@ class AuthController extends Controller
                 StockOpname::APPROVED,
             ])->count();
         $myPendingRequests = MaterialRequest::where('requested_by', $user->id)->where('status', MaterialRequest::PENDING)->count();
+        $expiry = $this->expiryCounts($warehouseIds);
 
         $tasks = collect([
+            ['label' => 'Stok Kedaluwarsa', 'count' => $expiry['expired'], 'url' => route('wms-control.index'), 'icon' => 'fa-circle-exclamation', 'tone' => 'error'],
+            ['label' => 'Mendekati Kedaluwarsa (30 Hari)', 'count' => $expiry['near_expiry'], 'url' => route('wms-control.index'), 'icon' => 'fa-hourglass-half', 'tone' => 'warning'],
             ['label' => 'Pemakaian Hari Ini', 'count' => $issuesToday, 'url' => route('pemakaian-barang.index'), 'icon' => 'fa-boxes-packing', 'tone' => 'info'],
             ['label' => 'Transfer Sedang Berjalan', 'count' => $transfersInProgress, 'url' => route('transfer-gudangs.index'), 'icon' => 'fa-truck-fast', 'tone' => 'info'],
             ['label' => 'Stock Opname Terbuka', 'count' => $openOpnames, 'url' => route('stock-opname.index'), 'icon' => 'fa-clipboard-list', 'tone' => 'warning'],
@@ -295,7 +320,7 @@ class AuthController extends Controller
         return compact('metrics', 'priorityInvoices', 'recentPayments', 'tasks');
     }
 
-    private function accountingDashboardData($user): array
+    private function accountingDashboardData(User $user): array
     {
         $pendingApprovalInvoices = FakturPembelian::where('status', FakturPembelian::PENDING_APPROVAL)->count();
         $draftJurnals = Jurnal::where('status', 'DRAFT')->count();

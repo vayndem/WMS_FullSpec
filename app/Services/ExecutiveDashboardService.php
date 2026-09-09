@@ -19,7 +19,7 @@ class ExecutiveDashboardService
             $monthEnd = now()->subMonths($i)->endOfMonth();
             $balance = JurnalDetail::query()
                 ->whereIn('coa_id', $persediaanAccountIds)
-                ->whereHas('jurnal', fn ($query) => $query->where('status', 'POSTED')->whereDate('tanggal', '<=', $monthEnd))
+                ->whereHas('jurnal', fn($query) => $query->where('status', 'POSTED')->whereDate('tanggal', '<=', $monthEnd))
                 ->selectRaw('SUM(debit - kredit) as balance')
                 ->value('balance');
             $labels[] = $monthEnd->translatedFormat('M Y');
@@ -61,13 +61,13 @@ class ExecutiveDashboardService
 
         return [
             'labels' => array_keys($buckets),
-            'data' => array_map(fn ($amount) => round($amount, 2), array_values($buckets)),
+            'data' => array_map(fn($amount) => round($amount, 2), array_values($buckets)),
         ];
     }
 
     public function topSuppliers(int $limit = 5): array
     {
-        $rows = FakturPembelian::where('status', '!=', FakturPembelian::VOID)
+        $rows = FakturPembelian::whereNotIn('status', [FakturPembelian::VOID, FakturPembelian::PENDING_APPROVAL])
             ->selectRaw('kode_supplier, SUM(grand_total) as total')
             ->groupBy('kode_supplier')
             ->orderByDesc('total')
@@ -76,8 +76,8 @@ class ExecutiveDashboardService
             ->get();
 
         return [
-            'labels' => $rows->map(fn ($row) => $row->supplier->nama ?? '-')->all(),
-            'data' => $rows->map(fn ($row) => round((float) $row->total, 2))->all(),
+            'labels' => $rows->map(fn($row) => $row->supplier->nama ?? '-')->all(),
+            'data' => $rows->map(fn($row) => round((float) $row->total, 2))->all(),
         ];
     }
 
@@ -85,17 +85,20 @@ class ExecutiveDashboardService
     {
         $categories = KategoriBahan::whereNotNull('coa_beban_id')->get(['id', 'katnama', 'coa_beban_id']);
         $bebanSums = JurnalDetail::query()
-            ->whereIn('coa_id', $categories->pluck('coa_beban_id'))
-            ->whereHas('jurnal', fn ($query) => $query->where('status', 'POSTED')->whereYear('tanggal', now()->year))
+            ->whereIn('coa_id', $categories->pluck('coa_beban_id')->unique())
+            ->whereHas('jurnal', fn($query) => $query->where('status', 'POSTED')->whereYear('tanggal', now()->year))
             ->selectRaw('coa_id, SUM(debit) as total')
             ->groupBy('coa_id')
             ->get()
             ->keyBy('coa_id');
 
-        $rows = $categories->map(fn ($category) => [
-            'label' => $category->katnama,
-            'amount' => round((float) ($bebanSums->get($category->coa_beban_id)->total ?? 0), 2),
-        ])->filter(fn ($row) => $row['amount'] > 0)->sortByDesc('amount')->values();
+        $rows = $categories->groupBy('coa_beban_id')->map(function ($group) use ($bebanSums) {
+            $coaId = $group->first()->coa_beban_id;
+            return [
+                'label' => $group->pluck('katnama')->implode(' / '),
+                'amount' => round((float) ($bebanSums->get($coaId)?->total ?? 0), 2),
+            ];
+        })->filter(fn($row) => $row['amount'] > 0)->sortByDesc('amount')->values();
 
         return [
             'labels' => $rows->pluck('label')->all(),

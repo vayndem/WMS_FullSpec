@@ -623,6 +623,378 @@ class WmsControlFrameworkTest extends TestCase
         $this->assertSame(\App\Models\MaterialRequest::FULFILLED, $materialRequest->status);
     }
 
+    public function test_material_request_pdf_and_excel_reports_are_scoped_to_own_requests_for_non_reviewers(): void
+    {
+        $finance = User::factory()->create(['type' => User::ROLE_FINANCE]);
+        $production = User::factory()->create(['type' => User::ROLE_PRODUCTION]);
+        $numbers = app(DocumentNumberService::class);
+        $category = \App\Models\KategoriBahan::where('katnama', 'Bahan Baku Paper')->firstOrFail();
+        $gudang = Gudang::where('nama', 'Gudang Utama')->firstOrFail();
+
+        $this->actingAs($finance)->postJson(route('request.store'), [
+            'no_request' => $numbers->internal('REQ', 'PO'),
+            'items' => [[
+                'nama_barang' => 'Barang Uji Scoping Report',
+                'jumlah_minta' => 5,
+                'satuan' => 'PCS',
+                'kategori' => $category->id,
+                'tipe_barang' => $category->id,
+                'tipe_gudang' => $gudang->id,
+            ]],
+        ])->assertOk();
+        $materialRequest = \App\Models\MaterialRequest::latest('id')->firstOrFail();
+
+        \Maatwebsite\Excel\Facades\Excel::fake();
+        $this->actingAs($production)->get(route('request.report.excel'))->assertOk();
+        \Maatwebsite\Excel\Facades\Excel::assertDownloaded('daftar-request-' . now()->format('Ymd-His') . '.xlsx', function (\App\Exports\GenericTableExport $export) use ($materialRequest) {
+            $noRequests = $export->collection()->pluck('no_request');
+            return !$noRequests->contains($materialRequest->no_request);
+        });
+
+        $this->actingAs($production)->get(route('request.report.pdf'))->assertOk();
+
+        $superAdmin = User::factory()->create(['type' => User::ROLE_SUPER_ADMIN]);
+        \Maatwebsite\Excel\Facades\Excel::fake();
+        $this->actingAs($superAdmin)->get(route('request.report.excel'))->assertOk();
+        \Maatwebsite\Excel\Facades\Excel::assertDownloaded('daftar-request-' . now()->format('Ymd-His') . '.xlsx', function (\App\Exports\GenericTableExport $export) use ($materialRequest) {
+            return $export->collection()->pluck('no_request')->contains($materialRequest->no_request);
+        });
+    }
+
+    public function test_receiving_captures_lot_expiry_and_expired_stock_is_rejected_with_a_clear_message(): void
+    {
+        $purchasing = User::factory()->create(['type' => User::ROLE_PURCHASING]);
+        $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
+        $numbers = app(DocumentNumberService::class);
+        $gudang = Gudang::where('nama', 'Gudang Utama')->firstOrFail();
+        $bahan = Bahan::whereNotNull('kategori')->firstOrFail();
+        $supplier = Supplier::create(['nama' => 'Supplier Uji Expiry', 'alamat' => 'Jl. Expiry', 'telp' => '0800000097', 'pembayaran' => 'Transfer']);
+
+        $poNumber = $numbers->financial('PO');
+        $this->actingAs($purchasing)->postJson(route('pembelian.store'), [
+            'no_po' => $poNumber,
+            'tanggal' => today()->toDateString(),
+            'supplier_id' => $supplier->id,
+            'gudang_id' => $gudang->id,
+            'is_ppn' => 0,
+            'details' => [['bahan_id' => $bahan->id, 'harga' => 5000, 'jumlah' => 10]],
+        ])->assertCreated();
+
+        $expiry = today()->addDays(15);
+        $this->actingAs($warehouse)->postJson(route('penerimaan-barang.store'), [
+            'id_lpb' => $numbers->external('LPB'),
+            'tanggal' => today()->toDateString(),
+            'no_po' => $poNumber,
+            'no_sj' => 'SJ-EXPIRY-001',
+            'details' => [[
+                'id_bahan' => $bahan->id,
+                'id_kategori' => $bahan->kategori,
+                'jumlah_barang_diterima' => 10,
+                'lot_number' => 'LOT-EXPIRY-001',
+                'expires_at' => $expiry->toDateString(),
+            ]],
+        ])->assertCreated();
+
+        $lot = \App\Models\LotPersediaan::where('lot_number', 'LOT-EXPIRY-001')->firstOrFail();
+        $this->assertSame($expiry->toDateString(), $lot->expires_at->toDateString());
+
+        $tersediaSebelumExpired = (float) LayerPersediaan::where('gudang_id', $gudang->id)
+            ->where('bahan_id', $bahan->id)->where('stock_status', 'AVAILABLE')
+            ->where('remaining_quantity', '>', 0)->sum('remaining_quantity');
+
+        $lot->update(['expires_at' => today()->subDay()]);
+
+        try {
+            app(StokGudangService::class)->ambilLayer((int) $gudang->id, (int) $bahan->id, $tersediaSebelumExpired, today());
+            $this->fail('Stok yang lotnya sudah kedaluwarsa seharusnya tidak bisa diambil.');
+        } catch (\RuntimeException $exception) {
+            $this->assertStringContainsString('kedaluwarsa', $exception->getMessage());
+        }
+    }
+
+    public function test_replenishment_suggestion_becomes_a_material_request_and_is_not_reopened_by_recalculation(): void
+    {
+        $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
+        $gudang = Gudang::where('nama', 'Gudang Utama')->firstOrFail();
+        $bahan = Bahan::whereNotNull('kategori')->firstOrFail();
+
+        $suggestion = \App\Models\SaranPengisianUlang::create([
+            'gudang_id' => $gudang->id,
+            'bahan_id' => $bahan->id,
+            'calculated_at' => today(),
+            'average_daily_usage' => 2,
+            'lead_time_days' => 5,
+            'available_quantity' => 3,
+            'suggested_quantity' => 25,
+            'priority' => 'CRITICAL',
+            'status' => \App\Models\SaranPengisianUlang::OPEN,
+        ]);
+
+        $this->actingAs($warehouse)
+            ->post(route('wms-control.replenishment.request', $suggestion))
+            ->assertRedirect();
+
+        $suggestion->refresh();
+        $this->assertSame(\App\Models\SaranPengisianUlang::REQUESTED, $suggestion->status);
+        $this->assertNotNull($suggestion->material_request_id);
+
+        $materialRequest = \App\Models\MaterialRequest::findOrFail($suggestion->material_request_id);
+        $this->assertSame(\App\Models\MaterialRequest::PENDING, $materialRequest->status);
+        $this->assertSame($warehouse->id, $materialRequest->requested_by);
+
+        $detail = $materialRequest->details()->firstOrFail();
+        $this->assertSame((int) $bahan->id, (int) $detail->bahan_id);
+        $this->assertEqualsWithDelta(25.0, (float) $detail->jumlah_minta, 0.000001);
+        $this->assertSame((int) $gudang->id, (int) $detail->tipe_gudang);
+
+        $this->actingAs($warehouse)
+            ->post(route('wms-control.replenishment.request', $suggestion))
+            ->assertSessionHasErrors();
+
+        \App\Models\PengaturanBahanGudang::updateOrCreate(
+            ['gudang_id' => $gudang->id, 'bahan_id' => $bahan->id],
+            ['titik_pemesanan' => 100, 'stok_pengaman' => 50, 'stok_maksimum' => 200, 'aktif' => true],
+        );
+        app(\App\Services\ReplenishmentService::class)->calculate((int) $gudang->id);
+
+        $this->assertSame(\App\Models\SaranPengisianUlang::REQUESTED, $suggestion->fresh()->status);
+
+        $this->travel(1)->days();
+        app(\App\Services\ReplenishmentService::class)->calculate((int) $gudang->id);
+
+        $besok = \App\Models\SaranPengisianUlang::where('gudang_id', $gudang->id)->where('bahan_id', $bahan->id)
+            ->whereDate('calculated_at', today())->firstOrFail();
+        $this->assertSame(\App\Models\SaranPengisianUlang::REQUESTED, $besok->status);
+        $this->assertSame((int) $materialRequest->id, (int) $besok->material_request_id);
+
+        $this->actingAs($warehouse)
+            ->post(route('wms-control.replenishment.request', $besok))
+            ->assertSessionHasErrors();
+        $this->assertSame(1, \App\Models\MaterialRequest::whereIn('id', \App\Models\SaranPengisianUlang::where('bahan_id', $bahan->id)->pluck('material_request_id')->filter())->count());
+    }
+
+    public function test_receiving_rejects_a_reused_lot_number_with_a_conflicting_expiry(): void
+    {
+        $purchasing = User::factory()->create(['type' => User::ROLE_PURCHASING]);
+        $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
+        $numbers = app(DocumentNumberService::class);
+        $gudang = Gudang::where('nama', 'Gudang Utama')->firstOrFail();
+        $bahan = Bahan::whereNotNull('kategori')->firstOrFail();
+        $supplier = Supplier::create(['nama' => 'Supplier Uji Konflik', 'alamat' => 'Jl. Konflik', 'telp' => '0800000094', 'pembayaran' => 'Transfer']);
+
+        $poNumber = $numbers->financial('PO');
+        $this->actingAs($purchasing)->postJson(route('pembelian.store'), [
+            'no_po' => $poNumber,
+            'tanggal' => today()->toDateString(),
+            'supplier_id' => $supplier->id,
+            'gudang_id' => $gudang->id,
+            'is_ppn' => 0,
+            'details' => [['bahan_id' => $bahan->id, 'harga' => 5000, 'jumlah' => 20]],
+        ])->assertCreated();
+
+        $kirim = fn (string $expiry) => $this->actingAs($warehouse)->postJson(route('penerimaan-barang.store'), [
+            'id_lpb' => $numbers->external('LPB'),
+            'tanggal' => today()->toDateString(),
+            'no_po' => $poNumber,
+            'no_sj' => 'SJ-KONFLIK',
+            'details' => [[
+                'id_bahan' => $bahan->id,
+                'id_kategori' => $bahan->kategori,
+                'jumlah_barang_diterima' => 5,
+                'lot_number' => 'LOT-KONFLIK-1',
+                'expires_at' => $expiry,
+            ]],
+        ]);
+
+        $kirim(today()->addDays(60)->toDateString())->assertCreated();
+        $kirim(today()->addDays(90)->toDateString())->assertStatus(422)->assertJsonValidationErrors(['details.0.expires_at']);
+        $kirim(today()->addDays(60)->toDateString())->assertCreated();
+
+        $this->assertSame(
+            today()->addDays(60)->toDateString(),
+            \App\Models\LotPersediaan::where('lot_number', 'LOT-KONFLIK-1')->firstOrFail()->expires_at->toDateString()
+        );
+    }
+
+    public function test_lot_controlled_material_cannot_be_received_without_lot_and_expiry(): void
+    {
+        $purchasing = User::factory()->create(['type' => User::ROLE_PURCHASING]);
+        $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
+        $numbers = app(DocumentNumberService::class);
+        $gudang = Gudang::where('nama', 'Gudang Utama')->firstOrFail();
+        $bahan = Bahan::whereNotNull('kategori')->firstOrFail();
+        $bahan->update(['wajib_lot' => true, 'wajib_expiry' => true]);
+        $supplier = Supplier::create(['nama' => 'Supplier Uji Lot', 'alamat' => 'Jl. Lot', 'telp' => '0800000096', 'pembayaran' => 'Transfer']);
+
+        $poNumber = $numbers->financial('PO');
+        $this->actingAs($purchasing)->postJson(route('pembelian.store'), [
+            'no_po' => $poNumber,
+            'tanggal' => today()->toDateString(),
+            'supplier_id' => $supplier->id,
+            'gudang_id' => $gudang->id,
+            'is_ppn' => 0,
+            'details' => [['bahan_id' => $bahan->id, 'harga' => 5000, 'jumlah' => 10]],
+        ])->assertCreated();
+
+        $payload = fn (array $detail) => [
+            'id_lpb' => $numbers->external('LPB'),
+            'tanggal' => today()->toDateString(),
+            'no_po' => $poNumber,
+            'no_sj' => 'SJ-LOT-001',
+            'details' => [array_merge([
+                'id_bahan' => $bahan->id,
+                'id_kategori' => $bahan->kategori,
+                'jumlah_barang_diterima' => 10,
+            ], $detail)],
+        ];
+
+        $this->actingAs($warehouse)->postJson(route('penerimaan-barang.store'), $payload([]))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['details.0.lot_number', 'details.0.expires_at']);
+
+        $this->actingAs($warehouse)->postJson(route('penerimaan-barang.store'), $payload(['lot_number' => 'LOT-WAJIB-1']))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['details.0.expires_at']);
+
+        $this->actingAs($warehouse)->postJson(route('penerimaan-barang.store'), $payload([
+            'lot_number' => 'LOT-WAJIB-1',
+            'expires_at' => today()->addDays(30)->toDateString(),
+        ]))->assertCreated();
+    }
+
+    private function buatLpbDuaBaris(User $warehouse, string $tanda): PenerimaanBarang
+    {
+        $purchasing = User::factory()->create(['type' => User::ROLE_PURCHASING]);
+        $numbers = app(DocumentNumberService::class);
+        $gudang = Gudang::where('nama', 'Gudang Utama')->firstOrFail();
+        $bahans = Bahan::whereNotNull('kategori')->take(2)->get();
+        $supplier = Supplier::create(['nama' => "Supplier {$tanda}", 'alamat' => 'Jl. Putaway', 'telp' => '08000000' . random_int(10, 99), 'pembayaran' => 'Transfer']);
+
+        $poNumber = $numbers->financial('PO');
+        $this->actingAs($purchasing)->postJson(route('pembelian.store'), [
+            'no_po' => $poNumber,
+            'tanggal' => today()->toDateString(),
+            'supplier_id' => $supplier->id,
+            'gudang_id' => $gudang->id,
+            'is_ppn' => 0,
+            'details' => $bahans->map(fn ($b) => ['bahan_id' => $b->id, 'harga' => 5000, 'jumlah' => 4])->all(),
+        ])->assertCreated();
+
+        $noLpb = $numbers->external('LPB');
+        $this->actingAs($warehouse)->postJson(route('penerimaan-barang.store'), [
+            'id_lpb' => $noLpb,
+            'tanggal' => today()->toDateString(),
+            'no_po' => $poNumber,
+            'no_sj' => "SJ-{$tanda}",
+            'details' => $bahans->map(fn ($b) => [
+                'id_bahan' => $b->id,
+                'id_kategori' => $b->kategori,
+                'jumlah_barang_diterima' => 4,
+            ])->all(),
+        ])->assertCreated();
+
+        return PenerimaanBarang::with('details')->where('id_lpb', $noLpb)->firstOrFail();
+    }
+
+    public function test_two_putaway_lines_sharing_one_bin_are_counted_once_against_capacity(): void
+    {
+        $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
+        $lpb = $this->buatLpbDuaBaris($warehouse, 'PAS');
+        $pas = \App\Models\LokasiGudang::create(['gudang_id' => $lpb->gudang_id, 'code' => 'BIN-PAS', 'name' => 'Bin Pas', 'type' => 'RACK', 'capacity' => 8, 'active' => true]);
+
+        $this->actingAs($warehouse)
+            ->post(route('wms-control.penerimaan-barang.putaway', $lpb), [
+                'locations' => $lpb->details->mapWithKeys(fn ($d) => [$d->id => $pas->id])->all(),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('PUTAWAY', $lpb->fresh()->receiving_status);
+        $this->assertEqualsWithDelta(8.0, (float) LayerPersediaan::where('warehouse_location_id', $pas->id)->sum('remaining_quantity'), 0.000001);
+    }
+
+    public function test_putaway_places_each_line_in_its_own_bin_and_respects_capacity(): void
+    {
+        $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
+        $lpb = $this->buatLpbDuaBaris($warehouse, 'PUTAWAY');
+        $details = $lpb->details->values();
+        $this->assertCount(2, $details);
+
+        $sempit = \App\Models\LokasiGudang::create(['gudang_id' => $lpb->gudang_id, 'code' => 'BIN-SEMPIT', 'name' => 'Bin Sempit', 'type' => 'RACK', 'capacity' => 0.5, 'active' => true]);
+        $lega = \App\Models\LokasiGudang::create(['gudang_id' => $lpb->gudang_id, 'code' => 'BIN-LEGA', 'name' => 'Bin Lega', 'type' => 'RACK', 'active' => true]);
+        $lain = \App\Models\LokasiGudang::create(['gudang_id' => $lpb->gudang_id, 'code' => 'BIN-LAIN', 'name' => 'Bin Lain', 'type' => 'RACK', 'active' => true]);
+
+        $semua = $details->mapWithKeys(fn ($d) => [$d->id => $lega->id])->all();
+
+        $this->actingAs($warehouse)
+            ->post(route('wms-control.penerimaan-barang.putaway', $lpb), ['locations' => [$details[0]->id => $sempit->id] + $semua])
+            ->assertSessionHasErrors();
+        $this->assertNotSame('PUTAWAY', $lpb->fresh()->receiving_status);
+
+        $terpisah = $semua;
+        $terpisah[$details[0]->id] = $lain->id;
+        $this->actingAs($warehouse)
+            ->post(route('wms-control.penerimaan-barang.putaway', $lpb), ['locations' => $terpisah])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('PUTAWAY', $lpb->fresh()->receiving_status);
+        $this->assertSame($lain->id, (int) LayerPersediaan::where('source_type', 'LPB_DETAIL')->where('source_id', $details[0]->id)->value('warehouse_location_id'));
+        $this->assertSame($lega->id, (int) LayerPersediaan::where('source_type', 'LPB_DETAIL')->where('source_id', $details[1]->id)->value('warehouse_location_id'));
+    }
+
+    public function test_completed_picking_order_becomes_a_draft_npk_exactly_once(): void
+    {
+        $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
+        $execution = app(WarehouseExecutionService::class);
+        $layer = LayerPersediaan::where('remaining_quantity', '>', 0)->where('stock_status', 'AVAILABLE')->firstOrFail();
+        $this->actingAs($warehouse);
+
+        $reservation = $execution->reserve((int) $layer->gudang_id, (int) $layer->bahan_id, 1.0);
+        $pick = $execution->createPick($reservation);
+        $execution->completePick($pick);
+
+        $this->actingAs($warehouse)
+            ->post(route('wms-control.picking-orders.issue', $pick))
+            ->assertSessionHasNoErrors();
+
+        $npk = PemakaianBarang::where('picking_order_id', $pick->id)->firstOrFail();
+        $this->assertSame(PemakaianBarang::DRAFT, $npk->status);
+        $this->assertSame((int) $reservation->id, (int) $npk->inventory_reservation_id);
+        $this->assertSame((int) $layer->bahan_id, (int) $npk->id_barang);
+        $this->assertEqualsWithDelta(1.0, (float) $npk->jumlah_stok, 0.000001);
+
+        $this->actingAs($warehouse)
+            ->post(route('wms-control.picking-orders.issue', $pick))
+            ->assertSessionHasErrors();
+        $this->assertSame(1, PemakaianBarang::where('picking_order_id', $pick->id)->count());
+    }
+
+    public function test_serial_registration_cannot_exceed_lot_quantity_and_status_is_updatable(): void
+    {
+        $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
+        $layer = LayerPersediaan::where('remaining_quantity', '>', 0)->firstOrFail();
+        $lot = \App\Models\LotPersediaan::create(['bahan_id' => $layer->bahan_id, 'lot_number' => 'LOT-SERIAL-1', 'quality_status' => 'RELEASED']);
+        $layer->update(['inventory_lot_id' => $lot->id, 'initial_quantity' => 2]);
+
+        foreach (['SN-1', 'SN-2'] as $serial) {
+            $this->actingAs($warehouse)
+                ->post(route('wms-control.serials.store'), ['inventory_lot_id' => $lot->id, 'serial_number' => $serial])
+                ->assertSessionHasNoErrors();
+        }
+
+        $this->actingAs($warehouse)
+            ->post(route('wms-control.serials.store'), ['inventory_lot_id' => $lot->id, 'serial_number' => 'SN-3'])
+            ->assertSessionHasErrors('serial_number');
+        $this->assertSame(2, $lot->serials()->count());
+
+        $serial = \App\Models\SerialPersediaan::where('serial_number', 'SN-1')->firstOrFail();
+        $this->assertSame('AVAILABLE', $serial->status);
+
+        $this->actingAs($warehouse)
+            ->patch(route('wms-control.serials.status', $serial), ['status' => 'ISSUED'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('ISSUED', $serial->fresh()->status);
+    }
+
     public function test_invoice_requires_accounting_manager_approval_before_posting_or_payment(): void
     {
         $accounting = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);

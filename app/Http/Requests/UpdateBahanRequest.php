@@ -33,6 +33,8 @@ class UpdateBahanRequest extends FormRequest
             'satuan_kecil' => ['nullable', 'string', 'max:11', 'different:satuan'],
             'tipe_gudang' => ['required', 'integer', 'exists:gudangs,id'],
             'planning' => ['nullable', 'numeric', 'min:0'],
+            'wajib_lot' => ['nullable', 'boolean'],
+            'wajib_expiry' => ['nullable', 'boolean'],
         ];
     }
 
@@ -45,6 +47,13 @@ class UpdateBahanRequest extends FormRequest
                 $validator->errors()->add(
                     $hasFactor ? 'satuan_kecil' : 'berat_kecil',
                     'Jumlah konversi dan nama satuan kecil harus diisi bersama.'
+                );
+            }
+
+            if ($this->boolean('wajib_expiry') && !$this->boolean('wajib_lot')) {
+                $validator->errors()->add(
+                    'wajib_lot',
+                    'Tanggal kedaluwarsa tersimpan pada lot, jadi wajib lot harus ikut diaktifkan.'
                 );
             }
         }];

@@ -66,13 +66,16 @@ Route::middleware('auth')->group(function () {
         Route::post('lots', [WmsTraceabilityController::class, 'storeLot'])->name('lots.store');
         Route::post('serials', [WmsTraceabilityController::class, 'storeSerial'])->name('serials.store');
         Route::patch('lots/{lot}/block', [WmsTraceabilityController::class, 'updateLotBlock'])->name('lots.block');
+        Route::patch('serials/{serial}/status', [WmsTraceabilityController::class, 'updateSerialStatus'])->name('serials.status');
         Route::post('penerimaan-barang/{lpb}/inspect', [WarehouseExecutionController::class, 'inspect'])->name('penerimaan-barang.inspect');
         Route::post('penerimaan-barang/{lpb}/putaway', [WarehouseExecutionController::class, 'putaway'])->name('penerimaan-barang.putaway');
         Route::post('reservations', [WarehouseExecutionController::class, 'reserve'])->name('reservations.store');
         Route::post('reservations/{reservation}/release', [WarehouseExecutionController::class, 'releaseReservation'])->name('reservations.release');
         Route::post('reservations/{reservation}/pick', [WarehouseExecutionController::class, 'createPick'])->name('reservations.pick');
         Route::post('picking-orders/{pickingOrder}/complete', [WarehouseExecutionController::class, 'completePick'])->name('picking-orders.complete');
+        Route::post('picking-orders/{pickingOrder}/issue', [WarehouseExecutionController::class, 'issuePick'])->name('picking-orders.issue');
         Route::post('replenishment', [WarehouseExecutionController::class, 'replenish'])->name('replenishment');
+        Route::post('replenishment/{suggestion}/request', [WarehouseExecutionController::class, 'requestReplenishment'])->name('replenishment.request');
         Route::post('faktur-pembelian/{invoice}/match', [InventoryFinancialControlController::class, 'matchInvoice'])->name('faktur-pembelian.match');
         Route::post('landed-costs', [InventoryFinancialControlController::class, 'storeLandedCost'])->name('landed-costs.store');
         Route::post('landed-costs/{landedCost}/post', [InventoryFinancialControlController::class, 'postLandedCost'])->name('landed-costs.post');

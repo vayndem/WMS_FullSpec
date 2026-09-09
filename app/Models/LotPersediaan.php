@@ -13,4 +13,5 @@ class LotPersediaan extends Model
     protected $casts = ['manufactured_at' => 'date', 'expires_at' => 'date', 'blocked' => 'boolean'];
     public function bahan() { return $this->belongsTo(Bahan::class, 'bahan_id'); }
     public function serials() { return $this->hasMany(SerialPersediaan::class, 'inventory_lot_id'); }
+    public function layers() { return $this->hasMany(LayerPersediaan::class, 'inventory_lot_id'); }
 }

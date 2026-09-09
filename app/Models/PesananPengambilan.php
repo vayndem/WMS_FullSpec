@@ -15,4 +15,9 @@ class PesananPengambilan extends Model
     {
         return $this->hasMany(PesananPengambilanDetail::class, 'picking_order_id');
     }
+
+    public function npk()
+    {
+        return $this->hasOne(PemakaianBarang::class, 'picking_order_id');
+    }
 }

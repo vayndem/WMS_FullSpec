@@ -32,11 +32,15 @@ class WmsControlController extends Controller
 
         return view('wms_control.index', [
             'locations' => LokasiGudang::with('gudang')->whereIn('gudang_id', $warehouseIds)->orderBy('code')->limit(100)->get(),
-            'lots' => LotPersediaan::with('bahan')->latest()->limit(100)->get(),
+            'lots' => LotPersediaan::with(['bahan', 'serials'])
+                ->withSum(['layers as sisa_stok' => fn ($query) => $query->whereIn('gudang_id', $warehouseIds)], 'remaining_quantity')
+                ->orderByRaw('expires_at IS NULL, expires_at')
+                ->limit(100)->get(),
+            'lotOptions' => LotPersediaan::with('bahan')->latest()->limit(100)->get(),
             'reservations' => ReservasiPersediaan::with(['gudang', 'bahan'])->whereIn('gudang_id', $warehouseIds)->latest()->limit(100)->get(),
-            'picks' => PesananPengambilan::with('lines')->whereIn('gudang_id', $warehouseIds)->latest()->limit(50)->get(),
+            'picks' => PesananPengambilan::with(['lines', 'npk'])->whereIn('gudang_id', $warehouseIds)->latest()->limit(50)->get(),
             'inspections' => PemeriksaanKualitas::with('lpb')->latest()->limit(50)->get(),
-            'suggestions' => SaranPengisianUlang::whereIn('gudang_id', $warehouseIds)->where('status', 'OPEN')->orderByRaw("FIELD(priority, 'CRITICAL', 'HIGH', 'NORMAL')")->limit(100)->get(),
+            'suggestions' => SaranPengisianUlang::with(['gudang', 'bahan'])->whereIn('gudang_id', $warehouseIds)->where('status', SaranPengisianUlang::OPEN)->orderByRaw("FIELD(priority, 'CRITICAL', 'HIGH', 'NORMAL')")->limit(100)->get(),
             'landedCosts' => $mayControlFinance ? BiayaTambahan::latest()->limit(50)->get() : collect(),
             'layers' => $mayControlFinance ? LayerPersediaan::with(['bahan', 'gudang'])->where('remaining_quantity', '>', 0)->latest()->limit(200)->get() : collect(),
             'gudangs' => Gudang::whereIn('id', $warehouseIds)->where('aktif', true)->orderBy('nama')->get(),

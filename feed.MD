@@ -230,6 +230,7 @@ Belum ada WIP manufacturing khusus. Sistem masih memakai pola pemakaian bahan la
 - posting LPB menambah `stok_gudangs`
 - posting LPB membuat `wms_layer_persediaan`
 - jurnal LPB: debit persediaan, kredit GRNI
+- form penerimaan menangkap `lot_number` **dan** `expires_at` (sejak 2026-09-09); lot dibuat/dipakai ulang per `(bahan_id, lot_number)`, dan tanggal kedaluwarsa diisikan ke lot lama yang masih kosong. Ini yang mengaktifkan FEFO picking dan seluruh guard stok kedaluwarsa — sebelumnya lot dari penerimaan selalu ber-`expires_at` NULL sehingga FEFO turun jadi FIFO biasa.
 
 ### 6.2 NPK (Pemakaian Barang)
 
@@ -463,8 +464,9 @@ Framework kontrol mencakup:
 - `wms_pemeriksaan_kualitas` dan putaway
 - `wms_biaya_tambahan` beserta alokasi ke layer
 - `wms_reservasi_persediaan` dan `wms_pesanan_pengambilan`
-- `wms_saran_pengisian_ulang`
+- `wms_saran_pengisian_ulang`, lengkap dengan tombol "Buat Request" yang mengubah saran jadi Material Request `PENDING` dan menandai saran itu `REQUESTED` (kolom `material_request_id`)
 - three-way matching tersimpan pada faktur pembelian
+- peringatan stok kedaluwarsa/mendekati kedaluwarsa muncul sebagai kartu tugas di dashboard gudang dan produksi
 
 Urutan transfer standar adalah `DRAFT -> DIAJUKAN -> DIKIRIM -> DITERIMA`. Urutan receiving adalah `RECEIVED -> QC_COMPLETED/QC_COMPLETED_WITH_HOLD -> PUTAWAY`. Dokumen posted tidak boleh diedit; gunakan workflow reversal atau void sumber transaksi.
 

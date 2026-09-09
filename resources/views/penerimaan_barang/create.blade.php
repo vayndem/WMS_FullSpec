@@ -71,12 +71,13 @@
                                     <th class="text-center">Sisa</th>
                                     <th class="text-center">Terima Fisik <span class="text-error">*</span></th>
                                     <th>Lot Number</th>
+                                    <th>Kedaluwarsa</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <template x-if="items.length === 0">
                                     <tr>
-                                        <td colspan="8" class="py-3 text-center text-base-content/50">Pilih Nomor PO terlebih dahulu.</td>
+                                        <td colspan="9" class="py-3 text-center text-base-content/50">Pilih Nomor PO terlebih dahulu.</td>
                                     </tr>
                                 </template>
                                 <template x-for="(item, idx) in items" :key="idx">
@@ -103,7 +104,16 @@
                                                 x-model="item.jumlah_barang_diterima" class="input input-bordered input-sm text-center font-bold text-success" required>
                                         </td>
                                         <td>
-                                            <input type="text" :name="`details[${idx}][lot_number]`" x-model="item.lot_number" class="input input-bordered input-sm" placeholder="No. Lot">
+                                            <input type="text" :name="`details[${idx}][lot_number]`" x-model="item.lot_number" class="input input-bordered input-sm"
+                                                :class="item.wajib_lot && !item.lot_number ? 'input-error' : ''"
+                                                :required="item.wajib_lot" :placeholder="item.wajib_lot ? 'No. Lot (wajib)' : 'No. Lot'">
+                                        </td>
+                                        <td>
+                                            <input type="date" :name="`details[${idx}][expires_at]`" x-model="item.expires_at" class="input input-bordered input-sm"
+                                                :class="item.wajib_expiry && !item.expires_at ? 'input-error' : ''"
+                                                :required="item.wajib_expiry"
+                                                :disabled="!item.lot_number && !item.wajib_expiry"
+                                                :title="item.wajib_expiry ? 'Bahan ini wajib punya tanggal kedaluwarsa' : (item.lot_number ? 'Tanggal kedaluwarsa lot' : 'Isi No. Lot dulu')">
                                         </td>
                                     </tr>
                                 </template>
@@ -152,7 +162,8 @@
                     this.items = res.items.map((item) => ({
                         bahan_id: item.bahan_id, nama_bahan: item.nama_bahan, id_kategori: item.id_kategori || '',
                         jumlah_po: item.jumlah_po, diterima: item.diterima, sisa: item.sisa,
-                        jumlah_barang_diterima: item.sisa, lot_number: '',
+                        jumlah_barang_diterima: item.sisa, lot_number: '', expires_at: '',
+                        wajib_lot: !!item.wajib_lot, wajib_expiry: !!item.wajib_expiry,
                     }));
                 } catch (error) {
                     window.AppAlert.error('Gagal memuat data PO.');

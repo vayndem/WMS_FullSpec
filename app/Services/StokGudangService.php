@@ -66,6 +66,34 @@ class StokGudangService
         return $saldo->fresh();
     }
 
+    private function pesanLayerTidakCukup(int $gudangId, int $bahanId, $tanggal, array $statuses): string
+    {
+        $terhalang = LayerPersediaan::with('lot')
+            ->where('gudang_id', $gudangId)->where('bahan_id', $bahanId)
+            ->whereIn('stock_status', $statuses)
+            ->where('remaining_quantity', '>', 0)
+            ->whereDate('transaction_date', '<=', $tanggal)
+            ->whereHas('lot', fn ($lot) => $lot
+                ->where('blocked', true)
+                ->orWhere(fn ($expiry) => $expiry->whereNotNull('expires_at')->whereDate('expires_at', '<', today())))
+            ->get();
+
+        $kedaluwarsa = $terhalang->filter(fn ($layer) => $layer->lot?->expires_at && $layer->lot->expires_at->lt(today()));
+        $diblokir = $terhalang->filter(fn ($layer) => $layer->lot?->blocked && !$kedaluwarsa->contains('id', $layer->id));
+
+        $sebab = [];
+        if ($kedaluwarsa->isNotEmpty()) {
+            $sebab[] = number_format((float) $kedaluwarsa->sum('remaining_quantity'), 2, ',', '.') . ' sudah kedaluwarsa';
+        }
+        if ($diblokir->isNotEmpty()) {
+            $sebab[] = number_format((float) $diblokir->sum('remaining_quantity'), 2, ',', '.') . ' diblokir';
+        }
+
+        return $sebab === []
+            ? 'Layer persediaan gudang tidak mencukupi.'
+            : 'Layer persediaan gudang tidak mencukupi. Ada stok yang tidak bisa dipakai: ' . implode(' dan ', $sebab) . '.';
+    }
+
     public function ambilLayer(int $gudangId, int $bahanId, float $jumlah, $tanggal, array $statuses = ['AVAILABLE']): array
     {
         $layers = LayerPersediaan::where('gudang_id', $gudangId)->where('bahan_id', $bahanId)
@@ -78,7 +106,7 @@ class StokGudangService
             ->where('remaining_quantity', '>', 0)->whereDate('transaction_date', '<=', $tanggal)
             ->orderBy('transaction_date')->orderBy('id')->lockForUpdate()->get();
         if ((float) $layers->sum('remaining_quantity') + 0.000001 < $jumlah) {
-            throw new RuntimeException('Layer persediaan gudang tidak mencukupi.');
+            throw new RuntimeException($this->pesanLayerTidakCukup($gudangId, $bahanId, $tanggal, $statuses));
         }
         $remaining = $jumlah;
         $allocations = [];

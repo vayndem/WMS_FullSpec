@@ -6,6 +6,7 @@ use App\Http\Requests\Wms\StoreLotPersediaanRequest;
 use App\Http\Requests\Wms\StoreSerialPersediaanRequest;
 use App\Http\Requests\Wms\StoreLokasiGudangRequest;
 use App\Http\Requests\Wms\UpdateLotPersediaanBlockRequest;
+use App\Http\Requests\Wms\UpdateSerialPersediaanStatusRequest;
 use App\Models\LotPersediaan;
 use App\Models\SerialPersediaan;
 use App\Models\LokasiGudang;
@@ -35,6 +36,13 @@ class WmsTraceabilityController extends Controller
         SerialPersediaan::create($request->validated());
 
         return back()->with('success', 'Serial number ditambahkan ke lot.');
+    }
+
+    public function updateSerialStatus(UpdateSerialPersediaanStatusRequest $request, SerialPersediaan $serial): RedirectResponse
+    {
+        $serial->update(['status' => $request->validated('status')]);
+
+        return back()->with('success', "Serial {$serial->serial_number} ditandai {$serial->status}.");
     }
 
     public function updateLotBlock(UpdateLotPersediaanBlockRequest $request, LotPersediaan $lot): RedirectResponse

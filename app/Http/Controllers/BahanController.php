@@ -119,8 +119,6 @@ class BahanController extends Controller
     public function update(UpdateBahanRequest $request, Bahan $bahan)
     {
         $data = $request->validated();
-        // Pertahankan kategori asli. Re-klasifikasi wajib memakai workflow
-        // accounting tersendiri, bukan edit master bahan.
         $data['kategori'] = $bahan->kategori;
         $data['tipe_barang'] = $bahan->tipe_barang;
         $data['berat_kecil'] = $request->filled('satuan_kecil')
@@ -129,6 +127,8 @@ class BahanController extends Controller
         $data['satuan_kecil'] = $request->filled('satuan_kecil')
             ? trim((string) $data['satuan_kecil'])
             : null;
+        $data['wajib_lot'] = $request->boolean('wajib_lot');
+        $data['wajib_expiry'] = $request->boolean('wajib_expiry');
 
         $bahan->update($data);
 

@@ -312,6 +312,8 @@ class PenerimaanBarangController extends Controller
                 'jumlah_po'           => $detail->jumlah,
                 'diterima'            => $detail->diterima,
                 'sisa'                => $selisih > 0 ? $selisih : 0,
+                'wajib_lot'           => (bool) ($detail->bahan->wajib_lot ?? false),
+                'wajib_expiry'        => (bool) ($detail->bahan->wajib_expiry ?? false),
             ];
         });
 
@@ -406,10 +408,16 @@ class PenerimaanBarangController extends Controller
                     'jumlah_tersisa'         => $item['jumlah_barang_diterima'],
                     'flag_dipakai'           => 1,
                 ]);
-                $lot = !empty($item['lot_number']) ? LotPersediaan::firstOrCreate(
-                    ['bahan_id' => $item['id_bahan'], 'lot_number' => $item['lot_number']],
-                    ['quality_status' => 'RELEASED']
-                ) : null;
+                $lot = null;
+                if (!empty($item['lot_number'])) {
+                    $lot = LotPersediaan::firstOrCreate(
+                        ['bahan_id' => $item['id_bahan'], 'lot_number' => $item['lot_number']],
+                        ['quality_status' => 'RELEASED', 'expires_at' => $item['expires_at'] ?? null]
+                    );
+                    if (!$lot->expires_at && !empty($item['expires_at'])) {
+                        $lot->update(['expires_at' => $item['expires_at']]);
+                    }
+                }
                 LayerPersediaan::create([
                     'bahan_id' => $item['id_bahan'],
                     'gudang_id' => $po->gudang_id,

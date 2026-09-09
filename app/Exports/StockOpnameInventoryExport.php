@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Exports\Concerns\HasStandardHeaderStyle;
 use App\Models\StokGudang;
 use App\Models\LayerPersediaan;
 use Illuminate\Support\Collection;
@@ -14,6 +15,8 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class StockOpnameInventoryExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
+    use HasStandardHeaderStyle;
+
     public function __construct(private readonly bool $financial) {}
 
     public function collection(): Collection
@@ -64,8 +67,6 @@ class StockOpnameInventoryExport implements FromCollection, WithHeadings, WithMa
 
     public function styles(Worksheet $sheet): array
     {
-        $sheet->freezePane('A2');
-        $sheet->getStyle('1:1')->getFont()->setBold(true);
-        return [1 => ['fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'DCEBFF']]]];
+        return $this->applyHeaderStyle($sheet);
     }
 }

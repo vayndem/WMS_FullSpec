@@ -48,6 +48,25 @@
                 </div>
 
                 <div class="rounded-lg border border-base-300 p-4 md:col-span-3">
+                    <h5 class="font-bold">Kontrol Lot &amp; Kedaluwarsa</h5>
+                    <p class="text-sm text-base-content/50">Kalau diaktifkan, penerimaan barang ini tidak bisa disimpan tanpa nomor lot / tanggal kedaluwarsa. Ini yang membuat picking FEFO dan blokir stok kedaluwarsa benar-benar jalan.</p>
+                    <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <label class="label cursor-pointer justify-start gap-3">
+                            <input type="hidden" name="wajib_lot" value="0">
+                            <input type="checkbox" name="wajib_lot" value="1" class="checkbox checkbox-primary"
+                                @checked(old('wajib_lot', $bahan->wajib_lot))>
+                            <span class="label-text">Wajib nomor lot saat penerimaan</span>
+                        </label>
+                        <label class="label cursor-pointer justify-start gap-3">
+                            <input type="hidden" name="wajib_expiry" value="0">
+                            <input type="checkbox" name="wajib_expiry" value="1" class="checkbox checkbox-primary"
+                                @checked(old('wajib_expiry', $bahan->wajib_expiry))>
+                            <span class="label-text">Wajib tanggal kedaluwarsa saat penerimaan</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="rounded-lg border border-base-300 p-4 md:col-span-3">
                     <h5 class="font-bold">Konversi Satuan Kecil</h5>
                     <p class="text-sm text-base-content/50">Contoh: 1 barrel berisi 10 kaleng. Isi jumlah kecil = 10 dan nama satuan = kaleng.</p>
                     <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">

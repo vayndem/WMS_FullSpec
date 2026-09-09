@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Exports\Concerns\HasStandardHeaderStyle;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -12,6 +13,8 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class GenericTableExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
+    use HasStandardHeaderStyle;
+
     public function __construct(private array $columns, private Collection $rows) {}
 
     public function collection(): Collection
@@ -31,9 +34,6 @@ class GenericTableExport implements FromCollection, WithHeadings, WithMapping, W
 
     public function styles(Worksheet $sheet): array
     {
-        $sheet->freezePane('A2');
-        $sheet->getStyle('1:1')->getFont()->setBold(true);
-
-        return [1 => ['fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'DCEBFF']]]];
+        return $this->applyHeaderStyle($sheet);
     }
 }

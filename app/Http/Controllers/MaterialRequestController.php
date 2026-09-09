@@ -6,6 +6,7 @@ use App\Models\MaterialRequest;
 use App\Models\RequestDetail;
 use App\Models\Bahan;
 use App\Models\Gudang;
+use App\Models\User;
 use App\Http\Requests\StoreMaterialRequest;
 use App\Http\Requests\ApproveMaterialRequest;
 use Illuminate\Http\Request;
@@ -21,6 +22,12 @@ use Maatwebsite\Excel\Facades\Excel;
 class MaterialRequestController extends Controller
 {
     public function __construct(private DocumentNumberService $numbers) {}
+
+    private function isRequestReviewer(User $user): bool
+    {
+        return $user->isSuperAdmin()
+            || $user->hasAnyRole([User::ROLE_PURCHASING, User::ROLE_WAREHOUSE, User::ROLE_ACCOUNTING]);
+    }
     public function index(Request $request)
     {
         $this->authorize('viewAny', MaterialRequest::class);
@@ -29,7 +36,7 @@ class MaterialRequestController extends Controller
             $status = $request->input('status');
 
             $query = MaterialRequest::with(['details.pembelianDetails', 'requester'])
-                ->when(!$request->user()->hasAnyRole([\App\Models\User::ROLE_PURCHASING, \App\Models\User::ROLE_WAREHOUSE, \App\Models\User::ROLE_ACCOUNTING]), fn($q) => $q->where('requested_by', $request->user()->id))
+                ->when(!$this->isRequestReviewer($request->user()), fn($q) => $q->where('requested_by', $request->user()->id))
                 ->when(!empty($status), function ($q) use ($status) {
                     return $q->where('status', $status);
                 });
@@ -57,6 +64,7 @@ class MaterialRequestController extends Controller
         $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
         $search = trim((string) $request->input('search', ''));
         $query = MaterialRequest::query()
+            ->when(!$this->isRequestReviewer($request->user()), fn($q) => $q->where('requested_by', $request->user()->id))
             ->when($request->filled('status'), fn($q) => $q->where('status', $request->status))
             ->latest();
 
@@ -99,6 +107,7 @@ class MaterialRequestController extends Controller
         $filters = collect($request->input('filters', []))->filter(fn($value) => $value !== '');
         $search = trim((string) $request->input('search', ''));
         $query = MaterialRequest::query()
+            ->when(!$this->isRequestReviewer($request->user()), fn($q) => $q->where('requested_by', $request->user()->id))
             ->when($request->filled('status'), fn($q) => $q->where('status', $request->status))
             ->latest();
 

@@ -2,15 +2,21 @@
 
 namespace App\Exports;
 
+use App\Exports\Concerns\HasStandardHeaderStyle;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class FinancialStatementExport implements FromArray, WithHeadings, WithStyles, ShouldAutoSize
 {
-    private array $boldRows = [];
+    use HasStandardHeaderStyle;
+
+    private array $sectionLabelRows = [];
+    private array $totalRows = [];
 
     public function __construct(private array $columns, private array $sections, private ?string $footer = null) {}
 
@@ -28,7 +34,7 @@ class FinancialStatementExport implements FromArray, WithHeadings, WithStyles, S
             if (!empty($section['label'])) {
                 $rowIndex++;
                 $data[] = array_pad([$section['label']], count($this->columns), '');
-                $this->boldRows[] = $rowIndex;
+                $this->sectionLabelRows[] = $rowIndex;
             }
 
             foreach ($section['rows'] as $row) {
@@ -39,14 +45,14 @@ class FinancialStatementExport implements FromArray, WithHeadings, WithStyles, S
             if (!empty($section['subtotal'])) {
                 $rowIndex++;
                 $data[] = array_map(fn ($column) => $section['subtotal'][$column['key']] ?? '', $this->columns);
-                $this->boldRows[] = $rowIndex;
+                $this->totalRows[] = $rowIndex;
             }
         }
 
         if ($this->footer) {
             $rowIndex++;
             $data[] = array_pad([$this->footer], count($this->columns), '');
-            $this->boldRows[] = $rowIndex;
+            $this->totalRows[] = $rowIndex;
         }
 
         return $data;
@@ -54,11 +60,24 @@ class FinancialStatementExport implements FromArray, WithHeadings, WithStyles, S
 
     public function styles(Worksheet $sheet): array
     {
-        $sheet->getStyle('1:1')->getFont()->setBold(true);
-        foreach ($this->boldRows as $row) {
-            $sheet->getStyle("{$row}:{$row}")->getFont()->setBold(true);
+        $styles = $this->applyHeaderStyle($sheet, freezeHeader: false, zebraStripe: false);
+        $highestColumn = $sheet->getHighestColumn();
+
+        foreach ($this->sectionLabelRows as $row) {
+            $sheet->getStyle("A{$row}:{$highestColumn}{$row}")->applyFromArray([
+                'font' => ['bold' => true, 'italic' => true, 'color' => ['rgb' => '1E3A8A']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
+            ]);
         }
 
-        return [1 => ['fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'DCEBFF']]]];
+        foreach ($this->totalRows as $row) {
+            $sheet->getStyle("A{$row}:{$highestColumn}{$row}")->applyFromArray([
+                'font' => ['bold' => true],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DBEAFE']],
+                'borders' => ['top' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '1E3A8A']]],
+            ]);
+        }
+
+        return $styles;
     }
 }

@@ -9,11 +9,12 @@ use App\Http\Requests\Wms\WarehouseActionRequest;
 use App\Models\ReservasiPersediaan;
 use App\Models\PenerimaanBarang;
 use App\Models\PesananPengambilan;
-use App\Models\LokasiGudang;
+use App\Models\SaranPengisianUlang;
 use App\Services\ReplenishmentService;
 use App\Services\WarehouseExecutionService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\RedirectResponse;
+use RuntimeException;
 
 class WarehouseExecutionController extends Controller
 {
@@ -28,9 +29,12 @@ class WarehouseExecutionController extends Controller
     public function putaway(PutawayLpbRequest $request, PenerimaanBarang $lpb, WarehouseExecutionService $service): RedirectResponse
     {
         $this->ensureWarehouseAccess($request, (int) $lpb->gudang_id);
-        $location = LokasiGudang::findOrFail($request->integer('warehouse_location_id'));
-        abort_unless((int) $location->gudang_id === (int) $lpb->gudang_id, 422, 'Lokasi putaway harus berada di gudang penerimaan.');
-        $service->putaway($lpb, $location);
+
+        try {
+            $service->putaway($lpb, $request->validated('locations'));
+        } catch (RuntimeException $exception) {
+            return back()->withErrors($exception->getMessage());
+        }
 
         return back()->with('success', 'Putaway LPB selesai.');
     }
@@ -68,6 +72,19 @@ class WarehouseExecutionController extends Controller
         return back()->with('success', 'Picking selesai dan siap diterbitkan melalui NPK.');
     }
 
+    public function issuePick(WarehouseActionRequest $request, PesananPengambilan $pickingOrder, WarehouseExecutionService $service): RedirectResponse
+    {
+        $this->ensureWarehouseAccess($request, (int) $pickingOrder->gudang_id);
+
+        try {
+            $npk = $service->createDraftIssue($pickingOrder);
+        } catch (RuntimeException $exception) {
+            return back()->withErrors($exception->getMessage());
+        }
+
+        return back()->with('success', "NPK draft {$npk->kode} dibuat dari picking order. Buka menu Pemakaian Barang untuk memposting.");
+    }
+
     public function replenish(WarehouseActionRequest $request, ReplenishmentService $service): RedirectResponse
     {
         $gudangId = $request->integer('gudang_id') ?: null;
@@ -77,6 +94,19 @@ class WarehouseExecutionController extends Controller
         $count = $service->calculate($gudangId);
 
         return back()->with('success', "Planning dihitung ulang untuk {$count} bahan-gudang.");
+    }
+
+    public function requestReplenishment(WarehouseActionRequest $request, SaranPengisianUlang $suggestion, ReplenishmentService $service): RedirectResponse
+    {
+        $this->ensureWarehouseAccess($request, (int) $suggestion->gudang_id);
+
+        try {
+            $materialRequest = $service->createMaterialRequest($suggestion, (int) $request->user()->id);
+        } catch (RuntimeException $exception) {
+            return back()->withErrors($exception->getMessage());
+        }
+
+        return back()->with('success', "Request {$materialRequest->no_request} dibuat dari saran pengisian ulang.");
     }
 
     private function ensureWarehouseAccess(FormRequest $request, int $gudangId): void

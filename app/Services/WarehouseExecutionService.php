@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Bahan;
 use App\Models\LayerPersediaan;
+use App\Models\PemakaianBarang;
 use App\Models\ReservasiPersediaan;
 use App\Models\Gudang;
 use App\Models\PenerimaanBarang;
@@ -78,6 +80,39 @@ class WarehouseExecutionService
         });
     }
 
+    public function createDraftIssue(PesananPengambilan $pick): PemakaianBarang
+    {
+        return DB::transaction(function () use ($pick) {
+            $pick = PesananPengambilan::with('lines')->lockForUpdate()->findOrFail($pick->id);
+            if ($pick->status !== 'COMPLETED') throw new RuntimeException('Picking order harus selesai dulu sebelum diterbitkan jadi NPK.');
+            if (PemakaianBarang::where('picking_order_id', $pick->id)->exists()) throw new RuntimeException('Picking order ini sudah punya NPK.');
+
+            $reservationIds = $pick->lines->pluck('inventory_reservation_id')->filter()->unique();
+            if ($reservationIds->count() !== 1) throw new RuntimeException('Picking order harus terhubung ke tepat satu reservasi.');
+            $reservation = ReservasiPersediaan::findOrFail($reservationIds->first());
+
+            $jumlahStok = (float) $pick->lines->sum('quantity_picked');
+            if ($jumlahStok <= 0) throw new RuntimeException('Belum ada kuantitas yang dipetik pada picking order ini.');
+
+            $bahan = Bahan::findOrFail($reservation->bahan_id);
+
+            return PemakaianBarang::create([
+                'kode' => $this->numbers->external('NPK'),
+                'tanggal' => today(),
+                'id_barang' => $bahan->id,
+                'id_gudang_asal' => $pick->gudang_id,
+                'jumlah' => $bahan->smallUnitEquivalent($jumlahStok) ?? $jumlahStok,
+                'jumlah_stok' => $jumlahStok,
+                'satuan_transaksi' => $bahan->hasSmallUnit() ? $bahan->satuan_kecil : $bahan->satuan,
+                'status' => PemakaianBarang::DRAFT,
+                'inventory_reservation_id' => $reservation->id,
+                'picking_order_id' => $pick->id,
+                'id_user' => Auth::id() ?? 0,
+                'keterangan' => 'Dari picking order ' . $pick->number,
+            ]);
+        });
+    }
+
     public function consumeReservation(ReservasiPersediaan $reservation, int $warehouseId, int $materialId, float $quantity): void
     {
         $reservation = ReservasiPersediaan::lockForUpdate()->findOrFail($reservation->id);
@@ -122,16 +157,37 @@ class WarehouseExecutionService
         });
     }
 
-    public function putaway(PenerimaanBarang $lpb, LokasiGudang $location): void
+    public function putaway(PenerimaanBarang $lpb, array $locationByDetail): void
     {
-        DB::transaction(function () use ($lpb, $location) {
-            $lpb = PenerimaanBarang::with('details')->lockForUpdate()->findOrFail($lpb->id);
-            $location = LokasiGudang::findOrFail($location->id);
-            if ((int) $location->gudang_id !== (int) $lpb->gudang_id || !$location->active) throw new RuntimeException('Lokasi putaway tidak valid untuk gudang LPB.');
+        DB::transaction(function () use ($lpb, $locationByDetail) {
+            $lpb = PenerimaanBarang::with('details.bahan')->lockForUpdate()->findOrFail($lpb->id);
             $detailIds = $lpb->details->pluck('id');
             if (LayerPersediaan::where('source_type', 'LPB_DETAIL')->whereIn('source_id', $detailIds)->where('stock_status', 'QC_HOLD')->where('remaining_quantity', '>', 0)->exists()) throw new RuntimeException('Selesaikan keputusan barang QC hold sebelum putaway.');
-            LayerPersediaan::where('source_type', 'LPB_DETAIL')->whereIn('source_id', $detailIds)->update(['warehouse_location_id' => $location->id]);
+
+            $locations = LokasiGudang::whereIn('id', array_unique(array_values($locationByDetail)))->get()->keyBy('id');
+
+            foreach ($lpb->details as $detail) {
+                $location = $locations->get($locationByDetail[$detail->id] ?? null);
+                if (!$location) throw new RuntimeException("Baris {$detail->bahan?->nama} belum dipilihkan lokasi putaway.");
+                if ((int) $location->gudang_id !== (int) $lpb->gudang_id || !$location->active) throw new RuntimeException("Lokasi {$location->code} tidak valid untuk gudang penerimaan ini.");
+
+                $masuk = (float) LayerPersediaan::where('source_type', 'LPB_DETAIL')->where('source_id', $detail->id)->sum('remaining_quantity');
+                $this->assertLocationCapacity($location, $masuk);
+
+                LayerPersediaan::where('source_type', 'LPB_DETAIL')->where('source_id', $detail->id)->update(['warehouse_location_id' => $location->id]);
+            }
+
             $lpb->update(['receiving_status' => 'PUTAWAY', 'putaway_by' => Auth::id(), 'putaway_at' => now()]);
         });
+    }
+
+    private function assertLocationCapacity(LokasiGudang $location, float $masuk): void
+    {
+        if ($location->capacity === null) return;
+        $terisi = (float) LayerPersediaan::where('warehouse_location_id', $location->id)->where('remaining_quantity', '>', 0)->sum('remaining_quantity');
+        $kapasitas = (float) $location->capacity;
+        if ($terisi + $masuk > $kapasitas + .000001) {
+            throw new RuntimeException("Kapasitas lokasi {$location->code} tidak cukup: terisi " . rtrim(rtrim(number_format($terisi, 4, ',', '.'), '0'), ',') . " dari " . rtrim(rtrim(number_format($kapasitas, 4, ',', '.'), '0'), ',') . ", masuk " . rtrim(rtrim(number_format($masuk, 4, ',', '.'), '0'), ',') . '.');
+        }
     }
 }
