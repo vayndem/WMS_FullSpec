@@ -35,6 +35,15 @@
                     </div>
                 </div>
                 <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold">Klasifikasi Fiskal</span></label>
+                    <select name="klasifikasi_fiskal" class="select select-bordered">
+                        @foreach (\App\Models\BaganAkun::KLASIFIKASI_FISKAL as $kode => $label)
+                            <option value="{{ $kode }}" @selected($coa->klasifikasi_fiskal === $kode)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <span class="label-text-alt mt-1 text-base-content/50">Dipakai laporan Rekonsiliasi Fiskal untuk menentukan koreksi laba komersial ke laba fiskal.</span>
+                </div>
+                <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Keterangan</span></label>
                     <textarea class="textarea textarea-bordered" name="keterangan" rows="3">{{ $coa->keterangan }}</textarea>
                 </div>

@@ -80,10 +80,18 @@ class DatabaseSeeder extends Seeder
             ['kode_akun' => '3102', 'nama_akun' => 'Ekuitas Saldo Awal Asset', 'kategori_akun' => 'EKUITAS', 'posisi_normal' => 'KREDIT'],
             ['kode_akun' => '4203', 'nama_akun' => 'Keuntungan Pelepasan Asset', 'kategori_akun' => 'PENDAPATAN', 'posisi_normal' => 'KREDIT'],
             ['kode_akun' => '5202', 'nama_akun' => 'Beban Jasa Operasional', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT'],
-            ['kode_akun' => '5301', 'nama_akun' => 'Beban Penyusutan Peralatan', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT'],
+            ['kode_akun' => '5301', 'nama_akun' => 'Beban Penyusutan Peralatan', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT', 'klasifikasi_fiskal' => BaganAkun::FISKAL_BEDA_WAKTU],
             ['kode_akun' => '5302', 'nama_akun' => 'Kerugian Pelepasan Asset', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT'],
             ['kode_akun' => '4204', 'nama_akun' => 'Laba Selisih Kurs', 'kategori_akun' => 'PENDAPATAN', 'posisi_normal' => 'KREDIT'],
             ['kode_akun' => '5303', 'nama_akun' => 'Rugi Selisih Kurs', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT'],
+            ['kode_akun' => '5304', 'nama_akun' => 'Beban Sanksi dan Denda Pajak', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT', 'klasifikasi_fiskal' => BaganAkun::FISKAL_BEDA_TETAP],
+            ['kode_akun' => '5305', 'nama_akun' => 'Beban Sumbangan dan Natura', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT', 'klasifikasi_fiskal' => BaganAkun::FISKAL_BEDA_TETAP],
+            ['kode_akun' => '4205', 'nama_akun' => 'Penghasilan Kena PPh Final', 'kategori_akun' => 'PENDAPATAN', 'posisi_normal' => 'KREDIT', 'klasifikasi_fiskal' => BaganAkun::FISKAL_PENGHASILAN_FINAL],
+            ['kode_akun' => '2107', 'nama_akun' => 'Hutang PPh Badan', 'kategori_akun' => 'LIABILITAS', 'posisi_normal' => 'KREDIT'],
+            ['kode_akun' => '5306', 'nama_akun' => 'Beban PPh Badan', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT', 'klasifikasi_fiskal' => BaganAkun::FISKAL_BEDA_TETAP],
+            ['kode_akun' => '1601', 'nama_akun' => 'Aset Pajak Tangguhan', 'kategori_akun' => 'ASET', 'posisi_normal' => 'DEBIT'],
+            ['kode_akun' => '2108', 'nama_akun' => 'Liabilitas Pajak Tangguhan', 'kategori_akun' => 'LIABILITAS', 'posisi_normal' => 'KREDIT'],
+            ['kode_akun' => '5307', 'nama_akun' => 'Beban Pajak Tangguhan', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT', 'klasifikasi_fiskal' => BaganAkun::FISKAL_BEDA_TETAP],
         ];
 
         foreach ($coas as $coa) {
@@ -91,6 +99,7 @@ class DatabaseSeeder extends Seeder
                 'is_active' => true,
                 'is_postable' => true,
                 'is_cash_bank' => false,
+                'klasifikasi_fiskal' => BaganAkun::FISKAL_NONE,
             ], $coa));
         }
 
@@ -107,6 +116,11 @@ class DatabaseSeeder extends Seeder
             AccountingSetting::BIAYA_ONGKIR => '5105',
             AccountingSetting::DISKON_PEMBELIAN => '5201',
             AccountingSetting::UANG_MUKA_SUPPLIER => '1401',
+            AccountingSetting::HUTANG_PPH_BADAN => '2107',
+            AccountingSetting::BEBAN_PPH_BADAN => '5306',
+            AccountingSetting::ASET_PAJAK_TANGGUHAN => '1601',
+            AccountingSetting::LIABILITAS_PAJAK_TANGGUHAN => '2108',
+            AccountingSetting::BEBAN_PAJAK_TANGGUHAN => '5307',
         ];
         foreach ($accountMappings as $key => $code) {
             AccountingSetting::updateOrCreate(

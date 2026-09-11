@@ -541,14 +541,56 @@ class WmsControlFrameworkTest extends TestCase
             User::ROLE_PRODUCTION => 'Semua Tugas Produksi',
             User::ROLE_ACCOUNTING => 'Semua Tugas Accounting',
             User::ROLE_ACCOUNTING_MANAGER => 'Semua Tugas Accounting',
+            User::ROLE_SUPER_ADMIN => 'Seluruh Tugas Terbuka',
         ];
 
         foreach ($roles as $role => $expectedHeading) {
             $user = User::factory()->create(['type' => $role]);
             $this->actingAs($user)->get(route('dashboard'))
                 ->assertOk()
-                ->assertSee($expectedHeading);
+                ->assertSee($expectedHeading)
+                ->assertSee('Progres Pekerjaan');
         }
+    }
+
+    public function test_dashboard_reminders_surface_upcoming_deadlines_with_a_day_countdown(): void
+    {
+        $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
+        $layer = LayerPersediaan::where('remaining_quantity', '>', 0)->where('stock_status', 'AVAILABLE')->firstOrFail();
+        $lot = \App\Models\LotPersediaan::create([
+            'bahan_id' => $layer->bahan_id,
+            'lot_number' => 'DASH-REMINDER-1',
+            'quality_status' => 'RELEASED',
+            'expires_at' => today()->addDays(5),
+        ]);
+        $layer->update(['inventory_lot_id' => $lot->id]);
+
+        $this->actingAs($warehouse)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Kedaluwarsa &amp; Transfer Menggantung', false)
+            ->assertSee('DASH-REMINDER-1')
+            ->assertSee('5 hari lagi');
+
+        $lot->update(['expires_at' => today()->subDays(2)]);
+        $this->actingAs($warehouse)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Lewat 2 hari');
+    }
+
+    public function test_finance_dashboard_counts_available_advances_without_an_n_plus_one(): void
+    {
+        $finance = User::factory()->create(['type' => User::ROLE_FINANCE]);
+
+        \Illuminate\Support\Facades\DB::enableQueryLog();
+        $this->actingAs($finance)->get(route('dashboard'))->assertOk();
+        $jumlahQuery = count(\Illuminate\Support\Facades\DB::getQueryLog());
+        \Illuminate\Support\Facades\DB::disableQueryLog();
+
+        $this->assertLessThan(
+            40,
+            $jumlahQuery,
+            "Dashboard Finance memakai {$jumlahQuery} query — cek apakah ada N+1 yang kembali (dulu uang muka dihitung satu query per baris)."
+        );
     }
 
     public function test_non_purchasing_role_can_submit_and_track_a_material_request_to_fulfillment(): void
@@ -993,6 +1035,113 @@ class WmsControlFrameworkTest extends TestCase
             ->patch(route('wms-control.serials.status', $serial), ['status' => 'ISSUED'])
             ->assertSessionHasNoErrors();
         $this->assertSame('ISSUED', $serial->fresh()->status);
+    }
+
+    public function test_declining_balance_depreciation_charges_double_rate_on_the_running_book_value(): void
+    {
+        $accounting = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);
+        $category = \App\Models\KategoriAset::where('is_active', true)->firstOrFail();
+
+        $asset = Aset::create([
+            'nomor_aset' => 'AUTO-DEP-SALDO-1',
+            'kategori_aset_id' => $category->id,
+            'name' => 'Aset Uji Saldo Menurun',
+            'condition' => 'BAIK',
+            'acquisition_date' => today()->subYear(),
+            'acquisition_type' => 'OPENING_BALANCE',
+            'acquisition_credit_coa_id' => BaganAkun::where('kode_akun', '3102')->value('id'),
+            'acquisition_cost' => 2400000,
+            'residual_value' => 0,
+            'useful_life_months' => 48,
+            'depreciation_method' => Aset::DECLINING_BALANCE,
+            'accumulated_depreciation' => 0,
+            'book_value' => 2400000,
+            'status' => 'ACTIVE',
+            'created_by' => $accounting->id,
+        ]);
+
+        $this->actingAs($accounting)->postJson(route('aset.depreciate-all'), [
+            'posting_date' => today()->toDateString(),
+            'period_label' => 'Saldo Menurun Bulan 1',
+        ])->assertOk();
+
+        $asset->refresh();
+        $this->assertEqualsWithDelta(100000.0, (float) $asset->accumulated_depreciation, 0.01);
+        $this->assertEqualsWithDelta(2300000.0, (float) $asset->book_value, 0.01);
+
+        $this->actingAs($accounting)->postJson(route('aset.depreciate-all'), [
+            'posting_date' => today()->toDateString(),
+            'period_label' => 'Saldo Menurun Bulan 2',
+        ])->assertOk();
+
+        $asset->refresh();
+        $this->assertEqualsWithDelta(95833.33, (float) $asset->depreciations()->latest('id')->value('amount'), 0.01);
+        $this->assertEqualsWithDelta(2204166.67, (float) $asset->book_value, 0.01);
+    }
+
+    public function test_reconciliation_flags_a_reservation_balance_that_no_longer_matches_live_reservations(): void
+    {
+        $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
+        $this->actingAs($warehouse);
+        $layer = LayerPersediaan::where('remaining_quantity', '>', 1)->where('stock_status', 'AVAILABLE')->firstOrFail();
+        $service = app(RekonsiliasiGudangService::class);
+
+        $this->assertSame(0, $service->summary()['reservation_exceptions'], 'Data awal harus bersih.');
+
+        $reservasi = app(WarehouseExecutionService::class)->reserve((int) $layer->gudang_id, (int) $layer->bahan_id, 1.0);
+        $this->assertSame(0, $service->summary()['reservation_exceptions'], 'Reservasi normal tidak boleh jadi temuan.');
+
+        $reservasi->update(['status' => 'RELEASED']);
+
+        $ringkasan = $service->summary();
+        $this->assertSame(1, $ringkasan['reservation_exceptions'], 'Reservasi yatim harus terdeteksi.');
+        $baris = $ringkasan['rows']->firstWhere(fn ($row) => (int) $row->gudang_id === (int) $layer->gudang_id && (int) $row->bahan_id === (int) $layer->bahan_id);
+        $this->assertEqualsWithDelta(1.0, (float) $baris->selisih_reservasi, 0.000001);
+    }
+
+    public function test_transfer_receipt_places_stock_into_a_bin_and_respects_capacity(): void
+    {
+        $warehouse = User::factory()->create(['type' => User::ROLE_WAREHOUSE]);
+        $this->actingAs($warehouse);
+        $service = app(TransferGudangService::class);
+
+        $layer = LayerPersediaan::where('remaining_quantity', '>=', 3)->where('stock_status', 'AVAILABLE')->firstOrFail();
+        $asal = Gudang::findOrFail($layer->gudang_id);
+        $tujuan = Gudang::where('jenis', Gudang::NORMAL)->where('aktif', true)->where('id', '!=', $asal->id)->firstOrFail();
+
+        $transfer = TransferGudang::create([
+            'nomor_transfer' => 'TRF-BIN-' . random_int(1000, 9999),
+            'tanggal' => today(),
+            'gudang_asal_id' => $asal->id,
+            'gudang_tujuan_id' => $tujuan->id,
+            'status' => TransferGudang::DIAJUKAN,
+            'idempotency_key' => 'bin-' . random_int(100000, 999999),
+            'dibuat_oleh' => $warehouse->id,
+        ]);
+        $transfer->details()->create(['bahan_id' => $layer->bahan_id, 'jumlah' => 2]);
+
+        $service->konfirmasi($transfer);
+
+        $sempit = \App\Models\LokasiGudang::create(['gudang_id' => $tujuan->id, 'code' => 'TRF-SEMPIT', 'name' => 'Bin Sempit', 'type' => 'RACK', 'capacity' => 1, 'active' => true]);
+        $lega = \App\Models\LokasiGudang::create(['gudang_id' => $tujuan->id, 'code' => 'TRF-LEGA', 'name' => 'Bin Lega', 'type' => 'RACK', 'capacity' => 100, 'active' => true]);
+        $detail = $transfer->fresh('details')->details->first();
+
+        try {
+            $service->terima($transfer->fresh(), [], null, [$detail->id => $sempit->id]);
+            $this->fail('Kapasitas bin tujuan seharusnya menolak penerimaan transfer.');
+        } catch (\RuntimeException $exception) {
+            $this->assertStringContainsString('Kapasitas lokasi', $exception->getMessage());
+        }
+
+        $service->terima($transfer->fresh(), [], null, [$detail->id => $lega->id]);
+
+        $this->assertSame(TransferGudang::DITERIMA, $transfer->fresh()->status);
+        $this->assertEqualsWithDelta(
+            2.0,
+            (float) LayerPersediaan::where('warehouse_location_id', $lega->id)->sum('remaining_quantity'),
+            0.000001,
+            'Barang hasil transfer harus mendarat di bin yang dipilih.'
+        );
     }
 
     public function test_invoice_requires_accounting_manager_approval_before_posting_or_payment(): void

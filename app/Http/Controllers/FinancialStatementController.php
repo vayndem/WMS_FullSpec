@@ -3,8 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\BaganAkun;
+use App\Http\Requests\StorePerhitunganPajakPenghasilanRequest;
+use App\Models\PerhitunganPajakPenghasilan;
 use App\Services\FinancialStatementService;
+use App\Services\PajakPenghasilanService;
+use App\Services\RekonsiliasiFiskalService;
 use App\Exports\FinancialStatementExport;
+use RuntimeException;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -12,7 +17,115 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class FinancialStatementController extends Controller
 {
-    public function __construct(private FinancialStatementService $statements) {}
+    public function __construct(
+        private FinancialStatementService $statements,
+        private RekonsiliasiFiskalService $fiskal,
+        private PajakPenghasilanService $pph,
+    ) {}
+
+    private function fiskalSections(array $data, bool $formatted): array
+    {
+        $uang = fn ($nilai) => $formatted ? 'Rp ' . number_format($nilai, 0, ',', '.') : (float) $nilai;
+        $baris = fn ($rows, string $kolom) => collect($rows)->map(fn ($row) => [
+            'nama_akun' => $row['kode_akun'] . ' — ' . $row['nama_akun'],
+            'jumlah' => $uang($row[$kolom]),
+        ]);
+
+        return [
+            ['label' => 'Laba (Rugi) Komersial', 'rows' => collect([[
+                'nama_akun' => 'Laba komersial sebelum pajak',
+                'jumlah' => $uang($data['laba_komersial']),
+            ]]), 'subtotal' => null],
+            ['label' => 'Koreksi Positif — Beda Tetap', 'rows' => $baris($data['beda_tetap_positif'], 'koreksi'),
+                'subtotal' => ['nama_akun' => 'Subtotal', 'jumlah' => $uang($data['total_koreksi_positif'])]],
+            ['label' => 'Koreksi Negatif — Beda Tetap', 'rows' => $baris($data['beda_tetap_negatif'], 'koreksi'),
+                'subtotal' => ['nama_akun' => 'Subtotal', 'jumlah' => $uang($data['total_koreksi_negatif'])]],
+            ['label' => 'Beda Waktu (menunggu jadwal penyusutan fiskal)', 'rows' => $baris($data['beda_waktu'], 'jumlah'),
+                'subtotal' => ['nama_akun' => 'Koreksi diterapkan', 'jumlah' => $uang($data['total_koreksi_beda_waktu'])]],
+        ];
+    }
+
+    public function pajakPenghasilan(Request $request)
+    {
+        $this->authorize('viewFinancialStatements');
+
+        $tahun = (int) ($request->input('tahun_pajak') ?: today()->year);
+        $peredaranBruto = (float) ($request->input('peredaran_bruto') ?: 0);
+        $data = $this->pph->hitung($tahun, $peredaranBruto);
+        $riwayat = PerhitunganPajakPenghasilan::with('jurnal')->orderByDesc('tahun_pajak')->limit(10)->get();
+        $tersimpan = $riwayat->firstWhere('tahun_pajak', $tahun);
+
+        return view('financial_statements.pajak-penghasilan', compact('tahun', 'peredaranBruto', 'data', 'riwayat', 'tersimpan'));
+    }
+
+    public function postingPajakPenghasilan(StorePerhitunganPajakPenghasilanRequest $request)
+    {
+        try {
+            $perhitungan = $this->pph->posting(
+                (int) $request->validated('tahun_pajak'),
+                (float) $request->validated('peredaran_bruto'),
+                $request->validated('posting_date'),
+            );
+        } catch (RuntimeException $exception) {
+            return back()->withErrors($exception->getMessage())->withInput();
+        }
+
+        return redirect()
+            ->route('financial-statements.pajak-penghasilan', [
+                'tahun_pajak' => $perhitungan->tahun_pajak,
+                'peredaran_bruto' => $perhitungan->peredaran_bruto,
+            ])
+            ->with('success', "Jurnal PPh Badan tahun {$perhitungan->tahun_pajak} diposting ({$perhitungan->jurnal->no_jurnal}).");
+    }
+
+    public function rekonsiliasiFiskal(Request $request)
+    {
+        $this->authorize('viewFinancialStatements');
+
+        $from = $this->parseDate($request->input('from'), today()->startOfYear());
+        $to = $this->parseDate($request->input('to'), today());
+        $data = $this->fiskal->reconcile($from, $to);
+
+        return view('financial_statements.rekonsiliasi-fiskal', compact('from', 'to', 'data'));
+    }
+
+    public function rekonsiliasiFiskalPdf(Request $request)
+    {
+        $this->authorize('viewFinancialStatements');
+
+        $from = $this->parseDate($request->input('from'), today()->startOfYear());
+        $to = $this->parseDate($request->input('to'), today());
+        $data = $this->fiskal->reconcile($from, $to);
+
+        return Pdf::loadView('reports.financial-statement-pdf', [
+            'title' => 'Rekonsiliasi Fiskal ' . $from->format('d-m-Y') . ' s.d. ' . $to->format('d-m-Y'),
+            'columns' => [
+                ['key' => 'nama_akun', 'label' => 'Keterangan', 'align' => 'left'],
+                ['key' => 'jumlah', 'label' => 'Jumlah', 'align' => 'right'],
+            ],
+            'sections' => $this->fiskalSections($data, true),
+            'footer' => 'Laba (Rugi) Fiskal: Rp ' . number_format($data['laba_fiskal'], 0, ',', '.'),
+            'generatedAt' => now(),
+        ])->stream('rekonsiliasi-fiskal.pdf');
+    }
+
+    public function rekonsiliasiFiskalExcel(Request $request)
+    {
+        $this->authorize('viewFinancialStatements');
+
+        $from = $this->parseDate($request->input('from'), today()->startOfYear());
+        $to = $this->parseDate($request->input('to'), today());
+        $data = $this->fiskal->reconcile($from, $to);
+
+        return Excel::download(
+            new FinancialStatementExport(
+                [['key' => 'nama_akun', 'label' => 'Keterangan'], ['key' => 'jumlah', 'label' => 'Jumlah']],
+                $this->fiskalSections($data, false),
+                'Laba (Rugi) Fiskal: ' . number_format($data['laba_fiskal'], 2, ',', '.')
+            ),
+            'rekonsiliasi-fiskal-' . now()->format('Ymd-His') . '.xlsx'
+        );
+    }
 
     public function neracaSaldo(Request $request)
     {
@@ -261,6 +374,83 @@ class FinancialStatementController extends Controller
         $footer = 'Laba (Rugi) Bersih: ' . number_format($data['laba_bersih'], 0, ',', '.');
 
         return Excel::download(new FinancialStatementExport($columns, $sections, $footer), 'laba-rugi-' . now()->format('Ymd') . '.xlsx');
+    }
+
+    private function arusKasData(Request $request): array
+    {
+        $from = $this->parseDate($request->input('from'), today()->startOfYear());
+        $to = $this->parseDate($request->input('to'), today());
+
+        return [$from, $to, $this->statements->cashFlow($from, $to)];
+    }
+
+    private function arusKasSections(array $data, bool $formatted): array
+    {
+        $label = [
+            'OPERASI' => 'Arus Kas dari Aktivitas Operasi',
+            'INVESTASI' => 'Arus Kas dari Aktivitas Investasi',
+            'PENDANAAN' => 'Arus Kas dari Aktivitas Pendanaan',
+        ];
+        $uang = fn ($nilai) => $formatted ? 'Rp ' . number_format($nilai, 0, ',', '.') : (float) $nilai;
+
+        return $data['sections']->map(fn ($section) => [
+            'label' => $label[$section['kelompok']],
+            'rows' => $section['rows']->map(fn ($row) => [
+                'nama_akun' => $row['account']?->nama_akun ?? 'Tanpa akun lawan',
+                'jumlah' => $uang($row['amount']),
+            ]),
+            'subtotal' => ['nama_akun' => 'Subtotal', 'jumlah' => $uang($section['subtotal'])],
+        ])->push([
+            'label' => 'Rekonsiliasi Saldo Kas',
+            'rows' => collect([
+                ['nama_akun' => 'Saldo kas awal', 'jumlah' => $uang($data['saldo_awal'])],
+                ['nama_akun' => 'Kenaikan (penurunan) kas bersih', 'jumlah' => $uang($data['arus_bersih'])],
+                ['nama_akun' => 'Saldo kas akhir menurut buku besar', 'jumlah' => $uang($data['saldo_akhir_buku'])],
+            ]),
+            'subtotal' => ['nama_akun' => 'Saldo kas akhir', 'jumlah' => $uang($data['saldo_akhir'])],
+        ])->all();
+    }
+
+    public function arusKas(Request $request)
+    {
+        $this->authorize('viewFinancialStatements');
+
+        [$from, $to, $data] = $this->arusKasData($request);
+
+        return view('financial_statements.arus-kas', compact('from', 'to', 'data'));
+    }
+
+    public function arusKasPdf(Request $request)
+    {
+        $this->authorize('viewFinancialStatements');
+
+        [$from, $to, $data] = $this->arusKasData($request);
+
+        return Pdf::loadView('reports.financial-statement-pdf', [
+            'title' => 'Laporan Arus Kas ' . $from->format('d-m-Y') . ' s.d. ' . $to->format('d-m-Y'),
+            'columns' => [
+                ['key' => 'nama_akun', 'label' => 'Keterangan', 'align' => 'left'],
+                ['key' => 'jumlah', 'label' => 'Jumlah', 'align' => 'right'],
+            ],
+            'sections' => $this->arusKasSections($data, true),
+            'footer' => null,
+            'generatedAt' => now(),
+        ])->stream('laporan-arus-kas.pdf');
+    }
+
+    public function arusKasExcel(Request $request)
+    {
+        $this->authorize('viewFinancialStatements');
+
+        [$from, $to, $data] = $this->arusKasData($request);
+
+        return Excel::download(
+            new FinancialStatementExport(
+                [['key' => 'nama_akun', 'label' => 'Keterangan'], ['key' => 'jumlah', 'label' => 'Jumlah']],
+                $this->arusKasSections($data, false)
+            ),
+            'laporan-arus-kas-' . now()->format('Ymd-His') . '.xlsx'
+        );
     }
 
     public function neraca(Request $request)

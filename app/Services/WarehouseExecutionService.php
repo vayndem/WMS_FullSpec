@@ -169,10 +169,10 @@ class WarehouseExecutionService
             foreach ($lpb->details as $detail) {
                 $location = $locations->get($locationByDetail[$detail->id] ?? null);
                 if (!$location) throw new RuntimeException("Baris {$detail->bahan?->nama} belum dipilihkan lokasi putaway.");
-                if ((int) $location->gudang_id !== (int) $lpb->gudang_id || !$location->active) throw new RuntimeException("Lokasi {$location->code} tidak valid untuk gudang penerimaan ini.");
+                $location->assertMilikGudang((int) $lpb->gudang_id);
 
                 $masuk = (float) LayerPersediaan::where('source_type', 'LPB_DETAIL')->where('source_id', $detail->id)->sum('remaining_quantity');
-                $this->assertLocationCapacity($location, $masuk);
+                $location->assertMuat($masuk);
 
                 LayerPersediaan::where('source_type', 'LPB_DETAIL')->where('source_id', $detail->id)->update(['warehouse_location_id' => $location->id]);
             }
@@ -181,13 +181,4 @@ class WarehouseExecutionService
         });
     }
 
-    private function assertLocationCapacity(LokasiGudang $location, float $masuk): void
-    {
-        if ($location->capacity === null) return;
-        $terisi = (float) LayerPersediaan::where('warehouse_location_id', $location->id)->where('remaining_quantity', '>', 0)->sum('remaining_quantity');
-        $kapasitas = (float) $location->capacity;
-        if ($terisi + $masuk > $kapasitas + .000001) {
-            throw new RuntimeException("Kapasitas lokasi {$location->code} tidak cukup: terisi " . rtrim(rtrim(number_format($terisi, 4, ',', '.'), '0'), ',') . " dari " . rtrim(rtrim(number_format($kapasitas, 4, ',', '.'), '0'), ',') . ", masuk " . rtrim(rtrim(number_format($masuk, 4, ',', '.'), '0'), ',') . '.');
-        }
-    }
 }

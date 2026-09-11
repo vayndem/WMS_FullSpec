@@ -10,6 +10,18 @@ class BaganAkun extends Model
 {
     use HasFactory;
 
+    public const FISKAL_NONE = 'NONE';
+    public const FISKAL_BEDA_TETAP = 'BEDA_TETAP';
+    public const FISKAL_BEDA_WAKTU = 'BEDA_WAKTU';
+    public const FISKAL_PENGHASILAN_FINAL = 'PENGHASILAN_FINAL';
+
+    public const KLASIFIKASI_FISKAL = [
+        self::FISKAL_NONE => 'Tidak dikoreksi',
+        self::FISKAL_BEDA_TETAP => 'Beda Tetap',
+        self::FISKAL_BEDA_WAKTU => 'Beda Waktu',
+        self::FISKAL_PENGHASILAN_FINAL => 'Penghasilan Kena PPh Final',
+    ];
+
     protected $table = 'wms_bagan_akun';
 
     protected $fillable = [
@@ -20,6 +32,7 @@ class BaganAkun extends Model
         'is_active',
         'is_postable',
         'is_cash_bank',
+        'klasifikasi_fiskal',
         'keterangan',
     ];
 

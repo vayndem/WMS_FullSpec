@@ -42,6 +42,14 @@ Route::middleware('auth')->group(function () {
     Route::get('financial-statements/laba-rugi', [FinancialStatementController::class, 'labaRugi'])->name('financial-statements.laba-rugi');
     Route::get('financial-statements/laba-rugi/pdf', [FinancialStatementController::class, 'labaRugiPdf'])->name('financial-statements.laba-rugi.pdf');
     Route::get('financial-statements/laba-rugi/excel', [FinancialStatementController::class, 'labaRugiExcel'])->name('financial-statements.laba-rugi.excel');
+    Route::get('financial-statements/pajak-penghasilan', [FinancialStatementController::class, 'pajakPenghasilan'])->name('financial-statements.pajak-penghasilan');
+    Route::post('financial-statements/pajak-penghasilan', [FinancialStatementController::class, 'postingPajakPenghasilan'])->name('financial-statements.pajak-penghasilan.posting');
+    Route::get('financial-statements/rekonsiliasi-fiskal', [FinancialStatementController::class, 'rekonsiliasiFiskal'])->name('financial-statements.rekonsiliasi-fiskal');
+    Route::get('financial-statements/rekonsiliasi-fiskal/pdf', [FinancialStatementController::class, 'rekonsiliasiFiskalPdf'])->name('financial-statements.rekonsiliasi-fiskal.pdf');
+    Route::get('financial-statements/rekonsiliasi-fiskal/excel', [FinancialStatementController::class, 'rekonsiliasiFiskalExcel'])->name('financial-statements.rekonsiliasi-fiskal.excel');
+    Route::get('financial-statements/arus-kas', [FinancialStatementController::class, 'arusKas'])->name('financial-statements.arus-kas');
+    Route::get('financial-statements/arus-kas/pdf', [FinancialStatementController::class, 'arusKasPdf'])->name('financial-statements.arus-kas.pdf');
+    Route::get('financial-statements/arus-kas/excel', [FinancialStatementController::class, 'arusKasExcel'])->name('financial-statements.arus-kas.excel');
     Route::get('financial-statements/neraca', [FinancialStatementController::class, 'neraca'])->name('financial-statements.neraca');
     Route::get('financial-statements/neraca/pdf', [FinancialStatementController::class, 'neracaPdf'])->name('financial-statements.neraca.pdf');
     Route::get('financial-statements/neraca/excel', [FinancialStatementController::class, 'neracaExcel'])->name('financial-statements.neraca.excel');

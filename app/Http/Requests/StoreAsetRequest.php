@@ -30,6 +30,9 @@ class StoreAsetRequest extends FormRequest
             'acquisition_cost' => 'required|numeric|min:0.01',
             'residual_value' => 'required|numeric|min:0|lte:acquisition_cost',
             'useful_life_months' => 'nullable|integer|min:1|max:1200',
+            'depreciation_method' => ['nullable', Rule::in([Aset::STRAIGHT_LINE, Aset::DECLINING_BALANCE])],
+            'kelompok_fiskal' => ['nullable', Rule::in(array_keys(Aset::KELOMPOK_FISKAL))],
+            'metode_penyusutan_fiskal' => ['nullable', Rule::in([Aset::STRAIGHT_LINE, Aset::DECLINING_BALANCE])],
             'depreciation_start_date' => 'nullable|date',
             'opening_accumulated_depreciation' => 'nullable|numeric|min:0|lte:acquisition_cost',
             'notes' => 'nullable|string|max:2000',
@@ -39,6 +42,17 @@ class StoreAsetRequest extends FormRequest
     public function after(): array
     {
         return [function ($validator) {
+            $kelompok = Aset::KELOMPOK_FISKAL[$this->input('kelompok_fiskal')] ?? null;
+            if ($kelompok && $kelompok['bangunan'] && $this->input('metode_penyusutan_fiskal') === Aset::DECLINING_BALANCE) {
+                $validator->errors()->add(
+                    'metode_penyusutan_fiskal',
+                    'Bangunan hanya boleh disusutkan fiskal dengan metode garis lurus.'
+                );
+            }
+            if (!$this->input('kelompok_fiskal') && $this->filled('metode_penyusutan_fiskal')) {
+                $validator->errors()->add('kelompok_fiskal', 'Pilih kelompok harta fiskal dulu sebelum menentukan metode fiskal.');
+            }
+
             $category = KategoriAset::find($this->input('kategori_aset_id'));
             if ($category && !$category->is_active) {
                 $validator->errors()->add('kategori_aset_id', 'Kategori aset sudah tidak aktif.');

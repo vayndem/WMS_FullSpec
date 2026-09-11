@@ -29,6 +29,11 @@
             @include('layouts.template.task-chart', ['tasks' => $tasks, 'chartTitle' => 'Distribusi Tugas', 'chartType' => 'doughnut', 'horizontal' => false])
         </div>
 
+        <div class="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+            @include('layouts.template.reminder-list', ['reminders' => $reminders ?? [], 'judul' => 'Kedaluwarsa & Transfer Gudang Saya'])
+            @include('layouts.template.progress-list', ['progress' => $progress ?? []])
+        </div>
+
         @php
             $colorClasses = [
                 'primary' => 'bg-primary/10 text-primary',

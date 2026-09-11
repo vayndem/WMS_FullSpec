@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AlokasiTransferGudang;
 use App\Models\Gudang;
 use App\Models\LayerPersediaan;
+use App\Models\LokasiGudang;
 use App\Models\TransferGudang;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -62,24 +63,32 @@ class TransferGudangService
         });
     }
 
-    public function terima(TransferGudang $transfer, array $received = [], ?string $notes = null): TransferGudang
+    public function terima(TransferGudang $transfer, array $received = [], ?string $notes = null, array $locations = []): TransferGudang
     {
-        return DB::transaction(function () use ($transfer, $received, $notes) {
+        return DB::transaction(function () use ($transfer, $received, $notes, $locations) {
             $transfer = TransferGudang::with('details.alokasi')->lockForUpdate()->findOrFail($transfer->id);
             if ($transfer->status !== TransferGudang::DIKIRIM) throw new RuntimeException('Hanya transfer dalam perjalanan yang dapat diterima.');
             $this->operations->claim('TRANSFER_GUDANG', $transfer->id, 'RECEIVE');
             $tujuan = Gudang::lockForUpdate()->findOrFail($transfer->gudang_tujuan_id);
+            $lokasi = LokasiGudang::whereIn('id', array_unique(array_filter(array_values($locations))))->get()->keyBy('id');
+
             foreach ($transfer->details as $detail) {
                 $quantity = array_key_exists($detail->id, $received) ? (float) $received[$detail->id] : (float) $detail->jumlah_dikirim;
                 if ($quantity < 0 || $quantity > (float) $detail->jumlah_dikirim) throw new RuntimeException('Jumlah diterima tidak valid.');
                 $allocations = $detail->alokasi;
                 $sentValue = (float) $allocations->sum('total_nilai');
                 $average = (float) $detail->jumlah_dikirim > 0 ? $sentValue / (float) $detail->jumlah_dikirim : 0;
+                $tujuanLokasi = $lokasi->get($locations[$detail->id] ?? null);
+                if ($tujuanLokasi) {
+                    $tujuanLokasi->assertMilikGudang((int) $tujuan->id);
+                    $tujuanLokasi->assertMuat($quantity);
+                }
+
                 $remaining = $quantity;
                 foreach ($allocations as $allocation) {
                     $layer = LayerPersediaan::lockForUpdate()->findOrFail($allocation->inventory_layer_tujuan_id);
                     $release = min($remaining, (float) $layer->remaining_quantity);
-                    if ($release > 0) $layer->update(['remaining_quantity' => $release, 'initial_quantity' => $release, 'stock_status' => $tujuan->jenis === Gudang::CONSIDER ? 'QC_HOLD' : 'AVAILABLE']);
+                    if ($release > 0) $layer->update(['remaining_quantity' => $release, 'initial_quantity' => $release, 'warehouse_location_id' => $tujuanLokasi?->id, 'stock_status' => $tujuan->jenis === Gudang::CONSIDER ? 'QC_HOLD' : 'AVAILABLE']);
                     else $layer->update(['remaining_quantity' => 0, 'initial_quantity' => 0, 'stock_status' => 'TRANSFER_SHORTAGE']);
                     $remaining -= $release;
                 }

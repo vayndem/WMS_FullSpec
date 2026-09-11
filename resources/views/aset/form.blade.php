@@ -83,6 +83,35 @@
                     <input type="number" min="1" name="useful_life_months" class="input input-bordered" value="{{ old('useful_life_months', $asset->useful_life_months ?? '') }}">
                 </div>
                 <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold">Metode Penyusutan</span></label>
+                    <select name="depreciation_method" class="select select-bordered">
+                        @foreach ([\App\Models\Aset::STRAIGHT_LINE => 'Garis Lurus', \App\Models\Aset::DECLINING_BALANCE => 'Saldo Menurun'] as $kode => $label)
+                            <option value="{{ $kode }}" @selected(old('depreciation_method', $asset->depreciation_method ?? \App\Models\Aset::STRAIGHT_LINE) === $kode)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <span class="label-text-alt mt-1 text-base-content/50">Saldo menurun memakai tarif 2x garis lurus atas nilai buku berjalan.</span>
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold">Kelompok Harta Fiskal</span></label>
+                    <select name="kelompok_fiskal" class="select select-bordered">
+                        <option value="">Tidak disusutkan secara fiskal</option>
+                        @foreach (\App\Models\Aset::KELOMPOK_FISKAL as $kode => $info)
+                            <option value="{{ $kode }}" @selected(old('kelompok_fiskal', $asset->kelompok_fiskal ?? '') === $kode)>{{ $info['label'] }}</option>
+                        @endforeach
+                    </select>
+                    <span class="label-text-alt mt-1 text-base-content/50">UU PPh Pasal 11. Menentukan masa manfaat fiskal, terpisah dari masa manfaat komersial.</span>
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold">Metode Penyusutan Fiskal</span></label>
+                    <select name="metode_penyusutan_fiskal" class="select select-bordered">
+                        <option value="">-</option>
+                        @foreach ([\App\Models\Aset::STRAIGHT_LINE => 'Garis Lurus', \App\Models\Aset::DECLINING_BALANCE => 'Saldo Menurun'] as $kode => $label)
+                            <option value="{{ $kode }}" @selected(old('metode_penyusutan_fiskal', $asset->metode_penyusutan_fiskal ?? '') === $kode)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <span class="label-text-alt mt-1 text-base-content/50">Fiskal tidak mengenal nilai residu; bangunan wajib garis lurus.</span>
+                </div>
+                <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Tanggal Mulai Penyusutan</span></label>
                     <input type="date" name="depreciation_start_date" class="input input-bordered"
                         value="{{ old('depreciation_start_date', isset($asset) && $asset->depreciation_start_date ? $asset->depreciation_start_date->format('Y-m-d') : '') }}">

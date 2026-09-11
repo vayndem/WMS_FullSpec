@@ -20,6 +20,11 @@
             @include('layouts.template.task-chart', ['tasks' => $tasks, 'chartTitle' => 'Distribusi Tugas', 'chartType' => 'bar', 'horizontal' => true])
         </div>
 
+        <div class="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+            @include('layouts.template.reminder-list', ['reminders' => $reminders ?? [], 'judul' => 'Menunggu Tindakan Accounting'])
+            @include('layouts.template.progress-list', ['progress' => $progress ?? []])
+        </div>
+
         <h5 class="mb-3 font-bold"><i class="fa-solid fa-compass text-primary"></i> Navigasi Cepat</h5>
         @php
             $colorClasses = [

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\BaganAkun;
 use App\Models\JurnalDetail;
+use App\Models\KategoriAset;
 use Illuminate\Support\Carbon;
 
 class FinancialStatementService
@@ -127,6 +128,88 @@ class FinancialStatementService
             'total_beban' => $totalBeban,
             'laba_bersih' => $totalPendapatan - $totalBeban,
         ];
+    }
+
+    public function cashFlow(Carbon $from, Carbon $to): array
+    {
+        if ($from->gt($to)) {
+            [$from, $to] = [$to, $from];
+        }
+
+        $kasIds = BaganAkun::where('is_cash_bank', true)->pluck('id');
+        $asetTetapIds = KategoriAset::whereNotNull('akun_aset_id')->distinct()->pluck('akun_aset_id');
+
+        $saldoAwal = $this->saldoKas($kasIds, null, $from->copy()->subDay());
+
+        $jurnalIds = JurnalDetail::whereIn('coa_id', $kasIds)
+            ->whereHas('jurnal', fn ($q) => $q->where('status', 'POSTED')->whereBetween('tanggal', [$from, $to]))
+            ->distinct()->pluck('jurnal_id');
+
+        $details = JurnalDetail::whereIn('jurnal_id', $jurnalIds)->with(['jurnal', 'coa'])->get();
+
+        $buckets = ['OPERASI' => [], 'INVESTASI' => [], 'PENDANAAN' => []];
+
+        foreach ($details->groupBy('jurnal_id') as $lines) {
+            $kasLines = $lines->filter(fn ($line) => $kasIds->contains($line->coa_id));
+            $lawanLines = $lines->reject(fn ($line) => $kasIds->contains($line->coa_id));
+            $arusKas = (float) $kasLines->sum('debit') - (float) $kasLines->sum('kredit');
+            if (abs($arusKas) < 0.005) {
+                continue;
+            }
+
+            $dominan = $lawanLines->sortByDesc(fn ($line) => abs((float) $line->debit - (float) $line->kredit))->first();
+            $akunLawan = $dominan?->coa;
+            $kelompok = match (true) {
+                $akunLawan === null => 'OPERASI',
+                $asetTetapIds->contains($akunLawan->id) => 'INVESTASI',
+                $akunLawan->kategori_akun === 'EKUITAS' => 'PENDANAAN',
+                default => 'OPERASI',
+            };
+
+            $kunci = $akunLawan?->id ?? 0;
+            $buckets[$kelompok][$kunci] ??= ['account' => $akunLawan, 'amount' => 0.0];
+            $buckets[$kelompok][$kunci]['amount'] += $arusKas;
+        }
+
+        $sections = collect($buckets)->map(function (array $rows, string $kelompok) {
+            $baris = collect($rows)->values()
+                ->filter(fn ($row) => abs($row['amount']) >= 0.005)
+                ->sortByDesc(fn ($row) => abs($row['amount']))->values();
+
+            return [
+                'kelompok' => $kelompok,
+                'rows' => $baris,
+                'subtotal' => round($baris->sum('amount'), 2),
+            ];
+        })->values();
+
+        $arusBersih = round($sections->sum('subtotal'), 2);
+        $saldoAkhirBuku = $this->saldoKas($kasIds, null, $to);
+
+        return [
+            'from' => $from,
+            'to' => $to,
+            'sections' => $sections,
+            'saldo_awal' => $saldoAwal,
+            'arus_bersih' => $arusBersih,
+            'saldo_akhir' => round($saldoAwal + $arusBersih, 2),
+            'saldo_akhir_buku' => $saldoAkhirBuku,
+            'selisih' => round($saldoAwal + $arusBersih - $saldoAkhirBuku, 2),
+        ];
+    }
+
+    private function saldoKas($kasIds, ?Carbon $from, Carbon $to): float
+    {
+        $sum = JurnalDetail::whereIn('coa_id', $kasIds)
+            ->whereHas('jurnal', function ($q) use ($from, $to) {
+                $q->where('status', 'POSTED')->whereDate('tanggal', '<=', $to);
+                if ($from) {
+                    $q->whereDate('tanggal', '>=', $from);
+                }
+            })
+            ->selectRaw('SUM(debit) as debit, SUM(kredit) as kredit')->first();
+
+        return round((float) ($sum->debit ?? 0) - (float) ($sum->kredit ?? 0), 2);
     }
 
     public function balanceSheet(Carbon $asOf): array

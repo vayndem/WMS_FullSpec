@@ -73,11 +73,13 @@ class AsetAccountingService
             if ($amount > $maximum) {
                 throw new RuntimeException("Penyusutan maksimal adalah {$maximum} agar tidak melewati nilai residu.");
             }
+            $amountFiskal = $asset->suggestedMonthlyFiscalDepreciation();
             $depreciation = $asset->depreciations()->create([
                 'posting_date' => $data['posting_date'],
                 'period_label' => $data['period_label'],
                 'suggested_amount' => $asset->suggestedMonthlyDepreciation(),
                 'amount' => $amount,
+                'amount_fiskal' => $amountFiskal,
                 'book_value_before' => $asset->book_value,
                 'book_value_after' => $maximum + $asset->residual_value - $amount,
                 'reason' => $data['reason'] ?? null,
@@ -98,6 +100,7 @@ class AsetAccountingService
             $asset->update([
                 'accumulated_depreciation' => (float) $asset->accumulated_depreciation + $amount,
                 'book_value' => (float) $asset->book_value - $amount,
+                'akumulasi_penyusutan_fiskal' => (float) $asset->akumulasi_penyusutan_fiskal + $amountFiskal,
                 'last_depreciation_date' => $data['posting_date'],
             ]);
             return $depreciation->fresh('journal');
@@ -109,7 +112,8 @@ class AsetAccountingService
         $posted = [];
         $skipped = [];
         $failed = [];
-        $assets = Aset::where('status', 'ACTIVE')->where('depreciation_method', 'STRAIGHT_LINE')->get();
+        $assets = Aset::where('status', 'ACTIVE')
+            ->whereIn('depreciation_method', [Aset::STRAIGHT_LINE, Aset::DECLINING_BALANCE])->get();
         foreach ($assets as $asset) {
             if ($asset->depreciations()->where('period_label', $periodLabel)->exists()) {
                 $skipped[] = ['nomor_aset' => $asset->nomor_aset, 'reason' => 'Sudah disusutkan pada periode ini.'];
@@ -127,7 +131,9 @@ class AsetAccountingService
                     'posting_date' => $postingDate,
                     'period_label' => $periodLabel,
                     'amount' => $amount,
-                    'reason' => 'Penyusutan otomatis garis lurus',
+                    'reason' => $asset->depreciation_method === Aset::DECLINING_BALANCE
+                        ? 'Penyusutan otomatis saldo menurun'
+                        : 'Penyusutan otomatis garis lurus',
                 ]);
                 $posted[] = ['nomor_aset' => $asset->nomor_aset, 'amount' => $amount];
             } catch (RuntimeException $e) {

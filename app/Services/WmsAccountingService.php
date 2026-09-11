@@ -358,6 +358,11 @@ class WmsAccountingService
         return $reversal;
     }
 
+    public function postPajakPenghasilan(int $referenceId, $date, string $description, array $lines): Jurnal
+    {
+        return $this->post("PPH-{$referenceId}", $date, 'PAJAK_PENGHASILAN', $referenceId, $description, $lines);
+    }
+
     private function post(string $number, $date, string $source, int $referenceId, string $description, array $lines): Jurnal
     {
         $lines = collect($lines)->filter(fn($line) => (float) $line['debit'] > 0 || (float) $line['kredit'] > 0)->values();

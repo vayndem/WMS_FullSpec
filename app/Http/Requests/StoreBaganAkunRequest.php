@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\BaganAkun;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreBaganAkunRequest extends FormRequest
 {
@@ -22,6 +23,7 @@ class StoreBaganAkunRequest extends FormRequest
             'is_active'     => 'sometimes|boolean',
             'is_postable'   => 'sometimes|boolean',
             'is_cash_bank'  => 'sometimes|boolean',
+            'klasifikasi_fiskal' => ['sometimes', Rule::in(array_keys(BaganAkun::KLASIFIKASI_FISKAL))],
             'keterangan'    => 'nullable|string',
         ];
     }

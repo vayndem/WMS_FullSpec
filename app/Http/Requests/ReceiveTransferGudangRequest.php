@@ -21,6 +21,8 @@ class ReceiveTransferGudangRequest extends FormRequest
             'received' => ['nullable', 'array'],
             'received.*' => ['numeric', 'min:0'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'locations' => ['nullable', 'array'],
+            'locations.*' => ['nullable', 'integer', 'exists:wms_lokasi_gudang,id'],
         ];
     }
 }

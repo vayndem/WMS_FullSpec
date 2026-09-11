@@ -23,7 +23,7 @@
             </div>
         @endif
 
-        @php($hasException = $quantity_exceptions || abs($global_quantity_difference) > .000001 || ($financial && abs($value_difference) > .01))
+        @php($hasException = $quantity_exceptions || $reservation_exceptions || abs($global_quantity_difference) > .000001 || ($financial && abs($value_difference) > .01))
         <div role="alert" class="alert {{ $hasException ? 'alert-error' : 'alert-success' }} mb-4">
             <span>{{ $hasException ? 'Ditemukan ketidaksesuaian yang harus diselesaikan sebelum closing.' : 'Seluruh kontrol inventory sesuai.' }}</span>
         </div>
@@ -38,22 +38,35 @@
                             <th>Saldo Gudang</th>
                             <th>Saldo Layer</th>
                             <th>Selisih</th>
+                            <th>Reservasi Tercatat</th>
+                            <th>Reservasi Hidup</th>
                             @if ($financial)<th>Nilai Layer</th>@endif
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($rows as $r)
-                            <tr class="{{ abs($r->selisih) > 0.000001 ? 'bg-error/10' : '' }}">
+                            @php
+                                $selisihQty = abs((float) $r->selisih) > 0.000001;
+                                $selisihRsv = abs((float) $r->selisih_reservasi) > 0.000001;
+                            @endphp
+                            <tr class="{{ $selisihQty || $selisihRsv ? 'bg-error/10' : '' }}">
                                 <td>{{ $r->gudang_nama }}</td>
                                 <td class="font-semibold">{{ $r->bahan_nama }}</td>
                                 <td>{{ $r->stok_tersedia }}</td>
                                 <td>{{ $r->layer_quantity }}</td>
                                 <td>{{ $r->selisih }}</td>
+                                <td>{{ $r->stok_direservasi }}</td>
+                                <td class="{{ $selisihRsv ? 'font-bold text-error' : '' }}">{{ $r->reservasi_hidup }}</td>
                                 @if ($financial)<td>Rp {{ number_format($r->layer_value, 2, ',', '.') }}</td>@endif
                                 <td>
-                                    <span class="badge {{ abs($r->selisih) <= 0.000001 ? 'badge-success' : 'badge-error' }}">
-                                        {{ abs($r->selisih) <= 0.000001 ? 'SESUAI' : 'SELISIH' }}
+                                    <span class="badge {{ !$selisihQty && !$selisihRsv ? 'badge-success' : 'badge-error' }}">
+                                        {{ match (true) {
+                                            $selisihQty && $selisihRsv => 'SELISIH QTY + RESERVASI',
+                                            $selisihQty => 'SELISIH',
+                                            $selisihRsv => 'SELISIH RESERVASI',
+                                            default => 'SESUAI',
+                                        } }}
                                     </span>
                                 </td>
                             </tr>
