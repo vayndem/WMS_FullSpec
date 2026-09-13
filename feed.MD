@@ -194,7 +194,7 @@ Capability gudang:
 
 ### 5.3 Pembagian gudang
 
-Tabel `pembagian_gudangs` sekarang benar-benar dipakai untuk pembatasan akses, terutama untuk role `Produksi`.
+Tabel `pembagian_gudangs` dipakai untuk pembatasan akses gudang, sejak 2026-09-13 untuk role `Warehouse` **dan** `Produksi`.
 
 Field penting:
 
@@ -205,11 +205,14 @@ Field penting:
 - `boleh_transfer`
 - `boleh_opname`
 
-Perilaku saat ini:
+Perilaku saat ini (berubah 2026-09-13):
 
-- `Warehouse` tetap dapat seluruh gudang aktif
-- `Produksi` hanya dapat gudang yang di-assign
+- `SuperAdmin` mendapat seluruh gudang aktif
+- `Warehouse` **dan** `Produksi` hanya mendapat gudang yang di-assign
+- operator tanpa assignment tidak mendapat gudang sama sekali
 - filter controller memakai `accessibleGudangIds()`
+
+Konteks perubahan: gudang perusahaan tersebar di beberapa lokasi dan tiap lokasi punya adminnya sendiri, sehingga operator lokasi A tidak boleh menerima/mengeluarkan/menghitung stok di lokasi B. Migrasi `2026_09_13_000004` memberi seluruh user `Warehouse` yang sudah ada akses ke semua gudang aktif supaya tidak ada yang kehilangan akses saat rilis; penyempitan dilakukan per orang lewat menu Pembagian Gudang.
 
 ### 5.4 Gudang Produksi tahap 1
 
@@ -467,21 +470,33 @@ Framework kontrol mencakup:
 - `wms_saran_pengisian_ulang`, lengkap dengan tombol "Buat Request" yang mengubah saran jadi Material Request `PENDING` dan menandai saran itu `REQUESTED` (kolom `material_request_id`)
 - three-way matching tersimpan pada faktur pembelian
 - peringatan stok kedaluwarsa/mendekati kedaluwarsa muncul sebagai kartu tugas di dashboard gudang dan produksi
+- `wms_gelombang_pengambilan` untuk wave/batch picking, dengan `gelombang_id` + `urutan_dalam_gelombang` pada `wms_pesanan_pengambilan`
+- `wms_kit`, `wms_kit_komponen`, `wms_perakitan_kit` + detail untuk kitting/bundling
+- klasifikasi ABC pada `pengaturan_bahan_gudangs` (`kelas_abc`, `nilai_pemakaian`, `kontribusi_kumulatif`) sebagai dasar cycle count dan slotting
+- dimensi dan kapasitas volume pada `wms_lokasi_gudang`, plus `volume_cm3` pada `bahans`
+- `wms_stock_opname.jenis` (`PENUH`/`SIKLUS`) + `kelas_abc` untuk cycle count parsial
 
 Urutan transfer standar adalah `DRAFT -> DIAJUKAN -> DIKIRIM -> DITERIMA`. Urutan receiving adalah `RECEIVED -> QC_COMPLETED/QC_COMPLETED_WITH_HOLD -> PUTAWAY`. Dokumen posted tidak boleh diedit; gunakan workflow reversal atau void sumber transaksi.
 
+Sejak 2026-09-13, QC boleh dijalankan **dua kali**: pemeriksaan awal dari `RECEIVED`, dan pemeriksaan lanjutan dari `QC_COMPLETED_WITH_HOLD` yang wajib menyebutkan baris mana yang diperiksa ulang. Baris yang stoknya masih QC hold ditolak dan diarahkan ke Pemeriksaan Consider, bukan ke QC ulang.
+
+Gelombang pengambilan memakai urutan `DIRENCANAKAN -> DIRILIS -> SELESAI` (atau `DIBATALKAN`, yang melepas kembali perintah pengambilannya). Perakitan kit memakai `DRAFT -> POSTED`, dengan jenis `RAKIT` atau `URAI`.
+
 ## 14. Next development yang masuk akal
 
-Berdasarkan "Known gaps" di `CLAUDE.md` (paling relevan per 2026-09-06), yang paling natural dikerjakan berikutnya:
+Berdasarkan "Open-items index" di `CLAUDE.md` (paling relevan per 2026-09-13), yang paling natural dikerjakan berikutnya:
 
-1. Sisi outbound-to-customer (Sales Order, Surat Jalan/Delivery Order, retur penjualan, AR/piutang) — belum ada sama sekali, butuh sesi desain/scoping sendiri sebelum dibangun.
-2. Barcode/RF scanning sungguhan untuk putaway/picking (saat ini murni form web manual).
-3. Wave/batch picking, cross-docking, slotting/ABC analysis.
-4. Model BOM/manufacturing order/WIP untuk `Gudang Produksi` (saat ini masih direct-consumption via NPK).
-5. Layer integrasi eksternal (API/EDI ke supplier, marketplace, ERP lain) di luar base Sanctum.
-6. Kitting/bundling.
-7. Perluasan pola maker-checker ke COA/jurnal manual, period lock, dan controlled reversal, bila kebutuhan "dual control" itu masih dianggap relevan.
-8. "Lacak Pembelian" — laporan tiga-arah (sisa stok vs beban NPK vs selisih opname) per LPB/invoice; data sudah ada dan saling terhubung, tinggal disatukan dalam satu view.
+1. **"Lacak Pembelian"** — laporan tiga-arah (sisa stok vs beban NPK vs selisih opname) per LPB/invoice; data sudah ada dan saling terhubung lewat `LayerPersediaan.source_type='LPB_DETAIL'`, tinggal disatukan dalam satu view. Diminta sejak 2026-09-06 dan masih yang paling lama menggantung.
+2. **Supplier scorecard** — rasio reject QC dan ketepatan kirim per supplier; datanya lengkap tapi belum pernah ditampilkan.
+3. **Laporan Perubahan Ekuitas** dan **CALK** untuk melengkapi lima laporan PSAK 1 (Arus Kas sudah ada sejak 2026-09-11).
+4. Sisi outbound-to-customer (Sales Order, Surat Jalan/Delivery Order, retur penjualan, AR/piutang) — belum ada sama sekali, butuh sesi desain/scoping sendiri. Ini juga yang memblokir **cross-docking** dan sebagian **trade-in**.
+5. Model BOM/manufacturing order/WIP untuk `Gudang Produksi` (saat ini masih direct-consumption via NPK). Kitting/bundling sudah ada sejak 2026-09-13 tapi sengaja bukan WIP.
+6. Penilaian persediaan per gudang di GL — dampaknya paling besar, tapi keputusan akuntansi dulu (akun persediaan terpisah per gudang, atau dimensi gudang pada baris jurnal).
+7. Layer integrasi eksternal (API/EDI ke supplier, marketplace, ERP lain) di luar base Sanctum.
+8. Barcode/QR untuk putaway/picking — **ditunda pemilik produk pada 2026-09-13**. Catatan desain yang harus diingat: QR-nya **per bundling/kit, bukan per barang**.
+9. Perluasan pola maker-checker ke COA/jurnal manual, period lock, dan controlled reversal, bila kebutuhan "dual control" itu masih dianggap relevan.
+
+Sudah selesai 2026-09-13 dan tidak perlu direncanakan lagi: antrean kerja operator, re-inspeksi QC, cycle count berbasis ABC, auto-reservasi saat approval Material Request, dimensi/volume bin + slotting ABC, pembatasan gudang per operator, wave/batch picking, dan kitting/bundling.
 
 ## 15. Source of truth
 

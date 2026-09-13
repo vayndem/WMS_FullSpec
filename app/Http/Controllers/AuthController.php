@@ -5,12 +5,13 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
 use App\Services\DashboardService;
+use App\Services\UserAccountService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
-    public function __construct(private DashboardService $dashboard) {}
+    public function __construct(private DashboardService $dashboard, private UserAccountService $akun) {}
 
     public function showLoginForm()
     {
@@ -21,7 +22,15 @@ class AuthController extends Controller
     {
         $credentials = $request->safe()->only(['email', 'password']);
 
-        if (!Auth::attempt($credentials, $request->boolean('remember'))) {
+        if ($this->akun->akunNonaktifDenganKredensialBenar($credentials['email'], $credentials['password'])) {
+            $this->akun->catatLoginGagal($credentials['email'], $request->ip(), true);
+
+            return back()
+                ->withErrors(['email' => 'Akun Anda dinonaktifkan. Hubungi administrator sistem.'])
+                ->onlyInput('email');
+        }
+
+        if (!Auth::attempt($credentials + ['is_active' => true], $request->boolean('remember'))) {
             return back()
                 ->withErrors(['email' => 'Email atau password tidak valid.'])
                 ->onlyInput('email');

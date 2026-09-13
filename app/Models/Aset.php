@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasLampiran;
 use Illuminate\Database\Eloquent\Model;
 
 class Aset extends Model
 {
+    use HasLampiran;
+
     public const STRAIGHT_LINE = 'STRAIGHT_LINE';
     public const DECLINING_BALANCE = 'DECLINING_BALANCE';
 

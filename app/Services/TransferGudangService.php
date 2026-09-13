@@ -81,7 +81,7 @@ class TransferGudangService
                 $tujuanLokasi = $lokasi->get($locations[$detail->id] ?? null);
                 if ($tujuanLokasi) {
                     $tujuanLokasi->assertMilikGudang((int) $tujuan->id);
-                    $tujuanLokasi->assertMuat($quantity);
+                    $tujuanLokasi->assertMuat($quantity, $detail->bahan);
                 }
 
                 $remaining = $quantity;

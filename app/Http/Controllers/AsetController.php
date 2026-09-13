@@ -110,7 +110,7 @@ class AsetController extends Controller
     public function show(Request $request, Aset $aset)
     {
         $this->authorize('view', $aset);
-        $aset->load(['category', 'acquisitionCreditAccount', 'depreciations.journal', 'disposal.journal']);
+        $aset->load(['category', 'acquisitionCreditAccount', 'depreciations.journal', 'disposal.journal', 'lampiran.user']);
         $financial = $request->user()->can('viewFinancials', Aset::class);
         $cashBanks = BaganAkun::where('is_active', true)->where('is_cash_bank', true)->orderBy('kode_akun')->get();
         return view('aset.show', ['asset' => $aset, 'financial' => $financial, 'cashBanks' => $cashBanks]);

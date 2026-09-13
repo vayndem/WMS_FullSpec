@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ApproveStockOpnameRequest;
+use App\Http\Requests\StoreCycleCountRequest;
 use App\Http\Requests\StoreStockOpnameRequest;
 use App\Http\Requests\UpdateStockOpnameRequest;
 use App\Models\Gudang;
@@ -15,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Services\AccountingPeriodService;
+use App\Services\CycleCountService;
 use App\Services\DocumentNumberService;
 use App\Exports\StockOpnameInventoryExport;
 use App\Exports\GenericTableExport;
@@ -22,7 +24,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class StockOpnameController extends Controller
 {
-    public function __construct(private StockOpnameService $service, private AccountingPeriodService $periods, private DocumentNumberService $numbers) {}
+    public function __construct(private StockOpnameService $service, private AccountingPeriodService $periods, private DocumentNumberService $numbers, private CycleCountService $siklus) {}
 
     public function index(Request $request)
     {
@@ -78,6 +80,38 @@ class StockOpnameController extends Controller
             return $opname;
         });
         return response()->json(['success' => true, 'message' => 'Draft stock opname berhasil dibuat.', 'data' => $opname], 201);
+    }
+
+    public function cycleBoard(Request $request)
+    {
+        $this->authorize('viewAny', StockOpname::class);
+
+        $gudangIds = $request->user()->accessibleGudangIds('opname');
+
+        return view('stock_opname.siklus', [
+            'jadwal' => $this->siklus->papanJadwal($gudangIds),
+            'gudangs' => Gudang::whereIn('id', $gudangIds)->where('aktif', true)->orderBy('nama')->get(),
+            'siklusBulan' => \App\Services\AbcAnalysisService::SIKLUS_BULAN,
+        ]);
+    }
+
+    public function startCycle(StoreCycleCountRequest $request)
+    {
+        $data = $request->validated();
+
+        try {
+            $opname = $this->siklus->mulai(
+                (int) $data['warehouse_id'],
+                $data['kelas_abc'],
+                $data['cutoff_at'],
+                $data['notes'] ?? null,
+            );
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['siklus' => $e->getMessage()]);
+        }
+
+        return redirect()->route('stock-opname.edit', $opname)
+            ->with('success', "Cycle count {$opname->number} kelas {$opname->kelas_abc} dibuat dengan {$opname->details()->count()} baris. Isi hasil hitungan fisiknya.");
     }
 
     public function show(StockOpname $stockOpname)

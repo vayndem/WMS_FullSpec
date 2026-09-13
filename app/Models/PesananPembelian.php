@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasLampiran;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PesananPembelian extends Model
 {
-    use HasFactory;
+    use HasFactory, HasLampiran;
 
     public const OPEN = 'OPEN';
     public const CLOSED = 'CLOSED';

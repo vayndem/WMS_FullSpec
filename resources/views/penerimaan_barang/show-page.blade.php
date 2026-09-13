@@ -126,5 +126,13 @@
                 <a href="{{ route('penerimaan-barang.index') }}" class="btn btn-ghost border border-base-300">Kembali</a>
             </div>
         </div>
+
+        <div class="mt-4">
+            @include('layouts.template.lampiran-panel', [
+                'induk' => $lpb,
+                'tipe' => 'penerimaan-barang',
+                'kategori' => ['SURAT_JALAN', 'QC', 'LAIN'],
+            ])
+        </div>
     </div>
 @endsection

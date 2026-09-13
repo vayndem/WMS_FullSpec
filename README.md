@@ -157,6 +157,11 @@ flowchart LR
 | 🛰️ WMS Control | Warehouse Execution | QC, putaway, reservation, FEFO/FIFO picking |
 | 🛰️ WMS Control | Financial Control | Three-way match, landed cost, controlled reversal |
 | 🛰️ WMS Control | Planning | Reorder point, safety stock, replenishment suggestion |
+| 🛰️ WMS Control | Antrean Kerja Operator | "Tugas saya": QC, putaway, picking, terima transfer, opname — dibatasi gudang yang boleh diakses |
+| 🛰️ WMS Control | Gelombang Pengambilan | Wave/batch picking: gabungkan banyak perintah ambil jadi satu gelombang, urut jalur bin |
+| 🛰️ WMS Control | Slotting ABC | Saran pemindahan bin: barang cepat bergerak ke bin dekat jalur ambil |
+| 🛰️ WMS Control | Kitting & Bundling | Rakit/urai kit dari beberapa bahan, nilai FIFO komponen pindah utuh ke kit |
+| 📦 Warehouse | Cycle Count ABC | Hitung fisik parsial per kelas ABC — A bulanan, B triwulan, C tahunan |
 | 📈 Semua Dashboard | Task Grid + Chart | Setiap role melihat seluruh tugas outstanding-nya sebagai kartu yang bisa diklik, plus grafik ringkasan |
 
 <br>
@@ -178,6 +183,7 @@ Jenis gudang aktif:
 - Transfer antar gudang mempertahankan nilai layer (FIFO cost ikut berpindah).
 - Gudang Consider diproses lewat pemeriksaan Consider.
 - Gudang Rusak bersifat final.
+- **Akses gudang dibatasi per orang.** Super Admin melihat semua gudang; operator Warehouse dan Produksi hanya melihat gudang yang ditugaskan lewat **Pembagian Gudang**. Operator baru mulai tanpa gudang dan harus ditugaskan lebih dulu.
 
 Transfer memakai standar `DRAFT → DIAJUKAN → DIKIRIM → DITERIMA`. Saat dikirim, barang berada di layer `IN_TRANSIT`; saldo global perusahaan **tidak berubah** sampai diterima. Selisih penerimaan dipertahankan sebagai exception rekonsiliasi.
 
@@ -192,6 +198,8 @@ Standar transaksi inventory lainnya:
 - ✅ Rekonsiliasi wajib: master quantity = gudang + transit; saldo gudang = layer; nilai layer = GL persediaan.
 - ✅ Invoice supplier lewat three-way matching PO–LPB–Invoice sebelum jurnal hutang diposting.
 - ✅ Landed cost dikapitalisasi ke layer aktif, diposting seimbang ke GL.
+- ✅ Kapasitas bin dicek dua arah: total unit **dan** volume (kalau dimensi bin dan volume bahan terisi).
+- ✅ Perakitan kit mengonsumsi komponen FIFO dan memindahkan nilainya utuh ke kit — nilai tidak diciptakan.
 
 📍 Pusat operasional fitur ini: menu **Multi Gudang → WMS Control Center**.
 
@@ -218,7 +226,7 @@ Role disimpan di tabel `user_roles`, direferensikan oleh kolom `users.type`.
 | 0 | 👑 SuperAdmin | Akses penuh tanpa pengecualian (`Gate::before`) |
 | 1 | 🛍️ Purchasing | Supplier, request, PO, LPB, invoice, jasa, visibilitas finansial operasional |
 | 2 | 💳 Finance | Melihat invoice, mencatat/void pembayaran supplier |
-| 3 | 📦 Warehouse | Operasional gudang lintas gudang aktif, tanpa visibilitas finansial sensitif |
+| 3 | 📦 Warehouse | Operasional gudang **sesuai assignment gudang**, tanpa visibilitas finansial sensitif |
 | 4 | 📊 Accounting | COA, mapping, jurnal, pajak, period lock, rekonsiliasi, approval opname, aset |
 | 5 | 🏭 Produksi | Transfer, NPK, saldo stok, mutasi, opname sesuai assignment gudang |
 | 6 | 🕵️ Accounting Manager | **Approve invoice supplier saja** (maker-checker) sebelum posting ke jurnal & bisa dibayar |
@@ -226,8 +234,8 @@ Role disimpan di tabel `user_roles`, direferensikan oleh kolom `users.type`.
 **Catatan:**
 
 - `SuperAdmin` melewati semua policy lewat `Gate::before`.
-- `Warehouse` punya cakupan operasional gudang yang luas.
-- `Produksi` dibatasi ke gudang yang di-assign di `pembagian_gudangs`.
+- `Warehouse` **dan** `Produksi` sama-sama dibatasi ke gudang yang di-assign di `pembagian_gudangs` (sejak 2026-09-13; sebelumnya `Warehouse` otomatis mendapat semua gudang aktif).
+- Operator yang belum punya assignment tidak melihat gudang manapun — ini disengaja, agar akses lintas lokasi harus diberikan secara sadar.
 - Semua role *kecuali Purchasing* sekarang bisa mengajukan Material Request; setiap user bisa melacak status request miliknya sendiri.
 
 <br>

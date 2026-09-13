@@ -84,3 +84,23 @@ Route::middleware('auth')->group(function () {
         Route::post('retur-pembelian/{returPembelian}/reverse', [InventoryFinancialControlController::class, 'reverseReturPembelian'])->name('retur-pembelian.reverse');
     });
 });
+
+Route::middleware('auth')->group(function () {
+    Route::get('antrean-kerja', [App\Http\Controllers\AntreanKerjaController::class, 'index'])->name('antrean-kerja.index');
+    Route::get('slotting', [App\Http\Controllers\SlottingController::class, 'index'])->name('slotting.index');
+
+    Route::get('gelombang-pengambilan', [App\Http\Controllers\GelombangPengambilanController::class, 'index'])->name('gelombang-pengambilan.index');
+    Route::post('gelombang-pengambilan', [App\Http\Controllers\GelombangPengambilanController::class, 'store'])->name('gelombang-pengambilan.store');
+    Route::post('gelombang-pengambilan/{gelombang}/rilis', [App\Http\Controllers\GelombangPengambilanController::class, 'release'])->name('gelombang-pengambilan.release');
+    Route::post('gelombang-pengambilan/{gelombang}/selesai', [App\Http\Controllers\GelombangPengambilanController::class, 'complete'])->name('gelombang-pengambilan.complete');
+    Route::delete('gelombang-pengambilan/{gelombang}', [App\Http\Controllers\GelombangPengambilanController::class, 'destroy'])->name('gelombang-pengambilan.destroy');
+
+    Route::get('kit', [App\Http\Controllers\KitController::class, 'index'])->name('kit.index');
+    Route::post('kit', [App\Http\Controllers\KitController::class, 'store'])->name('kit.store');
+    Route::get('kit/{kit}/ketersediaan', [App\Http\Controllers\KitController::class, 'ketersediaan'])->name('kit.ketersediaan');
+    Route::post('kit/{kit}/rakit', [App\Http\Controllers\KitController::class, 'rakit'])->name('kit.rakit');
+    Route::delete('kit/{kit}', [App\Http\Controllers\KitController::class, 'destroy'])->name('kit.destroy');
+
+    Route::get('stock-opname-siklus', [App\Http\Controllers\StockOpnameController::class, 'cycleBoard'])->name('stock-opname.siklus');
+    Route::post('stock-opname-siklus', [App\Http\Controllers\StockOpnameController::class, 'startCycle'])->name('stock-opname.siklus.store');
+});

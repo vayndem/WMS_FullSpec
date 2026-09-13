@@ -28,6 +28,8 @@ return [
     |
     */
 
+    'lampiran_disk' => env('LAMPIRAN_DISK', 'lampiran'),
+
     'disks' => [
 
         'local' => [
@@ -41,6 +43,13 @@ return [
             'root' => storage_path('app/public'),
             'url' => env('APP_URL').'/storage',
             'visibility' => 'public',
+            'throw' => false,
+        ],
+
+        'lampiran' => [
+            'driver' => 'local',
+            'root' => storage_path('app/lampiran'),
+            'visibility' => 'private',
             'throw' => false,
         ],
 

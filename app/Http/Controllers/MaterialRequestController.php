@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\DocumentNumberService;
+use App\Services\NotifikasiService;
+use App\Services\WarehouseExecutionService;
 use App\Models\KategoriBahan;
 use Illuminate\Validation\ValidationException;
 use App\Exports\GenericTableExport;
@@ -21,7 +23,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class MaterialRequestController extends Controller
 {
-    public function __construct(private DocumentNumberService $numbers) {}
+    public function __construct(private DocumentNumberService $numbers, private NotifikasiService $notifikasi, private WarehouseExecutionService $gudang) {}
 
     private function isRequestReviewer(User $user): bool
     {
@@ -154,7 +156,7 @@ class MaterialRequestController extends Controller
     {
         $validated = $request->validated();
 
-        DB::transaction(function () use ($validated) {
+        $reqHeader = DB::transaction(function () use ($validated) {
             $reqHeader = MaterialRequest::create([
                 'no_request'   => $validated['no_request'],
                 'status'       => MaterialRequest::PENDING,
@@ -177,7 +179,18 @@ class MaterialRequestController extends Controller
                     'tipe_barang'  => $item['tipe_barang'] ?? null,
                 ]);
             }
+
+            return $reqHeader;
         });
+
+        $this->notifikasi->mintaPersetujuan(
+            [User::ROLE_PURCHASING, User::ROLE_ACCOUNTING],
+            'Material Request',
+            'Request baru menunggu persetujuan',
+            $reqHeader->no_request . ' - ' . count($validated['items']) . ' item',
+            route('request.index'),
+            $reqHeader->no_request,
+        );
 
         return response()->json([
             'success' => true,
@@ -243,9 +256,22 @@ class MaterialRequestController extends Controller
             ]);
         });
 
+        $reservasi = $this->gudang->reservasiOtomatis($request->fresh('details'));
+
         return response()->json([
             'success' => true,
-            'message' => 'Request berhasil disetujui.'
+            'message' => 'Request berhasil disetujui.' . $this->ringkasanReservasi($reservasi),
+            'reservasi' => $reservasi,
         ]);
+    }
+
+    private function ringkasanReservasi(array $hasil): string
+    {
+        $bagian = [];
+        if ($hasil['dikunci'] > 0) $bagian[] = "{$hasil['dikunci']} baris stoknya dikunci penuh";
+        if ($hasil['sebagian'] > 0) $bagian[] = "{$hasil['sebagian']} baris dikunci sebagian";
+        if ($hasil['gagal'] > 0) $bagian[] = "{$hasil['gagal']} baris belum ada stok";
+
+        return $bagian === [] ? '' : ' Reservasi otomatis: ' . implode(', ', $bagian) . '.';
     }
 }

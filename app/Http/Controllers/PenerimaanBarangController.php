@@ -19,16 +19,15 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\WmsAccountingService;
-use App\Models\LayerPersediaan;
-use App\Models\LotPersediaan;
 use App\Services\DocumentNumberService;
+use App\Services\PenerimaanBarangService;
 use App\Services\StokGudangService;
 use App\Exports\GenericTableExport;
 use Maatwebsite\Excel\Facades\Excel;
 
 class PenerimaanBarangController extends Controller
 {
-    public function __construct(private WmsAccountingService $accounting, private DocumentNumberService $numbers, private StokGudangService $stokGudang) {}
+    public function __construct(private WmsAccountingService $accounting, private DocumentNumberService $numbers, private StokGudangService $stokGudang, private PenerimaanBarangService $penerimaan) {}
     public function index(Request $request)
     {
         $this->authorize('viewAny', PenerimaanBarang::class);
@@ -331,27 +330,11 @@ class PenerimaanBarangController extends Controller
     public function store(StorePenerimaanBarangRequest $request)
     {
         $validated = $request->validated();
-        $user = Auth::user();
-
         $po = PesananPembelian::where('no_po', $validated['no_po'])->with('details')->firstOrFail();
 
-        $overItems = [];
-        foreach ($validated['details'] as $item) {
-            $poDetail = $po->details->where('bahan_id', $item['id_bahan'])->first();
-            if ($poDetail) {
-                $sisaBelumDiterima = $poDetail->jumlah - $poDetail->diterima;
-                if ($item['jumlah_barang_diterima'] > $sisaBelumDiterima) {
-                    $bahan = Bahan::find($item['id_bahan']);
-                    $overItems[] = [
-                        'nama'       => $bahan->nama ?? 'Bahan #' . $item['id_bahan'],
-                        'minta_sisa' => $sisaBelumDiterima > 0 ? $sisaBelumDiterima : 0,
-                        'input'      => $item['jumlah_barang_diterima'],
-                    ];
-                }
-            }
-        }
+        $overItems = $this->penerimaan->kelebihanPenerimaan($po, $validated['details']);
 
-        if (!empty($overItems) && empty($validated['confirm_over_receive'])) {
+        if ($overItems !== [] && empty($validated['confirm_over_receive'])) {
             return response()->json([
                 'requires_confirmation' => true,
                 'message'               => 'Jumlah barang yang diterima melebihi sisa pesanan PO.',
@@ -359,97 +342,11 @@ class PenerimaanBarangController extends Controller
             ], 422);
         }
 
-        $lpb = DB::transaction(function () use ($validated, $user, $po) {
-            $idLpb = $validated['id_lpb'];
-
-            $lpb = PenerimaanBarang::create([
-                'id_lpb'      => $idLpb,
-                'tanggal'     => $validated['tanggal'],
-                'no_po'       => $validated['no_po'],
-                'gudang_id'   => $po->gudang_id,
-                'no_sj'       => $validated['no_sj'],
-                'id_user'     => $user->id,
-                'flag'        => 0,
-                'no_invoice'  => $validated['no_invoice'] ?? null,
-                'status'      => PenerimaanBarang::DRAFT,
-                'jenis_lpb'   => $validated['jenis_lpb'] ?? 1,
-                'ulang'       => 0,
-                'kunci'       => 0,
-                'cetakan'     => 0,
-                'cetak_ulang' => 0,
-            ]);
-
-            foreach ($validated['details'] as $item) {
-                $poDetail = PesananPembelianDetail::where('no_po', $validated['no_po'])
-                    ->where('bahan_id', $item['id_bahan'])
-                    ->lockForUpdate()
-                    ->firstOrFail();
-                $lockedRemaining = (float) $poDetail->jumlah - (float) $poDetail->diterima;
-                if (
-                    (float) $item['jumlah_barang_diterima'] > $lockedRemaining
-                    && empty($validated['confirm_over_receive'])
-                ) {
-                    abort(422, 'Jumlah penerimaan berubah atau melebihi sisa PO. Periksa kembali lalu konfirmasi over-receive.');
-                }
-                $bahan = Bahan::findOrFail($item['id_bahan']);
-                if ((int) $item['id_kategori'] !== (int) $bahan->tipe_barang) {
-                    throw new \RuntimeException("Kategori bahan {$bahan->nama} tidak sesuai master.");
-                }
-                $unitPrice = (float) $poDetail->harga;
-                $lpbDetail = PenerimaanBarangDetail::create([
-                    'id_lpb'                 => $idLpb,
-                    'id_bahan'               => $item['id_bahan'],
-                    'id_kategori'            => $item['id_kategori'] ?? null,
-                    'jumlah_barang_diterima' => $item['jumlah_barang_diterima'],
-                    'lot_number'             => $item['lot_number'] ?? null,
-                    'harga'                  => $unitPrice,
-                    'nilai_awal'             => $item['jumlah_barang_diterima'] * $unitPrice,
-                    'jumlah_dipakai'         => 0,
-                    'jumlah_tersisa'         => $item['jumlah_barang_diterima'],
-                    'flag_dipakai'           => 1,
-                ]);
-                $lot = null;
-                if (!empty($item['lot_number'])) {
-                    $lot = LotPersediaan::firstOrCreate(
-                        ['bahan_id' => $item['id_bahan'], 'lot_number' => $item['lot_number']],
-                        ['quality_status' => 'RELEASED', 'expires_at' => $item['expires_at'] ?? null]
-                    );
-                    if (!$lot->expires_at && !empty($item['expires_at'])) {
-                        $lot->update(['expires_at' => $item['expires_at']]);
-                    }
-                }
-                LayerPersediaan::create([
-                    'bahan_id' => $item['id_bahan'],
-                    'gudang_id' => $po->gudang_id,
-                    'inventory_lot_id' => $lot?->id,
-                    'source_type' => 'LPB_DETAIL',
-                    'source_id' => $lpbDetail->id,
-                    'transaction_date' => $lpb->tanggal,
-                    'initial_quantity' => $item['jumlah_barang_diterima'],
-                    'remaining_quantity' => $item['jumlah_barang_diterima'],
-                    'unit_cost' => $unitPrice,
-                ]);
-
-                $this->stokGudang->masuk((int) $po->gudang_id, (int) $item['id_bahan'], (float) $item['jumlah_barang_diterima'], $unitPrice, 'PENERIMAAN', 'LPB', $lpb->id, $lpb->id_lpb);
-
-                if ($poDetail) {
-                    $poDetail->increment('diterima', $item['jumlah_barang_diterima']);
-
-                    $sisaPoSaja = max(0, $poDetail->jumlah - ($poDetail->diterima - $item['jumlah_barang_diterima']));
-                    $potongOnPurchase = min($sisaPoSaja, $item['jumlah_barang_diterima']);
-
-                    if ($potongOnPurchase > 0) {
-                        Bahan::where('id', $item['id_bahan'])->decrement('stok_onpurchase', $potongOnPurchase);
-                        $this->stokGudang->kurangiPesanan((int) $po->gudang_id, (int) $item['id_bahan'], (float) $potongOnPurchase);
-                    }
-                }
-            }
-
-            $this->accounting->postLpb($lpb);
-            $lpb->update(['kunci' => true, 'status' => PenerimaanBarang::POSTED]);
-
-            return $lpb;
-        });
+        try {
+            $lpb = $this->penerimaan->terima($po, $validated, Auth::user());
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
 
         return response()->json([
             'success' => true,
@@ -469,6 +366,7 @@ class PenerimaanBarangController extends Controller
                 'serviceDetails.allocations',
                 'pembelian.supplier',
                 'user',
+                'lampiran.user',
             ])
             ->firstOrFail();
 

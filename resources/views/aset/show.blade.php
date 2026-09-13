@@ -141,5 +141,13 @@
                 </div>
             </div>
         </div>
+
+        <div class="mt-4">
+            @include('layouts.template.lampiran-panel', [
+                'induk' => $asset,
+                'tipe' => 'aset',
+                'kategori' => ['ASET', 'LAIN'],
+            ])
+        </div>
     </div>
 @endsection

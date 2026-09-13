@@ -1,6 +1,7 @@
 <?php
 
 require __DIR__.'/auth.php';
+require __DIR__.'/administration.php';
 require __DIR__.'/warehouse.php';
 require __DIR__.'/procurement.php';
 require __DIR__.'/finance.php';

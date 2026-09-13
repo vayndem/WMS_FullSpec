@@ -12,7 +12,29 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        $schedule->command('wms:hitung-replenishment')
+            ->dailyAt('05:00')
+            ->withoutOverlapping()
+            ->onOneServer();
+
+        $schedule->command('wms:hitung-abc')
+            ->weeklyOn(1, '04:00')
+            ->withoutOverlapping()
+            ->onOneServer();
+
+        $schedule->command('wms:pengingat-harian')
+            ->weekdays()
+            ->dailyAt('07:00')
+            ->withoutOverlapping()
+            ->onOneServer();
+
+        $schedule->command('wms:penyusutan-bulanan')
+            ->monthlyOn(1, '02:00')
+            ->withoutOverlapping()
+            ->onOneServer();
+
+        $schedule->command('queue:prune-failed --hours=720')->weeklyOn(7, '03:00');
+        $schedule->command('auth:clear-resets')->daily();
     }
 
     /**

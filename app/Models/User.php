@@ -63,11 +63,29 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'type' => 'integer',
+        'is_active' => 'boolean',
+        'last_login_at' => 'datetime',
+        'deactivated_at' => 'datetime',
     ];
 
     public function role(): BelongsTo
     {
         return $this->belongsTo(UserRole::class, 'type');
+    }
+
+    public function deactivatedBy(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'deactivated_by');
+    }
+
+    public function scopeAktif($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeBerperan($query, array|int $roles)
+    {
+        return $query->whereIn('type', (array) $roles);
     }
 
     public function pembagianGudangs(): HasMany
@@ -128,11 +146,11 @@ class User extends Authenticatable
             $gudangQuery->where($this->gudangAbilityColumn($ability), true);
         }
 
-        if ($this->isSuperAdmin() || $this->isWarehouse()) {
+        if ($this->isSuperAdmin()) {
             return $gudangQuery->pluck('id')->all();
         }
 
-        if (!$this->isProduction()) {
+        if (!$this->isWarehouseOperator()) {
             return [];
         }
 

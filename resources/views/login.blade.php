@@ -60,6 +60,13 @@
                     <span class="label-text">Ingat saya</span>
                 </label>
 
+                @if (session('status'))
+                    <div role="alert" class="alert alert-success text-sm">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>{{ session('status') }}</span>
+                    </div>
+                @endif
+
                 @if ($errors->any())
                     <div role="alert" class="alert alert-error text-sm">
                         <i class="fa-solid fa-circle-exclamation"></i>
@@ -75,21 +82,14 @@
                     <button type="submit" class="btn btn-primary w-full">
                         <i class="fa-solid fa-right-to-bracket"></i> Masuk
                     </button>
-                    <button type="button" id="forgot-password" class="btn btn-link btn-sm no-underline">
+                    <a href="{{ route('password.request') }}" class="btn btn-link btn-sm no-underline">
                         Lupa password?
-                    </button>
+                    </a>
                 </div>
             </form>
         </div>
     </section>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            document.getElementById('forgot-password').addEventListener('click', function () {
-                window.AppAlert.show('Silakan hubungi tim IT untuk reset password Anda.', { title: 'Hubungi IT' });
-            });
-        });
-    </script>
 </body>
 
 </html>

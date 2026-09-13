@@ -9,6 +9,7 @@ use App\Models\Jurnal;
 use App\Models\PenerimaanBarang;
 use App\Models\PenerimaanBarangDetail;
 use App\Models\PemakaianBarang;
+use App\Models\PerakitanKit;
 use App\Models\PemakaianBarangAlokasiStok;
 use App\Models\LayerPersediaan;
 use App\Models\BaganAkun;
@@ -153,6 +154,52 @@ class WmsAccountingService
             ['coa_id' => $category->coa_beban_id, 'debit' => $amount, 'kredit' => 0, 'keterangan' => "Pemakaian {$category->katnama}"],
             ['coa_id' => $category->coa_persediaan_id, 'debit' => 0, 'kredit' => $amount, 'keterangan' => "Pengurangan persediaan {$category->katnama}"],
         ]);
+    }
+
+    public function postPerakitanKit(PerakitanKit $perakitan): ?Jurnal
+    {
+        $this->periods->assertOpen($perakitan->tanggal, 'Perakitan kit');
+        $perakitan->loadMissing('kit.bahanHasil.tipeBarang', 'details.bahan.tipeBarang');
+
+        $kategoriKit = $perakitan->kit?->bahanHasil?->tipeBarang;
+        $this->assertCategoryMapping($kategoriKit);
+
+        $rakit = $perakitan->jenis === PerakitanKit::RAKIT;
+        $lines = [];
+
+        foreach ($perakitan->details->groupBy(fn ($detail) => $detail->bahan?->tipe_barang) as $details) {
+            $kategori = $details->first()->bahan?->tipeBarang;
+            $this->assertCategoryMapping($kategori);
+            $nilai = round((float) $details->sum('nilai'), 2);
+
+            if ($nilai <= 0) {
+                continue;
+            }
+
+            $this->line($lines, $kategori->coa_persediaan_id, $rakit ? 0 : $nilai, $rakit ? $nilai : 0,
+                ($rakit ? 'Komponen terpakai ' : 'Komponen kembali ') . $kategori->katnama);
+        }
+
+        $nilaiKit = round((float) $perakitan->nilai_total, 2);
+        if ($nilaiKit > 0) {
+            $this->line($lines, $kategoriKit->coa_persediaan_id, $rakit ? $nilaiKit : 0, $rakit ? 0 : $nilaiKit,
+                ($rakit ? 'Persediaan kit jadi ' : 'Kit terurai ') . $kategoriKit->katnama);
+        }
+
+        $lines = array_values(array_filter($lines, fn ($line) => abs((float) $line['debit'] - (float) $line['kredit']) > 0.001));
+
+        if ($lines === []) {
+            return null;
+        }
+
+        return $this->post(
+            "KIT-{$perakitan->nomor}",
+            $perakitan->tanggal,
+            'PERAKITAN_KIT',
+            $perakitan->id,
+            ($rakit ? 'Perakitan kit ' : 'Penguraian kit ') . $perakitan->nomor,
+            $lines,
+        );
     }
 
     public function consumeStock(PemakaianBarang $npk): void

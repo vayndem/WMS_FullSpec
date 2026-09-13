@@ -332,6 +332,12 @@
                             @endcan
                             @can('reconcile', App\Models\StokGudang::class)<li><a href="{{ route('rekonsiliasi-gudangs.index') }}"><span>Rekonsiliasi</span></a></li>@endcan
                             <li><a href="{{ route('wms-control.index') }}"><span>WMS Control Center</span></a></li>
+                            <li><a href="{{ route('antrean-kerja.index') }}"><span>Antrean Kerja Saya</span></a></li>
+                            @can('operateWarehouse')
+                                <li><a href="{{ route('gelombang-pengambilan.index') }}"><span>Gelombang Pengambilan</span></a></li>
+                                <li><a href="{{ route('slotting.index') }}"><span>Saran Slotting</span></a></li>
+                                <li><a href="{{ route('kit.index') }}"><span>Kitting &amp; Bundling</span></a></li>
+                            @endcan
                             @can('viewAny', App\Models\TransferGudang::class)
                                 <li><a href="{{ route('transfer-gudangs.index') }}"><span>Transfer Gudang</span></a></li>
                             @endcan
@@ -351,12 +357,28 @@
                     </li>
                 @endif
 
+                @can('viewAny', App\Models\User::class)
+                    <li class="{{ request()->routeIs('user.*') ? 'active' : '' }}">
+                        <a href="#administrasi" class="svg-icon">
+                            <i class="fa-solid fa-users-gear"></i><span class="ms-2">Administrasi</span>
+                        </a>
+                        <ul id="administrasi" class="submenu {{ request()->routeIs('user.*') ? 'show' : '' }}">
+                            <li><a href="{{ route('user.index') }}"><span>Manajemen Pengguna</span></a></li>
+                            <li><a href="{{ route('user.login-audit') }}"><span>Audit Login</span></a></li>
+                        </ul>
+                    </li>
+                @endcan
+
                 @can('viewAny', App\Models\StockOpname::class)
                     <li class="{{ request()->routeIs('stock-opname.*') ? 'active' : '' }}">
-                        <a href="{{ route('stock-opname.index') }}" class="svg-icon">
+                        <a href="#stock-opname" class="svg-icon">
                             <i class="fa-solid fa-clipboard-check"></i>
                             <span class="ms-2">Stock Opname</span>
                         </a>
+                        <ul id="stock-opname" class="submenu {{ request()->routeIs('stock-opname.*') ? 'show' : '' }}">
+                            <li><a href="{{ route('stock-opname.index') }}"><span>Daftar Opname</span></a></li>
+                            <li><a href="{{ route('stock-opname.siklus') }}"><span>Cycle Count ABC</span></a></li>
+                        </ul>
                     </li>
                 @endcan
 

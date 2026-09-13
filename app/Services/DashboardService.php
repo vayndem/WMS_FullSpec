@@ -16,16 +16,16 @@ use App\Models\PesananPembelian;
 use App\Models\ReturPembelian;
 use App\Models\StockOpname;
 use App\Models\User;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class DashboardService
 {
-    public const AMBANG_KEDALUWARSA_HARI = 30;
-    public const AMBANG_JATUH_TEMPO_HARI = 14;
+    public const AMBANG_KEDALUWARSA_HARI = PengingatService::AMBANG_KEDALUWARSA_HARI;
+    public const AMBANG_JATUH_TEMPO_HARI = PengingatService::AMBANG_JATUH_TEMPO_HARI;
     private const TTL_REKONSILIASI = 300;
+
+    public function __construct(private PengingatService $pengingatan) {}
 
     public function untuk(User $user): array
     {
@@ -38,28 +38,6 @@ class DashboardService
             $user->isAccounting() || $user->isAccountingManager() => ['view' => 'accounting.dashboard', 'data' => $this->akuntansi($user)],
             default => ['view' => 'dashboard', 'data' => []],
         };
-    }
-
-    private function pengingat(string $konteks, string $label, $tanggal, string $url, ?float $nilai = null): ?array
-    {
-        if (!$tanggal) {
-            return null;
-        }
-        $tanggal = Carbon::parse($tanggal)->startOfDay();
-
-        return [
-            'konteks' => $konteks,
-            'label' => $label,
-            'tanggal' => $tanggal,
-            'hari' => (int) today()->diffInDays($tanggal, false),
-            'url' => $url,
-            'nilai' => $nilai,
-        ];
-    }
-
-    private function urutkanPengingat(array $items): Collection
-    {
-        return collect($items)->filter()->sortBy('hari')->values();
     }
 
     private function progres(string $label, float $selesai, float $total, string $catatan = ''): array
@@ -91,33 +69,6 @@ class DashboardService
         ];
     }
 
-    private function lotSegeraKedaluwarsa(?array $warehouseIds = null, int $limit = 5): Collection
-    {
-        $rows = LayerPersediaan::with(['lot.bahan', 'gudang'])
-            ->where('remaining_quantity', '>', 0)
-            ->where('stock_status', 'AVAILABLE')
-            ->when($warehouseIds !== null, fn ($query) => $query->whereIn('gudang_id', $warehouseIds))
-            ->whereHas('lot', fn ($lot) => $lot->whereNotNull('expires_at')
-                ->whereDate('expires_at', '<=', today()->addDays(self::AMBANG_KEDALUWARSA_HARI)))
-            ->get()
-            ->groupBy('inventory_lot_id')
-            ->map(fn ($layers) => [
-                'lot' => $layers->first()->lot,
-                'gudang' => $layers->first()->gudang,
-                'sisa' => (float) $layers->sum('remaining_quantity'),
-            ])
-            ->sortBy(fn ($row) => $row['lot']->expires_at)
-            ->take($limit);
-
-        return $this->urutkanPengingat($rows->map(fn ($row) => $this->pengingat(
-            'Lot kedaluwarsa',
-            ($row['lot']->bahan->nama ?? 'Bahan') . ' · lot ' . $row['lot']->lot_number . ' · ' . ($row['gudang']->nama ?? '-'),
-            $row['lot']->expires_at,
-            route('wms-control.index'),
-            $row['sisa'],
-        ))->all());
-    }
-
     private function uangMukaTersedia(): int
     {
         return DB::table('wms_pembayaran_faktur as p')
@@ -133,45 +84,6 @@ class DashboardService
     private function masalahRekonsiliasi(): int
     {
         return (int) Cache::remember('dashboard.rekonsiliasi.invalid', self::TTL_REKONSILIASI, fn () => app(AccountingReconciliationService::class)->checks()->sum('invalid'));
-    }
-
-    private function invoiceJatuhTempo(int $limit = 6): Collection
-    {
-        $rows = FakturPembelian::with('supplier')
-            ->whereNotIn('status', [FakturPembelian::VOID, FakturPembelian::PENDING_APPROVAL])
-            ->where('sisa_tagihan', '>', 0)
-            ->whereNotNull('tgl_deadline_pembayaran')
-            ->whereDate('tgl_deadline_pembayaran', '<=', today()->addDays(self::AMBANG_JATUH_TEMPO_HARI))
-            ->orderBy('tgl_deadline_pembayaran')
-            ->limit($limit)->get();
-
-        return $this->urutkanPengingat($rows->map(fn ($inv) => $this->pengingat(
-            'Invoice jatuh tempo',
-            $inv->no_invoice . ' · ' . ($inv->supplier->nama ?? '-'),
-            $inv->tgl_deadline_pembayaran,
-            route('faktur-pembelian.index'),
-            (float) $inv->sisa_tagihan,
-        ))->all());
-    }
-
-    private function transferMenggantung(?array $warehouseIds = null, int $limit = 5): Collection
-    {
-        $rows = DB::table('transfer_gudangs as tg')
-            ->leftJoin('gudangs as asal', 'asal.id', '=', 'tg.gudang_asal_id')
-            ->leftJoin('gudangs as tujuan', 'tujuan.id', '=', 'tg.gudang_tujuan_id')
-            ->where('tg.status', 'DIKIRIM')
-            ->when($warehouseIds !== null, fn ($query) => $query->where(fn ($q) => $q
-                ->whereIn('tg.gudang_asal_id', $warehouseIds)->orWhereIn('tg.gudang_tujuan_id', $warehouseIds)))
-            ->orderBy('tg.dikirim_pada')
-            ->limit($limit)
-            ->get(['tg.nomor_transfer', 'tg.dikirim_pada', 'tg.tanggal', 'asal.nama as asal_nama', 'tujuan.nama as tujuan_nama']);
-
-        return $this->urutkanPengingat($rows->map(fn ($row) => $this->pengingat(
-            'Transfer belum diterima',
-            $row->nomor_transfer . ' · ' . ($row->asal_nama ?? '-') . ' → ' . ($row->tujuan_nama ?? '-'),
-            $row->dikirim_pada ?: $row->tanggal,
-            route('transfer-gudangs.index'),
-        ))->all());
     }
 
     private function superAdmin(): array
@@ -204,9 +116,9 @@ class DashboardService
                 ['label' => 'Jurnal Draft', 'count' => $draftJurnals, 'url' => route('jurnal.index'), 'icon' => 'fa-book', 'tone' => 'warning'],
                 ['label' => 'Masalah Rekonsiliasi', 'count' => $masalahRekonsiliasi, 'url' => route('reconciliation.index'), 'icon' => 'fa-scale-unbalanced', 'tone' => $masalahRekonsiliasi > 0 ? 'error' : 'success'],
             ]),
-            'reminders' => $this->invoiceJatuhTempo()
-                ->merge($this->lotSegeraKedaluwarsa())
-                ->merge($this->transferMenggantung())
+            'reminders' => $this->pengingatan->invoiceJatuhTempo()
+                ->merge($this->pengingatan->lotSegeraKedaluwarsa())
+                ->merge($this->pengingatan->transferMenggantung())
                 ->sortBy('hari')->values(),
             'progress' => [
                 $this->progres('Realisasi Baris PO Terbuka', (float) ($poLines->selesai ?? 0), (float) ($poLines->total ?? 0), 'Baris PO yang sudah diterima penuh'),
@@ -265,7 +177,7 @@ class DashboardService
                 ->where('sisa_tagihan', '>', 0)
                 ->orderByRaw('tgl_deadline_pembayaran IS NULL')
                 ->orderBy('tgl_deadline_pembayaran')->limit(5)->get(),
-            'reminders' => $this->invoiceJatuhTempo(),
+            'reminders' => $this->pengingatan->invoiceJatuhTempo(),
             'progress' => [
                 $this->progres('Realisasi Baris PO Terbuka', (float) ($poLines->selesai ?? 0), (float) ($poLines->total ?? 0), 'Baris PO yang sudah diterima penuh'),
                 $this->progres('Request Disetujui Sudah Di-PO', (float) ($requestLines->selesai ?? 0), (float) ($requestLines->total ?? 0), 'Baris request approved yang kuotanya sudah penuh'),
@@ -321,7 +233,7 @@ class DashboardService
                 ->orderBy('tgl_deadline_pembayaran')->limit(8)->get(),
             'recentPayments' => PembayaranFaktur::with(['invoice.supplier', 'coaKasBank'])
                 ->where('status', PembayaranFaktur::POSTED)->latest('tanggal_pembayaran')->latest('id')->limit(8)->get(),
-            'reminders' => $this->invoiceJatuhTempo(8),
+            'reminders' => $this->pengingatan->invoiceJatuhTempo(8),
             'progress' => [
                 $this->progres('Hutang Belum Jatuh Tempo', max($metrics['outstanding_value'] - $jatuhTempoNilai, 0), max($metrics['outstanding_value'], 0.0001), 'Makin penuh makin sehat: porsi hutang yang belum lewat tanggal'),
                 $this->progres('Invoice Terbayar Bulan Ini', (float) $metrics['payments_this_month'], (float) ($metrics['payments_this_month'] + $metrics['unpaid_count']), 'Pembayaran bulan ini dibanding sisa tagihan terbuka'),
@@ -366,7 +278,7 @@ class DashboardService
                 ['label' => 'Transfer Gudang Berjalan', 'count' => $transfersInProgress, 'url' => route('transfer-gudangs.index'), 'icon' => 'fa-truck-fast', 'tone' => 'info'],
                 ['label' => 'Request Saya Menunggu Approval', 'count' => $myPendingRequests, 'url' => route('request.index'), 'icon' => 'fa-file-circle-question', 'tone' => 'neutral'],
             ]),
-            'reminders' => $this->lotSegeraKedaluwarsa()->merge($this->transferMenggantung())->sortBy('hari')->values(),
+            'reminders' => $this->pengingatan->lotSegeraKedaluwarsa()->merge($this->pengingatan->transferMenggantung())->sortBy('hari')->values(),
             'progress' => [
                 $this->progres('Penerimaan Sudah Putaway', (float) max($totalPenerimaan - $putawayTertunda, 0), (float) $totalPenerimaan, 'Dokumen penerimaan barang yang sudah ditempatkan ke bin'),
                 $this->progres('Stock Opname Selesai', (float) $opnameSelesai, (float) ($opnameSelesai + $openOpnames), 'Opname berstatus POSTED dibanding yang masih berjalan'),
@@ -407,7 +319,7 @@ class DashboardService
                 ['label' => 'Stock Opname Terbuka', 'count' => $openOpnames, 'url' => route('stock-opname.index'), 'icon' => 'fa-clipboard-list', 'tone' => 'warning'],
                 ['label' => 'Request Saya Menunggu Approval', 'count' => $myPendingRequests, 'url' => route('request.index'), 'icon' => 'fa-file-circle-question', 'tone' => 'neutral'],
             ]),
-            'reminders' => $this->lotSegeraKedaluwarsa($warehouseIds)->merge($this->transferMenggantung($warehouseIds))->sortBy('hari')->values(),
+            'reminders' => $this->pengingatan->lotSegeraKedaluwarsa($warehouseIds)->merge($this->pengingatan->transferMenggantung($warehouseIds))->sortBy('hari')->values(),
             'progress' => [
                 $this->progres('Stock Opname Selesai', (float) $opnameSelesai, (float) ($opnameSelesai + $openOpnames), 'Opname gudang yang di-assign ke Anda'),
             ],
@@ -464,13 +376,13 @@ class DashboardService
                 ['label' => 'Request Menunggu Approval', 'count' => $pendingRequests, 'url' => route('request.index'), 'icon' => 'fa-file-circle-question', 'tone' => 'neutral'],
                 ['label' => 'Aset Belum Disusutkan Periode Ini', 'count' => $assetsDueDepreciation, 'url' => route('aset.index'), 'icon' => 'fa-building-shield', 'tone' => 'neutral'],
             ])),
-            'reminders' => $this->urutkanPengingat($invoicePendingLama->map(fn ($inv) => $this->pengingat(
+            'reminders' => $this->pengingatan->urutkan($invoicePendingLama->map(fn ($inv) => $this->pengingatan->susun(
                 'Invoice menunggu approval',
                 $inv->no_invoice . ' · ' . ($inv->supplier->nama ?? '-'),
                 $inv->tanggal,
                 route('faktur-pembelian.index'),
                 (float) $inv->grand_total,
-            ))->all())->merge($this->invoiceJatuhTempo())->sortBy('hari')->values(),
+            ))->all())->merge($this->pengingatan->invoiceJatuhTempo())->sortBy('hari')->values(),
             'progress' => [
                 $this->progres('Jurnal Sudah Diposting', (float) $postedJurnals, (float) ($postedJurnals + $draftJurnals), 'Jurnal POSTED dibanding yang masih draft'),
                 $this->progres('Aset Punya Kelompok Fiskal', (float) $asetBerkelompokFiskal, (float) $totalAsetAktif, 'Tanpa kelompok fiskal, pajak tangguhan aset itu tidak bisa dihitung'),

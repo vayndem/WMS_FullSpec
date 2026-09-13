@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasLampiran;
 use Illuminate\Database\Eloquent\Model;
 
 class PemeriksaanKualitas extends Model
 {
-    use Auditable;
+    use Auditable, HasLampiran;
     protected $table = 'wms_pemeriksaan_kualitas';
     protected $guarded = ['id'];
     protected $casts = ['inspected_at' => 'datetime'];

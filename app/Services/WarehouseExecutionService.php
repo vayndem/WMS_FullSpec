@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Bahan;
 use App\Models\LayerPersediaan;
+use App\Models\MaterialRequest;
 use App\Models\PemakaianBarang;
 use App\Models\ReservasiPersediaan;
 use App\Models\Gudang;
@@ -29,6 +30,38 @@ class WarehouseExecutionService
             $balance->increment('stok_direservasi', $quantity);
             return ReservasiPersediaan::create(['number' => $this->numbers->internal('RSV', 'STK'), 'gudang_id' => $warehouseId, 'bahan_id' => $materialId, 'quantity' => $quantity, 'reference_type' => $referenceType, 'reference_id' => $referenceId, 'created_by' => Auth::id()]);
         });
+    }
+
+    public function reservasiOtomatis(MaterialRequest $request): array
+    {
+        $request->loadMissing('details');
+        $hasil = ['dikunci' => 0, 'sebagian' => 0, 'gagal' => 0, 'rincian' => []];
+
+        foreach ($request->details as $detail) {
+            $gudangId = (int) $detail->tipe_gudang;
+            $bahanId = (int) $detail->bahan_id;
+            $diminta = (float) $detail->jumlah_acc;
+
+            if (!$gudangId || !$bahanId || $diminta <= 0) {
+                continue;
+            }
+
+            $bebas = (float) $this->stock->saldo($gudangId, $bahanId)->stok_dapat_dipakai;
+            $dikunci = round(min($diminta, max($bebas, 0)), 6);
+
+            if ($dikunci <= 0) {
+                $hasil['gagal']++;
+                $hasil['rincian'][] = ['bahan_id' => $bahanId, 'diminta' => $diminta, 'dikunci' => 0.0];
+                continue;
+            }
+
+            $this->reserve($gudangId, $bahanId, $dikunci, 'MATERIAL_REQUEST', (int) $request->id);
+
+            $hasil[$dikunci + 0.000001 >= $diminta ? 'dikunci' : 'sebagian']++;
+            $hasil['rincian'][] = ['bahan_id' => $bahanId, 'diminta' => $diminta, 'dikunci' => $dikunci];
+        }
+
+        return $hasil;
     }
 
     public function release(ReservasiPersediaan $reservation): void
@@ -127,17 +160,29 @@ class WarehouseExecutionService
     {
         return DB::transaction(function () use ($lpb, $decisions) {
             $lpb = PenerimaanBarang::with('details')->lockForUpdate()->findOrFail($lpb->id);
-            if ($lpb->receiving_status !== 'RECEIVED') throw new RuntimeException('LPB hanya dapat diperiksa QC satu kali sebelum putaway.');
+            if (!in_array($lpb->receiving_status, ['RECEIVED', 'QC_COMPLETED_WITH_HOLD'], true)) {
+                throw new RuntimeException('QC hanya dapat dijalankan sebelum putaway, atau sebagai pemeriksaan lanjutan atas penerimaan yang masih punya QC hold.');
+            }
+            $lanjutan = $lpb->receiving_status === 'QC_COMPLETED_WITH_HOLD';
+            if ($lanjutan && $decisions === []) {
+                throw new RuntimeException('Pemeriksaan lanjutan harus menyebutkan baris mana yang diperiksa ulang.');
+            }
             $inspection = PemeriksaanKualitas::create(['number' => $this->numbers->internal('QCI', 'WH'), 'lpb_id' => $lpb->id, 'status' => 'COMPLETED', 'inspected_by' => Auth::id(), 'inspected_at' => now()]);
             $hasRejected = false;
+            $diperiksa = 0;
             foreach ($lpb->details as $detail) {
+                if ($lanjutan && !array_key_exists($detail->id, $decisions)) continue;
                 $accepted = (float) data_get($decisions, $detail->id . '.accepted', $detail->jumlah_barang_diterima);
                 $rejected = (float) $detail->jumlah_barang_diterima - $accepted;
                 $hasRejected = $hasRejected || $rejected > 0;
                 if ($accepted < 0 || $rejected < 0) throw new RuntimeException('Keputusan QC melebihi jumlah diterima.');
                 $inspection->lines()->create(['lpb_detail_id' => $detail->id, 'quantity_received' => $detail->jumlah_barang_diterima, 'quantity_accepted' => $accepted, 'quantity_rejected' => $rejected, 'decision' => $rejected > 0 ? ($accepted > 0 ? 'PARTIAL' : 'REJECTED') : 'ACCEPTED', 'reason' => data_get($decisions, $detail->id . '.reason')]);
                 $layer = LayerPersediaan::where('source_type', 'LPB_DETAIL')->where('source_id', $detail->id)->lockForUpdate()->firstOrFail();
+                if ($lanjutan && ($layer->stock_status !== 'AVAILABLE' || (int) $layer->gudang_id !== (int) $lpb->gudang_id)) {
+                    throw new RuntimeException('Baris ini sedang berstatus QC hold; selesaikan lewat Pemeriksaan Consider, bukan QC ulang.');
+                }
                 if (abs((float) $layer->initial_quantity - (float) $layer->remaining_quantity) > .000001) throw new RuntimeException('Barang yang sudah digunakan tidak dapat masuk pemeriksaan QC penerimaan.');
+                $diperiksa++;
                 $consider = null;
                 if ($rejected > 0) {
                     $consider = Gudang::where('jenis', Gudang::CONSIDER)->where('aktif', true)->first();
@@ -152,7 +197,11 @@ class WarehouseExecutionService
                     $layer->update(['gudang_id' => $rejected > 0 ? $consider->id : $layer->gudang_id, 'warehouse_location_id' => $rejected > 0 ? null : $layer->warehouse_location_id, 'stock_status' => $rejected > 0 ? 'QC_HOLD' : 'AVAILABLE']);
                 }
             }
-            $lpb->update(['receiving_status' => $hasRejected ? 'QC_COMPLETED_WITH_HOLD' : 'QC_COMPLETED']);
+            if ($diperiksa === 0) throw new RuntimeException('Tidak ada baris yang dapat diperiksa ulang pada penerimaan ini.');
+            $masihHold = LayerPersediaan::whereIn('source_id', $lpb->details->pluck('id'))
+                ->where(fn ($query) => $query->where('source_type', 'LPB_DETAIL')->orWhere('source_type', 'like', 'QC_REJECT_%'))
+                ->where('stock_status', 'QC_HOLD')->where('remaining_quantity', '>', 0)->exists();
+            $lpb->update(['receiving_status' => ($hasRejected || $masihHold) ? 'QC_COMPLETED_WITH_HOLD' : 'QC_COMPLETED']);
             return $inspection;
         });
     }
@@ -172,7 +221,7 @@ class WarehouseExecutionService
                 $location->assertMilikGudang((int) $lpb->gudang_id);
 
                 $masuk = (float) LayerPersediaan::where('source_type', 'LPB_DETAIL')->where('source_id', $detail->id)->sum('remaining_quantity');
-                $location->assertMuat($masuk);
+                $location->assertMuat($masuk, $detail->bahan);
 
                 LayerPersediaan::where('source_type', 'LPB_DETAIL')->where('source_id', $detail->id)->update(['warehouse_location_id' => $location->id]);
             }

@@ -14,14 +14,16 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\WmsAccountingService;
 use App\Models\TaxRate;
 use App\Models\Supplier;
+use App\Models\User;
 use App\Services\DocumentNumberService;
+use App\Services\NotifikasiService;
 use App\Services\ThreeWayMatchService;
 use App\Exports\GenericTableExport;
 use Maatwebsite\Excel\Facades\Excel;
 
 class FakturPembelianController extends Controller
 {
-    public function __construct(private WmsAccountingService $accounting, private DocumentNumberService $numbers, private ThreeWayMatchService $matching) {}
+    public function __construct(private WmsAccountingService $accounting, private DocumentNumberService $numbers, private ThreeWayMatchService $matching, private NotifikasiService $notifikasi) {}
     public function index(Request $request)
     {
         $this->authorize('viewAny', FakturPembelian::class);
@@ -291,6 +293,15 @@ class FakturPembelianController extends Controller
 
             return $createdInvoice;
         });
+
+        $this->notifikasi->mintaPersetujuan(
+            [User::ROLE_ACCOUNTING_MANAGER],
+            'Faktur pembelian',
+            'Faktur menunggu persetujuan Anda',
+            $invoice->no_invoice . ' - Rp ' . number_format((float) $invoice->grand_total, 2, ',', '.'),
+            route('faktur-pembelian.index'),
+            $invoice->no_invoice,
+        );
 
         return response()->json([
             'success' => true,

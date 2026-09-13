@@ -15,11 +15,17 @@ class StockOpname extends Model
     public const SUBMITTED = 'SUBMITTED';
     public const APPROVED = 'APPROVED';
     public const POSTED = 'POSTED';
+
+    public const PENUH = 'PENUH';
+    public const SIKLUS = 'SIKLUS';
     public const REJECTED = 'REJECTED';
 
     protected $fillable = [
         'number',
         'warehouse_id',
+        'jenis',
+        'kelas_abc',
+        'zona',
         'cutoff_at',
         'status',
         'notes',

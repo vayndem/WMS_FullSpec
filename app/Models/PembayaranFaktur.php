@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasLampiran;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PembayaranFaktur extends Model
 {
-    use HasFactory;
+    use HasFactory, HasLampiran;
 
     public const POSTED = 'POSTED';
     public const VOID = 'VOID';
