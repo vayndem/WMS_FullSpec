@@ -79,25 +79,47 @@
                         <button class="btn btn-primary">Posting Penyusutan</button>
                     </div>
                 </form>
-                <form method="post" action="{{ route('aset.dispose', $asset) }}" class="card border border-base-300 bg-base-100 shadow-sm" @submit="confirmDispose($event)">
+                <form method="post" action="{{ route('aset.dispose', $asset) }}" class="card border border-base-300 bg-base-100 shadow-sm"
+                    x-data="{ jenis: 'SALE' }" @submit="confirmDispose($event)">
                     @csrf
                     <div class="p-4">
-                        <h5 class="font-bold">Penjualan / Penghapusan</h5>
-                        <div class="mt-2 grid grid-cols-2 gap-2">
+                        <h5 class="font-bold">Pelepasan Aset</h5>
+                        <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                             <input required type="date" name="disposal_date" value="{{ today()->format('Y-m-d') }}" class="input input-bordered">
-                            <select name="disposal_type" class="select select-bordered">
-                                <option value="SALE">Dijual</option>
-                                <option value="WRITE_OFF">Dihapus</option>
+                            <select name="disposal_type" class="select select-bordered" x-model="jenis">
+                                @foreach (\App\Models\PelepasanAset::JENIS as $kode => $label)
+                                    <option value="{{ $kode }}">{{ $label }}</option>
+                                @endforeach
                             </select>
-                            <input type="number" min="0" step=".01" name="proceeds" class="input input-bordered" placeholder="Hasil penjualan">
-                            <select name="cash_bank_coa_id" class="select select-bordered">
+
+                            <input type="number" min="0" step=".01" name="proceeds" class="input input-bordered"
+                                x-show="jenis !== 'WRITE_OFF'"
+                                :placeholder="jenis === 'TRADE_IN' ? 'Nilai wajar (DPP PPN Keluaran)' : 'Hasil penjualan'">
+
+                            <select name="cash_bank_coa_id" class="select select-bordered" x-show="jenis === 'SALE'">
                                 <option value="">Kas/Bank</option>
                                 @foreach ($cashBanks as $a)
                                     <option value="{{ $a->id }}">{{ $a->kode_akun }} — {{ $a->nama_akun }}</option>
                                 @endforeach
                             </select>
-                            <textarea required name="reason" class="textarea textarea-bordered col-span-2" placeholder="Alasan pelepasan"></textarea>
+
+                            <select name="supplier_id" class="select select-bordered" x-show="jenis === 'TRADE_IN'" data-app-picker>
+                                <option value="">Supplier penerima tukar tambah</option>
+                                @foreach ($suppliers as $supplier)
+                                    <option value="{{ $supplier->id }}">{{ $supplier->nama }}</option>
+                                @endforeach
+                            </select>
+
+                            <input type="number" min="0" step=".01" name="ppn_keluaran" class="input input-bordered"
+                                x-show="jenis === 'TRADE_IN'" placeholder="PPN Keluaran atas nilai wajar">
+
+                            <textarea required name="reason" class="textarea textarea-bordered sm:col-span-2" placeholder="Alasan pelepasan"></textarea>
                         </div>
+
+                        <p class="mt-2 text-xs text-base-content/60" x-show="jenis === 'TRADE_IN'" x-cloak>
+                            Tukar tambah adalah penyerahan barang (barter). DPP-nya <strong>nilai wajar</strong> barang yang diserahkan, bukan nilai buku.
+                            Nilai wajar + PPN akan dicatat sebagai <strong>uang muka supplier</strong> yang bisa dipakai untuk tagihan pembelian penggantinya.
+                        </p>
                     </div>
                     <div class="flex justify-end border-t border-base-300 p-4">
                         <button class="btn btn-error">Posting Pelepasan</button>

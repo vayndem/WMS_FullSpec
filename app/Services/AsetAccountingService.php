@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\AccountingSetting;
+use App\Models\PembayaranFaktur;
 use App\Models\Aset;
 use App\Models\PenyusutanAset;
 use App\Models\PelepasanAset;
@@ -150,13 +152,21 @@ class AsetAccountingService
             $asset = Aset::with('category')->lockForUpdate()->findOrFail($asset->id);
             if ($asset->status !== 'ACTIVE') throw new RuntimeException('Aset sudah tidak aktif.');
             $this->assertCategoryMapping($asset);
-            $proceeds = $data['disposal_type'] === 'SALE' ? round((float) $data['proceeds'], 2) : 0;
+            $tradeIn = $data['disposal_type'] === PelepasanAset::TRADE_IN;
+            $proceeds = in_array($data['disposal_type'], ['SALE', PelepasanAset::TRADE_IN], true)
+                ? round((float) $data['proceeds'], 2) : 0;
+
             if ($data['disposal_type'] === 'SALE' && empty($data['cash_bank_coa_id'])) {
                 throw new RuntimeException('Akun kas/bank wajib dipilih untuk penjualan aset.');
             }
             if ($data['disposal_type'] === 'SALE') {
                 BaganAkun::assertUsable($data['cash_bank_coa_id'], [['ASET', 'DEBIT']], 'kas/bank penjualan aset', true);
             }
+            if ($tradeIn && empty($data['supplier_id'])) {
+                throw new RuntimeException('Supplier penerima tukar tambah wajib dipilih.');
+            }
+
+            $ppnKeluaran = $tradeIn ? round((float) ($data['ppn_keluaran'] ?? 0), 2) : 0;
             $book = (float) $asset->book_value;
             $gain = max($proceeds - $book, 0);
             $loss = max($book - $proceeds, 0);
@@ -165,6 +175,10 @@ class AsetAccountingService
                 'disposal_date' => $data['disposal_date'],
                 'disposal_type' => $data['disposal_type'],
                 'proceeds' => $proceeds,
+                'supplier_id' => $tradeIn ? $data['supplier_id'] : null,
+                'pesanan_pembelian_id' => $tradeIn ? ($data['pesanan_pembelian_id'] ?? null) : null,
+                'dpp_ppn_keluaran' => $tradeIn ? $proceeds : 0,
+                'ppn_keluaran' => $ppnKeluaran,
                 'cash_bank_coa_id' => $data['cash_bank_coa_id'] ?? null,
                 'book_value_at_disposal' => $book,
                 'gain_amount' => $gain,
@@ -173,7 +187,23 @@ class AsetAccountingService
                 'disposed_by' => Auth::id(),
             ]);
             $lines = [];
-            if ($proceeds > 0) $lines[] = ['coa_id' => $data['cash_bank_coa_id'], 'debit' => $proceeds, 'kredit' => 0, 'keterangan' => 'Hasil penjualan aset'];
+            if ($proceeds > 0 && !$tradeIn) {
+                $lines[] = ['coa_id' => $data['cash_bank_coa_id'], 'debit' => $proceeds, 'kredit' => 0, 'keterangan' => 'Hasil penjualan aset'];
+            }
+            if ($tradeIn) {
+                $lines[] = [
+                    'coa_id' => AccountingSetting::accountId(AccountingSetting::UANG_MUKA_SUPPLIER),
+                    'debit' => round($proceeds + $ppnKeluaran, 2), 'kredit' => 0,
+                    'keterangan' => "Nilai tukar tambah jadi uang muka supplier",
+                ];
+                if ($ppnKeluaran > 0) {
+                    $lines[] = [
+                        'coa_id' => AccountingSetting::accountId(AccountingSetting::PPN_KELUARAN),
+                        'debit' => 0, 'kredit' => $ppnKeluaran,
+                        'keterangan' => 'PPN Keluaran atas penyerahan tukar tambah',
+                    ];
+                }
+            }
             if ((float) $asset->accumulated_depreciation > 0) $lines[] = [
                 'coa_id' => $asset->category->accumulated_depreciation_coa_id,
                 'debit' => (float) $asset->accumulated_depreciation,
@@ -192,9 +222,44 @@ class AsetAccountingService
                 $lines
             );
             $disposal->update(['journal_id' => $journal->id]);
-            $asset->update(['status' => $data['disposal_type'] === 'SALE' ? 'SOLD' : 'DISPOSED']);
+
+            if ($tradeIn) {
+                $disposal->update(['advance_payment_id' => $this->uangMukaTukarTambah($disposal, $proceeds + $ppnKeluaran)]);
+            }
+
+            $asset->update(['status' => match ($data['disposal_type']) {
+                'SALE' => 'SOLD',
+                PelepasanAset::TRADE_IN => 'TRADED_IN',
+                default => 'DISPOSED',
+            }]);
+
             return $disposal->fresh('journal');
         });
+    }
+
+    private function uangMukaTukarTambah(PelepasanAset $disposal, float $nilai): ?int
+    {
+        if ($nilai <= 0) {
+            return null;
+        }
+
+        return PembayaranFaktur::create([
+            'payment_number' => $this->numbers->financial('PY', $disposal->disposal_date),
+            'invoice_lpb_id' => null,
+            'supplier_id' => $disposal->supplier_id,
+            'tanggal_pembayaran' => $disposal->disposal_date,
+            'metode_pembayaran' => 'Uang Muka dari Tukar Tambah Aset',
+            'coa_kas_bank_id' => null,
+            'jumlah_pembayaran' => 0,
+            'selisih_bayar' => $nilai,
+            'jenis_selisih' => 'UANG_MUKA_SUPPLIER',
+            'coa_selisih_id' => AccountingSetting::accountId(AccountingSetting::UANG_MUKA_SUPPLIER),
+            'kelebihan_pembayaran' => $nilai,
+            'total_transaksi_pengurang_hutang' => 0,
+            'keterangan' => "Uang muka supplier dari tukar tambah aset {$disposal->asset->nomor_aset}",
+            'finance_user_id' => Auth::id(),
+            'status' => PembayaranFaktur::POSTED,
+        ])->id;
     }
 
     private function post(string $number, $date, string $source, int $referenceId, string $description, array $lines): Jurnal

@@ -4,15 +4,24 @@ use App\Http\Controllers\BahanController;
 use App\Http\Controllers\DebitController;
 use App\Http\Controllers\KategoriBahanController;
 use App\Http\Controllers\KreditController;
+use App\Http\Controllers\LacakPembelianController;
 use App\Http\Controllers\PesananPembelianController;
 use App\Http\Controllers\PesananPembelianDetailController;
 use App\Http\Controllers\MaterialRequestController;
 use App\Http\Controllers\RequestDetailController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\SupplierScorecardController;
 use App\Http\Controllers\TipePembebananController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
+    Route::get('lacak-pembelian', [LacakPembelianController::class, 'index'])->name('lacak-pembelian.index');
+    Route::get('lacak-pembelian/pdf', [LacakPembelianController::class, 'pdf'])->name('lacak-pembelian.pdf');
+    Route::get('lacak-pembelian/excel', [LacakPembelianController::class, 'excel'])->name('lacak-pembelian.excel');
+    Route::get('kartu-skor-supplier', [SupplierScorecardController::class, 'index'])->name('supplier-scorecard.index');
+    Route::get('kartu-skor-supplier/pdf', [SupplierScorecardController::class, 'pdf'])->name('supplier-scorecard.pdf');
+    Route::get('kartu-skor-supplier/excel', [SupplierScorecardController::class, 'excel'])->name('supplier-scorecard.excel');
+
     Route::get('supplier/data-table', [SupplierController::class, 'dataTable'])->name('supplier.dataTable');
     Route::get('supplier-report/pdf', [SupplierController::class, 'reportPdf'])->name('supplier.report.pdf');
     Route::get('supplier-report/excel', [SupplierController::class, 'reportExcel'])->name('supplier.report.excel');

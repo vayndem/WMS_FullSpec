@@ -27,8 +27,18 @@
                                 <option value="{{ $a->id }}" @selected($c->grni_coa_id === $a->id)>{{ $a->kode_akun }} — {{ $a->nama_akun }}</option>
                             @endforeach
                         </select>
+                        <label class="label"><span class="label-text">Perlakuan Akuntansi</span></label>
+                        <select name="perlakuan" class="select select-bordered mb-2 w-full">
+                            @foreach (\App\Models\KategoriJasa::PERLAKUAN as $kode => $label)
+                                <option value="{{ $kode }}" @selected($c->perlakuan === $kode)>{{ $label }}</option>
+                            @endforeach
+                        </select>
                         <p class="text-sm text-base-content/50">
                             COA ini didebit ketika penerimaan jasa masuk invoice. Penerimaan jasa yang baru dibuat belum membentuk jurnal. Mapping GRNI disimpan sebagai kontrol konfigurasi dan persiapan accrual jasa.
+                        </p>
+                        <p class="mt-2 text-sm text-base-content/50">
+                            Pilih <strong>Kapitalisasi</strong> hanya untuk jasa yang benar-benar menambah masa manfaat atau kapasitas aset (PSAK 16).
+                            Jasa kapitalisasi <strong>tidak</strong> masuk COA beban di atas — nilainya didebit ke akun aset dan menambah nilai tercatat aset yang ditunjuk pada PO jasa.
                         </p>
                         <input type="hidden" name="is_active" value="1">
                     </div>

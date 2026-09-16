@@ -16,6 +16,7 @@ use App\Models\TaxRate;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Services\DocumentNumberService;
+use App\Services\KapitalisasiAsetService;
 use App\Services\NotifikasiService;
 use App\Services\ThreeWayMatchService;
 use App\Exports\GenericTableExport;
@@ -23,7 +24,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class FakturPembelianController extends Controller
 {
-    public function __construct(private WmsAccountingService $accounting, private DocumentNumberService $numbers, private ThreeWayMatchService $matching, private NotifikasiService $notifikasi) {}
+    public function __construct(private WmsAccountingService $accounting, private DocumentNumberService $numbers, private ThreeWayMatchService $matching, private NotifikasiService $notifikasi, private KapitalisasiAsetService $kapitalisasi) {}
     public function index(Request $request)
     {
         $this->authorize('viewAny', FakturPembelian::class);
@@ -461,6 +462,8 @@ class FakturPembelianController extends Controller
                     $invoice->id,
                     'Pembatalan invoice supplier ' . $invoice->no_invoice
                 );
+
+                $this->batalkanKapitalisasi($invoice);
             }
             $invoice->receipts()->delete();
             $invoice->update([
@@ -487,4 +490,13 @@ class FakturPembelianController extends Controller
         return (float) $lpb->details->sum(fn($detail) => (float) $detail->jumlah_barang_diterima * (float) $detail->harga)
             + (float) $lpb->serviceDetails->sum('amount');
     }
+    private function batalkanKapitalisasi(FakturPembelian $invoice): void
+    {
+        $invoice->loadMissing('receipts.lpb.serviceDetails.servicePoDetail');
+
+        foreach ($invoice->receipts->flatMap(fn ($receipt) => $receipt->lpb->serviceDetails) as $detail) {
+            $this->kapitalisasi->batalkanDariJasa($detail);
+        }
+    }
+
 }

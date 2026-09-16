@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AccountingSetting;
+use App\Models\DataPesanan;
 use App\Models\FakturPembelian;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -62,6 +63,21 @@ class AccountingReconciliationService
             $apLedger = null;
         }
 
+        $wipLedger = null;
+        try {
+            $wipId = AccountingSetting::accountId(AccountingSetting::BARANG_DALAM_PROSES);
+            $wipLedger = (float) DB::table('wms_jurnal_detail')->join('wms_jurnal', 'wms_jurnal.id', '=', 'wms_jurnal_detail.jurnal_id')
+                ->whereIn('wms_jurnal.status', ['POSTED', 'REVERSED'])->where('wms_jurnal_detail.coa_id', $wipId)
+                ->selectRaw('COALESCE(SUM(debit-kredit),0) balance')->value('balance');
+        } catch (\RuntimeException) {
+            $wipLedger = null;
+        }
+
+        $wipPerintah = round(
+            DataPesanan::berjalan()->get()->sum(fn (DataPesanan $pesanan) => $pesanan->saldoWip()),
+            2
+        );
+
         return collect([
             [
                 'key' => 'stock',
@@ -102,6 +118,14 @@ class AccountingReconciliationService
                 'invalid' => $apLedger !== null && abs((float) $invoice->outstanding - $apLedger) <= .01 ? 0 : 1,
                 'amount' => $apLedger,
                 'expected' => (float) $invoice->outstanding,
+            ],
+            [
+                'key' => 'wip',
+                'label' => 'Barang dalam proses vs perintah kerja berjalan',
+                'total' => 1,
+                'invalid' => $wipLedger !== null && abs($wipPerintah - $wipLedger) <= .01 ? 0 : 1,
+                'amount' => $wipLedger,
+                'expected' => $wipPerintah,
             ],
         ]);
     }

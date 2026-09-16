@@ -80,6 +80,7 @@ class WmsDemoSeeder extends Seeder
             $journal->details()->createMany([
                 [
                     'coa_id' => $category->coa_persediaan_id,
+                    'gudang_id' => $warehouse->id,
                     'debit' => 250000,
                     'kredit' => 0,
                     'keterangan' => 'Persediaan data demo',

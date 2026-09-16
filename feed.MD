@@ -286,6 +286,15 @@ Role:
 - `mata_uang_asing`/`kurs`/`nilai_asing` menyimpan referensi kurs asal invoice supplier luar negeri — **bukan** ledger multi-currency sungguhan; `grand_total` tetap IDR, dihitung dari nilai yang sudah dikonversi saat LPB. Selisih kurs saat pembayaran memakai mekanisme umum `jenis_selisih`/`coa_selisih_id` (akun baru: `4204` Laba Selisih Kurs, `5303` Rugi Selisih Kurs).
 - `ppn_impor` diposting sebagai baris nyata ke `AccountingSetting::PPN_IMPOR` (akun aset, `1104`), dikreditkan ke Hutang Usaha bersama `grand_total`.
 
+### 6.7a Jasa: kapitalisasi, gate pass, barang titipan, tukar tambah (2026-09-14)
+
+Empat hal yang sebelumnya tidak bisa dicatat sistem:
+
+- **Kapitalisasi jasa ke aset.** `wms_kategori_jasa.perlakuan` = `BEBAN` (default) atau `KAPITALISASI`. Kategori kapitalisasi mewajibkan `wms_pesanan_jasa_detail.aset_id`; saat invoice diposting, nilainya didebit ke akun aset (`KategoriAset.akun_aset_id`), bukan ke `expense_coa_id`, lalu menambah `acquisition_cost`/`book_value` dan boleh memperpanjang `useful_life_months` lewat `tambahan_umur_bulan`. Jejaknya di `wms_kapitalisasi_aset` dengan unique `(sumber_type, sumber_id)` sehingga posting ulang invoice tidak menggelembungkan aset.
+- **Gate pass** (`wms_pengeluaran_barang`): barang kita keluar ke vendor lalu kembali. Alur `DRAFT -> DI_VENDOR -> SEBAGIAN_KEMBALI -> SELESAI`. **Tidak membuat jurnal** — kepemilikan tidak berpindah, aset tetap `ACTIVE` dan tetap disusutkan. Mengeluarkan *persediaan* (bukan aset) untuk subkontrak sengaja tidak didukung di sini karena akan menyentuh layer FIFO; pakai Transfer Gudang ke gudang khusus.
+- **Barang titipan vendor** (`wms_barang_titipan`): unit pinjaman selama barang kita diperbaiki. Nol jurnal, nol layer persediaan, nol aset — barang ini milik vendor. `nilai_taksiran` hanya memo.
+- **Tukar tambah** (`disposal_type = TRADE_IN`): pelepasan aset via barter. DPP = nilai wajar barang yang diserahkan (UU PPN Pasal 1A), PPN Keluaran ke COA `2109`, dan nilai DPP+PPN menjadi **uang muka supplier** lewat mekanisme yang sudah ada sehingga bisa mengurangi tagihan pembelian penggantinya. Laba/rugi diukur terhadap DPP saja, bukan DPP+PPN. Belum menghasilkan e-Faktur — bagian itu memang butuh sisi penjualan.
+
 ### 6.7 Depresiasi aset otomatis (2026-09-05)
 
 - `AsetAccountingService::runAutomaticDepreciation()` (`POST aset/penyusutan-otomatis`) menjalankan depresiasi garis lurus untuk semua aset aktif pada satu periode, melewati aset yang sudah didepresiasi di periode itu atau tidak punya umur manfaat.
@@ -297,6 +306,22 @@ Role:
 - Semua role kecuali Purchasing sekarang bisa membuat Material Request (`MaterialRequestPolicy::create()`); Purchasing dan Accounting tetap yang approve.
 - `requests.requested_by` mencatat pembuat; non-reviewer hanya melihat request miliknya sendiri di `request.index`.
 - Status baru `FULFILLED` otomatis aktif begitu setiap baris `realisasi` mencapai `jumlah_acc` — dihitung terpusat di `MaterialRequestFulfillmentService::syncRealisasi()`, dipanggil dari setiap tempat yang dulu meng-update `realisasi` secara manual (`PesananPembelianController`/`PesananPembelianDetailController`). Status kembali ke `APPROVED` bila baris PO terkait diedit/dihapus di bawah kuota penuh.
+
+### 6.9 Penjualan dan piutang (sejak 2026-09-16)
+
+- `PesananPenjualan` menampung pesanan pelanggan beserta DPP/PPN; statusnya `OPEN` sampai seluruh baris terkirim.
+- `SuratJalan` adalah tempat stok dan GL benar-benar bergerak: posting mengonsumsi layer lewat `StokGudangService::ambilLayer()` (jalur FIFO yang sama dengan NPK dan transfer), mencatat tiap tarikan di `wms_surat_jalan_alokasi`, lalu memposting **debit Beban Pokok Penjualan / kredit Persediaan dengan dimensi gudang**. Surat jalan draft tidak menyentuh apa pun.
+- `FakturPenjualan` memposting **debit Piutang Usaha / kredit Penjualan + PPN Keluaran**, dan menolak posting bila ber-PPN tanpa NSFP.
+- `PenerimaanPembayaran` mengurangi piutang; kelebihan bayar **ditolak**, bukan diam-diam jadi uang muka pelanggan.
+- `ReturPenjualan` mengembalikan stok sebagai **layer baru** (`source_type='RETUR_PENJUALAN'`), bukan membatalkan konsumsi layer lama — layer lama bisa sudah terpakai dokumen lain dan menghidupkannya kembali akan merusak urutan FIFO.
+
+### 6.10 Produksi dan barang dalam proses (sejak 2026-09-16)
+
+- `DataPesanan` (perintah kerja) selalu lahir dari satu baris `PesananPenjualan`; produk yang dibuat mengikuti baris itu.
+- NPK yang ditandai ke perintah kerja **mendebit Barang Dalam Proses (`1303`)**, bukan akun beban. NPK tanpa tanda perilakunya tidak berubah.
+- Saldo WIP **diturunkan dari baris `wms_data_pesanan_biaya`**, bukan disimpan sebagai kolom berjalan.
+- Saat dilaporkan selesai, harga pokok per unit dikunci dan perintah kerja **berhenti menerima biaya**. Konsekuensinya: NPK yang perintah kerjanya sudah disegel tidak bisa dibalik.
+- Keluaran tidak dibukukan sebagai stok barang jadi. Tiap pengiriman melepas WIP secara proporsional ke Beban Pokok Penjualan; perintah kerja tutup saat terkirim penuh.
 
 ## 7. Dashboard
 
@@ -355,9 +380,20 @@ Chart memakai komponen `taskChart` yang sama (diperluas dengan tipe `line` dan o
 | Opname | `wms_stock_opname`, `wms_stock_opname_detail`, `wms_stock_opname_alokasi` |
 | Asset | `wms_kategori_asets`, `wms_asets`, `wms_penyusutan_asets`, `wms_pelepasan_asets` |
 | Service | `wms_kategori_jasa`, `wms_pesanan_jasa_detail`, `wms_penerimaan_jasa_detail`, `wms_penerimaan_jasa_alokasi` |
+| Sales | `pelanggans`, `wms_pesanan_penjualan`, `wms_pesanan_penjualan_detail`, `wms_surat_jalan`, `wms_surat_jalan_detail`, `wms_surat_jalan_alokasi` |
+| AR | `wms_faktur_penjualan`, `wms_faktur_penjualan_detail`, `wms_penerimaan_pembayaran`, `wms_retur_penjualan`, `wms_retur_penjualan_detail` |
+| Produksi | `wms_data_pesanan`, `wms_data_pesanan_biaya` |
+| Pelaporan | `wms_catatan_laporan_keuangan`, `wms_permintaan_persetujuan` |
+| Pajak | `wms_perhitungan_pajak_penghasilan`, `wms_kompensasi_kerugian_fiskal` |
+| Kitting | `wms_kit`, `wms_kit_komponen`, `wms_perakitan_kit`, `wms_perakitan_kit_detail` |
+| Gelombang | `wms_gelombang_pengambilan` |
+| Jasa lanjutan | `wms_kapitalisasi_aset`, `wms_pengeluaran_barang`, `wms_pengeluaran_barang_detail`, `wms_barang_titipan` |
+| Lampiran | `wms_lampiran_dokumen` |
 | WMS control | `wms_log_audit`, `wms_kunci_operasi_dokumen`, `wms_pembalikan_dokumen`, `wms_lokasi_gudang`, `wms_lot_persediaan`, `wms_serial_persediaan`, `wms_reservasi_persediaan`, `wms_pesanan_pengambilan`, `wms_pesanan_pengambilan_detail`, `wms_pemeriksaan_kualitas`, `wms_pemeriksaan_kualitas_detail`, `wms_biaya_tambahan`, `wms_biaya_tambahan_alokasi`, `wms_saran_pengisian_ulang` |
 
 Penambahan kolom penting sejak refresh sebelumnya (semua di tabel yang sudah ada, bukan tabel baru): `wms_faktur_pembelian.jenis_pph`/`mata_uang_asing`/`kurs`/`nilai_asing`/`ppn_impor`/`approved_by`/`approved_at`, `wms_pembayaran_faktur.potongan_pph` (rename dari `potongan_pph23`)/`uang_muka_sumber_payment_id`/`uang_muka_dipakai`, `wms_retur_pembelian.invoice_id`/`hutang_reduction`/`advance_payment_id`, `requests.requested_by`.
+
+Kolom lintas-domain yang ditambahkan 2026-09-16 dan gampang terlewat: **`wms_jurnal_detail.gudang_id`** (dimensi gudang; sudah di-backfill ke jurnal lama lewat migration `2026_09_16_000004`), `wms_pemakaian_barang.data_pesanan_id`, `wms_surat_jalan_detail.data_pesanan_id`, dan `wms_penerimaan_jasa_alokasi.data_pesanan_id`. Ketiga kolom `data_pesanan_id` itulah yang mengubah `kode_datapesanan` yang dulu sekadar teks bebas menjadi kaitan nyata ke perintah kerja.
 
 ### 8.2 Migration yang relevan dengan role
 
@@ -413,9 +449,11 @@ Catatan:
 
 ## 11. Testing
 
-Status terakhir (6 September 2026):
+Status terakhir (16 September 2026):
 
-- 79 tests passed, 2.499+ assertions
+- 202 tests passed, 4.201 assertions
+- architecture convention test: 6 passed
+- diverifikasi berturut-turut setelah `migrate:fresh --seed`, bukan sekali jalan
 
 Perintah:
 
@@ -427,7 +465,12 @@ composer test:case-sensitive                  # cek casing ala Linux CI, dari Wi
 
 Cakupan utama:
 
-- accounting control policy, chart of account safety, financial statement (Neraca Saldo/Buku Besar/Laba Rugi/Neraca)
+- accounting control policy, chart of account safety, financial statement (Neraca Saldo/Buku Besar/Laba Rugi/Neraca/Arus Kas/Perubahan Ekuitas/CALK — Arus Kas dan Perubahan Ekuitas punya tie-out sendiri ke buku besar dan ke neraca)
+- maker-checker jurnal manual, pembalikan dokumen, dan perubahan COA/mapping; pemohon tidak bisa menyetujui permintaannya sendiri
+- dimensi gudang pada baris jurnal: nilai persediaan per gudang, dan transfer internal yang netral secara total
+- lacak pembelian per penerimaan dan kartu skor supplier
+- penjualan end-to-end: pesanan, surat jalan (FIFO + HPP), faktur (piutang + PPN Keluaran), penerimaan pembayaran, retur penjualan
+- produksi: perintah kerja, akumulasi WIP dari NPK, penguncian harga pokok saat selesai, pelepasan WIP proporsional saat kirim, dan invarian WIP vs buku besar
 - asset and service policy, depresiasi otomatis
 - inventory cost calculator, material unit conversion
 - multi-warehouse policy, transfer in-transit, reservation/picking, three-way match, landed cost, reversal, rekonsiliasi
@@ -442,18 +485,21 @@ Cakupan utama:
 
 ## 12. Technical debt
 
-Daftar yang masih relevan:
+Daftar yang masih relevan per 2026-09-16:
 
-1. belum ada UI admin user dan reset password
-2. `DatabaseSeeder` masih mencampur master dan demo
-3. belum ada token management UI/API untuk Sanctum
-4. beberapa file lama masih punya encoding teks yang jelek
-5. CI GitHub Actions sudah tersedia untuk build, fresh migration+seed, dan test
-6. belum ada model manufacturing/WIP khusus untuk produksi
-7. maker-checker baru mencakup faktur pembelian — COA/jurnal manual, period lock, dan controlled reversal masih dipegang penuh oleh `accounting` tanpa checker kedua
-8. "Lacak Pembelian" (laporan disposisi per-pembelian: sisa di gudang vs jadi beban vs jadi selisih opname) sudah didesain (lihat `CLAUDE.md`) tapi belum dibangun
+1. `DatabaseSeeder` masih mencampur master dan demo — jangan dijalankan penuh ke produksi
+2. belum ada token management UI/API untuk Sanctum — catatan: **layer integrasi API/EDI sendiri sudah dicoret dari perencanaan**, jadi ini hanya soal mengelola token internal
+3. beberapa file lama masih punya encoding teks yang jelek
+4. daftar modul penjualan memakai tabel Blade berpaginasi, bukan Yajra + `wmsDataTable()` seperti modul lain — penyimpangan yang disengaja dan dicatat; konversinya mekanis
+5. `UpdateAccountingMappingRequest` memvalidasi semua `KategoriBahan` dengan aturan kategori barang, padahal dua kategori jasa bawaan seeder tidak memenuhinya — form mapping tidak bisa disimpan untuk daftar kategori lengkap
+6. stok dalam perjalanan masih menempel ke gudang asal sampai diterima, karena jurnal transfer baru terbentuk saat penerimaan — memperbaikinya butuh akun "Persediaan Dalam Perjalanan", sebuah keputusan akuntansi
+7. perintah kerja yang dibatalkan setelah menyerap biaya belum punya jalur hapus buku — butuh keputusan akun kerugian
+8. `plafon_kredit` pelanggan dicatat dan ditampilkan tapi belum ditegakkan — memblokir pesanan karena plafon adalah keputusan kebijakan
+9. suite tes berjalan dekat plafon memori PHP; `phpunit.xml` menyetel `memory_limit=512M` agar deterministik. Kalau export terus bertambah besar, alihkan tes export ke koleksi `Excel::fake()` daripada mengunduh sungguhan
 
-Sudah selesai (dipertahankan sebagai catatan historis, bukan tugas aktif lagi): `.env.example`, NSFP pada faktur pembelian, laporan keuangan statutori, PPh 22/4(2) Final, depresiasi otomatis, field multi-currency ringan + PPN Impor, retur pembelian pasca-invoice, rename sweep baku Indonesia, migrasi Tailwind/daisyUI/Alpine, maker-checker invoice, Material Request lintas role, dashboard task grid + chart, Dashboard Eksekutif, export Excel di seluruh laporan.
+**Bukan lagi utang teknis** (dipertahankan sebagai catatan historis): UI manajemen user + reset password + audit login, `.env.example`, NSFP pada faktur pembelian, lima laporan PSAK 1 lengkap termasuk Arus Kas, Perubahan Ekuitas dan CALK, PPh 22/4(2) Final, depresiasi otomatis garis lurus & saldo menurun, rekonsiliasi fiskal + PPh Badan + pajak tangguhan + kompensasi kerugian, field multi-currency ringan + PPN Impor, retur pembelian pasca-invoice, rename sweep baku Indonesia, migrasi Tailwind/daisyUI/Alpine, Material Request lintas role, dashboard task grid + chart + pengingat + progres, Dashboard Eksekutif, export Excel di seluruh laporan, scheduler + notifikasi terantre, lampiran dokumen, antrean kerja operator, cycle count ABC, wave picking, kitting, seluruh celah jasa (kapitalisasi, gate pass, barang titipan, tukar tambah), Lacak Pembelian, Kartu Skor Supplier, **maker-checker yang kini mencakup jurnal manual/pembalikan dokumen/perubahan COA**, **penilaian persediaan per gudang lewat dimensi gudang pada baris jurnal**, **sisi AR/penjualan lengkap**, dan **perintah kerja produksi dengan barang dalam proses**.
+
+CI GitHub Actions sudah berjalan untuk build, fresh migration+seed, dan test — itu infrastruktur yang ada, bukan utang.
 
 ## 13. WMS control standard (12 Agustus 2026)
 
@@ -475,6 +521,8 @@ Framework kontrol mencakup:
 - klasifikasi ABC pada `pengaturan_bahan_gudangs` (`kelas_abc`, `nilai_pemakaian`, `kontribusi_kumulatif`) sebagai dasar cycle count dan slotting
 - dimensi dan kapasitas volume pada `wms_lokasi_gudang`, plus `volume_cm3` pada `bahans`
 - `wms_stock_opname.jenis` (`PENUH`/`SIKLUS`) + `kelas_abc` untuk cycle count parsial
+- `wms_pengeluaran_barang` + detail (gate pass barang keluar ke vendor) dan `wms_barang_titipan` (unit pinjaman vendor) — keduanya catatan kustodian tanpa jurnal
+- `wms_kapitalisasi_aset` sebagai jejak audit jasa yang dikapitalisasi ke aset, unique per sumber agar tidak dobel
 
 Urutan transfer standar adalah `DRAFT -> DIAJUKAN -> DIKIRIM -> DITERIMA`. Urutan receiving adalah `RECEIVED -> QC_COMPLETED/QC_COMPLETED_WITH_HOLD -> PUTAWAY`. Dokumen posted tidak boleh diedit; gunakan workflow reversal atau void sumber transaksi.
 
@@ -484,19 +532,27 @@ Gelombang pengambilan memakai urutan `DIRENCANAKAN -> DIRILIS -> SELESAI` (atau 
 
 ## 14. Next development yang masuk akal
 
-Berdasarkan "Open-items index" di `CLAUDE.md` (paling relevan per 2026-09-13), yang paling natural dikerjakan berikutnya:
+Berdasarkan "Open-items index" di `CLAUDE.md` (paling relevan per 2026-09-16). **Pekerjaan kecil yang tinggal dikerjakan sudah habis** — sisanya domain baru, format eksternal, atau keputusan akuntansi.
 
-1. **"Lacak Pembelian"** — laporan tiga-arah (sisa stok vs beban NPK vs selisih opname) per LPB/invoice; data sudah ada dan saling terhubung lewat `LayerPersediaan.source_type='LPB_DETAIL'`, tinggal disatukan dalam satu view. Diminta sejak 2026-09-06 dan masih yang paling lama menggantung.
-2. **Supplier scorecard** — rasio reject QC dan ketepatan kirim per supplier; datanya lengkap tapi belum pernah ditampilkan.
-3. **Laporan Perubahan Ekuitas** dan **CALK** untuk melengkapi lima laporan PSAK 1 (Arus Kas sudah ada sejak 2026-09-11).
-4. Sisi outbound-to-customer (Sales Order, Surat Jalan/Delivery Order, retur penjualan, AR/piutang) — belum ada sama sekali, butuh sesi desain/scoping sendiri. Ini juga yang memblokir **cross-docking** dan sebagian **trade-in**.
-5. Model BOM/manufacturing order/WIP untuk `Gudang Produksi` (saat ini masih direct-consumption via NPK). Kitting/bundling sudah ada sejak 2026-09-13 tapi sengaja bukan WIP.
-6. Penilaian persediaan per gudang di GL — dampaknya paling besar, tapi keputusan akuntansi dulu (akun persediaan terpisah per gudang, atau dimensi gudang pada baris jurnal).
-7. Layer integrasi eksternal (API/EDI ke supplier, marketplace, ERP lain) di luar base Sanctum.
-8. Barcode/QR untuk putaway/picking — **ditunda pemilik produk pada 2026-09-13**. Catatan desain yang harus diingat: QR-nya **per bundling/kit, bukan per barang**.
-9. Perluasan pola maker-checker ke COA/jurnal manual, period lock, dan controlled reversal, bila kebutuhan "dual control" itu masih dianggap relevan.
+1. **BOM sebagai standar** — perintah kerja dan WIP sudah ada sejak 2026-09-16, tapi costing-nya berdasarkan pemakaian aktual, bukan terhadap daftar komponen yang diharapkan. Tanpa BOM belum ada selisih pemakaian material. Ini kelanjutan alami dari produksi.
+2. **Penyerapan tenaga kerja dan overhead ke WIP** — butuh tarif per jam, pencatatan jam kerja, dan dasar alokasi; ketiganya belum ada dan masing-masing keputusan kebijakan.
+3. **Hapus buku perintah kerja yang dibatalkan di tengah jalan** — saat ini perintah kerja hanya bisa dibatalkan selama biayanya nol. Kalau pelanggan batal setelah material masuk, WIP-nya perlu dihapusbukukan ke akun kerugian yang belum ditentukan.
+4. **Format DJP** — e-Faktur CSV, SPT Masa PPN 1111, e-Bupot. Sejak sisi penjualan ada (2026-09-16) datanya lengkap termasuk PPN Keluaran dan NSFP, jadi tinggal pekerjaan format. Formatnya ditentukan eksternal dan sensitif versi: **cek spesifikasi DJP yang berlaku sebelum membangun, jangan mengira-ngira layout-nya**.
+5. **Cross-docking** — tidak lagi terhalang sejak sisi outbound ada; sekarang sekadar pekerjaan yang belum dibangun.
+6. **Multi-currency penuh** — revaluasi dan laba/rugi selisih kurs per PSAK 10; membuka ini berarti layer FIFO berdenominasi valas.
+7. **Akun "Persediaan Dalam Perjalanan"** — hanya jika stok dalam perjalanan tidak boleh lagi menempel ke gudang asal. Jurnal transfer sekarang terbentuk saat penerimaan, jadi ini keputusan akuntansi, bukan bug.
+8. **Uang muka pelanggan dan penegakan plafon kredit** — `pelanggans.plafon_kredit` sudah dicatat dan ditampilkan tapi sengaja belum ditegakkan; memblokir pesanan karena plafon adalah keputusan kebijakan.
+9. **Barcode/QR** untuk putaway/picking — **ditunda pemilik produk pada 2026-09-13**. Catatan desain yang harus diingat: QR-nya **per bundling/kit, bukan per barang**.
 
-Sudah selesai 2026-09-13 dan tidak perlu direncanakan lagi: antrean kerja operator, re-inspeksi QC, cycle count berbasis ABC, auto-reservasi saat approval Material Request, dimensi/volume bin + slotting ABC, pembatasan gudang per operator, wave/batch picking, dan kitting/bundling.
+Sudah selesai dan tidak perlu direncanakan lagi — **2026-09-13**: antrean kerja operator, re-inspeksi QC, cycle count berbasis ABC, auto-reservasi saat approval Material Request, dimensi/volume bin + slotting ABC, pembatasan gudang per operator, wave/batch picking, kitting/bundling. **2026-09-14**: kapitalisasi jasa ke aset (PSAK 16), gate pass barang keluar ke vendor, barang titipan vendor, tukar tambah aset, dan Laporan Perubahan Ekuitas. **2026-09-16**: Lacak Pembelian, Kartu Skor Supplier, CALK (PSAK 1 lengkap lima laporan), perluasan maker-checker ke jurnal manual/pembalikan dokumen/perubahan COA, **dimensi gudang pada baris jurnal** sehingga nilai persediaan per gudang akhirnya bisa ditarik dari buku besar, **seluruh sisi penjualan** (pelanggan, pesanan penjualan, surat jalan dengan konsumsi FIFO + jurnal HPP, faktur penjualan dengan piutang + PPN Keluaran, penerimaan pembayaran, dan retur penjualan) — sejak ini Laba Rugi punya sisi pendapatan dan Neraca punya piutang — serta **perintah kerja produksi dengan Barang Dalam Proses** (job costing aktual untuk produksi pesanan pelanggan).
+
+### Dicoret dari perencanaan
+
+**Layer integrasi eksternal (API/EDI ke supplier, marketplace, atau ERP lain) dicoret pemilik produk pada 2026-09-16.** Dicatat di sini, bukan sekadar dihapus, supaya tidak ditemukan ulang sebagai celah oleh pembacaan kode berikutnya lalu dimasukkan lagi. Tidak adanya API publik adalah keadaan yang memang dikehendaki. Base Sanctum yang sudah ada tetap dibiarkan.
+
+### Catatan terbuka yang ditemukan 2026-09-16
+
+`UpdateAccountingMappingRequest` memvalidasi **semua** `KategoriBahan` dengan aturan kategori barang, padahal dua kategori jasa bawaan seeder tidak memenuhinya: "Jasa Operasional" memetakan `coa_persediaan_id` ke akun BEBAN, dan "Jasa Produksi" memetakan `coa_beban_id` ke akun ASET. Akibatnya form mapping tidak bisa disimpan untuk daftar kategori lengkap. Ini bukan bug baru — sudah ada sebelum pekerjaan maker-checker — dan perlu keputusan: kategori jasa dikecualikan dari aturan mapping barang, atau diberi akun yang sesuai.
 
 ## 15. Source of truth
 

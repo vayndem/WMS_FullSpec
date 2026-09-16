@@ -28,3 +28,14 @@ Route::middleware('auth')->group(function () {
     Route::resource('penerimaan-jasa', PenerimaanJasaController::class)->parameters(['penerimaan-jasa' => 'service_bap'])->only(['index', 'create', 'store', 'show']);
     Route::resource('kategori-jasa', KategoriJasaController::class)->parameters(['kategori-jasa' => 'service_category'])->only(['index', 'update']);
 });
+
+Route::middleware('auth')->group(function () {
+    Route::get('pengeluaran-barang', [App\Http\Controllers\PengeluaranBarangController::class, 'index'])->name('pengeluaran-barang.index');
+    Route::post('pengeluaran-barang', [App\Http\Controllers\PengeluaranBarangController::class, 'store'])->name('pengeluaran-barang.store');
+    Route::post('pengeluaran-barang/{pengeluaran}/kirim', [App\Http\Controllers\PengeluaranBarangController::class, 'kirim'])->name('pengeluaran-barang.kirim');
+    Route::post('pengeluaran-barang/{pengeluaran}/terima', [App\Http\Controllers\PengeluaranBarangController::class, 'terima'])->name('pengeluaran-barang.terima');
+    Route::delete('pengeluaran-barang/{pengeluaran}', [App\Http\Controllers\PengeluaranBarangController::class, 'destroy'])->name('pengeluaran-barang.destroy');
+
+    Route::post('barang-titipan', [App\Http\Controllers\PengeluaranBarangController::class, 'storeTitipan'])->name('barang-titipan.store');
+    Route::post('barang-titipan/{titipan}/selesai', [App\Http\Controllers\PengeluaranBarangController::class, 'selesaikanTitipan'])->name('barang-titipan.selesai');
+});

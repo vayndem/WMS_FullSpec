@@ -11,6 +11,7 @@ class AccountingSetting extends Model
     public const HUTANG_USAHA = 'HUTANG_USAHA';
     public const PPN_MASUKAN = 'PPN_MASUKAN';
     public const PPN_IMPOR = 'PPN_IMPOR';
+    public const PPN_KELUARAN = 'PPN_KELUARAN';
     public const HUTANG_PPH23 = 'HUTANG_PPH23';
     public const HUTANG_PPH22 = 'HUTANG_PPH22';
     public const HUTANG_PPH4A2 = 'HUTANG_PPH4A2';
@@ -25,6 +26,11 @@ class AccountingSetting extends Model
     public const ASET_PAJAK_TANGGUHAN = 'ASET_PAJAK_TANGGUHAN';
     public const LIABILITAS_PAJAK_TANGGUHAN = 'LIABILITAS_PAJAK_TANGGUHAN';
     public const BEBAN_PAJAK_TANGGUHAN = 'BEBAN_PAJAK_TANGGUHAN';
+    public const PIUTANG_USAHA = 'PIUTANG_USAHA';
+    public const PENJUALAN = 'PENJUALAN';
+    public const RETUR_PENJUALAN = 'RETUR_PENJUALAN';
+    public const BEBAN_POKOK_PENJUALAN = 'BEBAN_POKOK_PENJUALAN';
+    public const BARANG_DALAM_PROSES = 'BARANG_DALAM_PROSES';
 
     public const PPH_LIABILITY_KEY = [
         'PPH23' => self::HUTANG_PPH23,
@@ -46,6 +52,7 @@ class AccountingSetting extends Model
             self::HUTANG_USAHA => [['LIABILITAS', 'KREDIT']],
             self::PPN_MASUKAN => [['ASET', 'DEBIT']],
             self::PPN_IMPOR => [['ASET', 'DEBIT']],
+            self::PPN_KELUARAN => [['LIABILITAS', 'KREDIT']],
             self::HUTANG_PPH23 => [['LIABILITAS', 'KREDIT']],
             self::HUTANG_PPH22 => [['LIABILITAS', 'KREDIT']],
             self::HUTANG_PPH4A2 => [['LIABILITAS', 'KREDIT']],
@@ -60,6 +67,11 @@ class AccountingSetting extends Model
             self::ASET_PAJAK_TANGGUHAN => [['ASET', 'DEBIT']],
             self::LIABILITAS_PAJAK_TANGGUHAN => [['LIABILITAS', 'KREDIT']],
             self::BEBAN_PAJAK_TANGGUHAN => [['BEBAN', 'DEBIT']],
+            self::PIUTANG_USAHA => [['ASET', 'DEBIT']],
+            self::PENJUALAN => [['PENDAPATAN', 'KREDIT']],
+            self::RETUR_PENJUALAN => [['PENDAPATAN', 'DEBIT']],
+            self::BEBAN_POKOK_PENJUALAN => [['BEBAN', 'DEBIT']],
+            self::BARANG_DALAM_PROSES => [['ASET', 'DEBIT']],
         ];
         if (
             !$setting

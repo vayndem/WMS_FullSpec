@@ -247,6 +247,84 @@ class FinancialStatementService
         ];
     }
 
+    public function changesInEquity(Carbon $from, Carbon $to): array
+    {
+        if ($from->gt($to)) {
+            [$from, $to] = [$to, $from];
+        }
+
+        $sebelum = $from->copy()->subDay();
+        $accounts = BaganAkun::where('kategori_akun', 'EKUITAS')->orderBy('kode_akun')->get();
+        $accountIds = $accounts->pluck('id');
+
+        $saldoAwal = $this->mutasiEkuitas($accountIds, null, $sebelum);
+        $mutasi = $this->mutasiEkuitas($accountIds, $from, $to);
+
+        $komponen = $accounts->map(function (BaganAkun $account) use ($saldoAwal, $mutasi) {
+            $awal = $saldoAwal->get($account->id);
+            $gerak = $mutasi->get($account->id);
+
+            $awalBersih = round((float) ($awal->kredit ?? 0) - (float) ($awal->debit ?? 0), 2);
+            $setoran = round((float) ($gerak->kredit ?? 0), 2);
+            $penarikan = round((float) ($gerak->debit ?? 0), 2);
+
+            return [
+                'account' => $account,
+                'nama' => $account->kode_akun . ' — ' . $account->nama_akun,
+                'saldo_awal' => $awalBersih,
+                'setoran' => $setoran,
+                'penarikan' => $penarikan,
+                'laba_bersih' => 0.0,
+                'saldo_akhir' => round($awalBersih + $setoran - $penarikan, 2),
+            ];
+        })->filter(fn ($row) => $row['saldo_awal'] != 0 || $row['setoran'] != 0 || $row['penarikan'] != 0)->values();
+
+        $labaDitahanAwal = round($this->cumulativeNetIncome($sebelum), 2);
+        $labaBersih = round((float) $this->incomeStatement($from, $to)['laba_bersih'], 2);
+
+        $komponen = $komponen->push([
+            'account' => null,
+            'nama' => 'Laba (Rugi) Ditahan',
+            'saldo_awal' => $labaDitahanAwal,
+            'setoran' => 0.0,
+            'penarikan' => 0.0,
+            'laba_bersih' => $labaBersih,
+            'saldo_akhir' => round($labaDitahanAwal + $labaBersih, 2),
+        ]);
+
+        $total = fn (string $kolom) => round($komponen->sum($kolom), 2);
+        $saldoAkhir = $total('saldo_akhir');
+        $saldoAkhirBuku = round((float) $this->balanceSheet($to)['total_ekuitas'], 2);
+
+        return [
+            'from' => $from,
+            'to' => $to,
+            'komponen' => $komponen,
+            'total_saldo_awal' => $total('saldo_awal'),
+            'total_setoran' => $total('setoran'),
+            'total_penarikan' => $total('penarikan'),
+            'total_laba_bersih' => $total('laba_bersih'),
+            'total_saldo_akhir' => $saldoAkhir,
+            'saldo_akhir_buku' => $saldoAkhirBuku,
+            'selisih' => round($saldoAkhir - $saldoAkhirBuku, 2),
+        ];
+    }
+
+    private function mutasiEkuitas($accountIds, ?Carbon $from, Carbon $to)
+    {
+        return JurnalDetail::whereIn('coa_id', $accountIds)
+            ->whereHas('jurnal', function ($q) use ($from, $to) {
+                $q->where('status', 'POSTED')->whereDate('tanggal', '<=', $to);
+                if ($from) {
+                    $q->whereDate('tanggal', '>=', $from);
+                }
+            })
+            ->selectRaw('coa_id, SUM(debit) as debit, SUM(kredit) as kredit')
+            ->groupBy('coa_id')
+            ->get()
+            ->keyBy('coa_id');
+    }
+
     private function cumulativeNetIncome(Carbon $asOf): float
     {
         $accountIds = BaganAkun::whereIn('kategori_akun', ['PENDAPATAN', 'BEBAN'])->pluck('id');

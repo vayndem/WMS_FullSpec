@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\BaganAkun;
+use App\Models\PermintaanPersetujuan;
+use App\Services\PersetujuanOperasiService;
+use RuntimeException;
 use App\Http\Requests\StoreBaganAkunRequest;
 use App\Http\Requests\UpdateBaganAkunRequest;
 use Illuminate\Http\Request;
@@ -16,6 +19,8 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class BaganAkunController extends Controller
 {
+    public function __construct(private PersetujuanOperasiService $persetujuan) {}
+
     public function index(Request $request)
     {
         $this->authorize('viewAny', BaganAkun::class);
@@ -187,6 +192,28 @@ class BaganAkunController extends Controller
         ) {
             abort(422, 'Kategori akun dan posisi normal tidak boleh diubah setelah akun dipakai mapping atau jurnal.');
         }
+        if ($coa->isMapped() || $coa->jurnalDetails()->exists()) {
+            try {
+                $permintaan = $this->persetujuan->ajukan(
+                    PermintaanPersetujuan::PERUBAHAN_COA,
+                    PersetujuanOperasiService::COA_UBAH,
+                    "Perubahan akun {$coa->kode_akun} - {$coa->nama_akun}",
+                    $validated,
+                    $request->input('alasan') ?: 'Perubahan akun yang sudah dipakai mapping atau jurnal.',
+                    $request->user(),
+                    $coa
+                );
+            } catch (RuntimeException $e) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Akun ini sudah dipakai mapping atau jurnal, jadi perubahannya diajukan sebagai {$permintaan->nomor} dan menunggu persetujuan Accounting Manager.",
+                'data' => $coa,
+            ]);
+        }
+
         $coa->update($validated);
 
         return response()->json([
@@ -227,15 +254,25 @@ class BaganAkunController extends Controller
 
     public function updateMapping(UpdateAccountingMappingRequest $request)
     {
-        DB::transaction(function () use ($request) {
-            foreach ($request->validated('global') as $key => $coaId) {
-                AccountingSetting::updateOrCreate(['key' => $key], ['coa_id' => $coaId]);
-            }
-            foreach ($request->validated('categories') as $categoryId => $mapping) {
-                KategoriBahan::whereKey($categoryId)->update($mapping);
-            }
-        });
+        try {
+            $permintaan = $this->persetujuan->ajukan(
+                PermintaanPersetujuan::PERUBAHAN_COA,
+                PersetujuanOperasiService::COA_MAPPING,
+                'Perubahan mapping akuntansi',
+                [
+                    'global' => $request->validated('global'),
+                    'categories' => $request->validated('categories'),
+                ],
+                $request->input('alasan') ?: 'Perubahan mapping akuntansi.',
+                $request->user()
+            );
+        } catch (RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
 
-        return response()->json(['success' => true, 'message' => 'Mapping akuntansi berhasil disimpan.']);
+        return response()->json([
+            'success' => true,
+            'message' => "Mapping diajukan sebagai {$permintaan->nomor} dan menunggu persetujuan Accounting Manager sebelum berlaku.",
+        ]);
     }
 }

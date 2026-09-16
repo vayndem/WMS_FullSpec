@@ -28,13 +28,15 @@ class PembayaranFakturController extends Controller
         $advances = PembayaranFaktur::with('invoice')
             ->where('status', PembayaranFaktur::POSTED)
             ->where('jenis_selisih', 'UANG_MUKA_SUPPLIER')
-            ->whereHas('invoice', fn($query) => $query->where('kode_supplier', $supplierId))
+            ->where(fn($query) => $query
+                ->where('supplier_id', $supplierId)
+                ->orWhereHas('invoice', fn($invoice) => $invoice->where('kode_supplier', $supplierId)))
             ->get()
             ->map(fn(PembayaranFaktur $payment) => [
                 'id'                 => $payment->id,
                 'payment_number'     => $payment->payment_number,
                 'tanggal_pembayaran' => optional($payment->tanggal_pembayaran)->format('Y-m-d'),
-                'no_invoice_asal'    => $payment->invoice->no_invoice ?? '-',
+                'no_invoice_asal'    => $payment->invoice->no_invoice ?? ($payment->keterangan ?: '-'),
                 'sisa'               => $payment->sisaUangMuka(),
             ])
             ->filter(fn($row) => $row['sisa'] > 0.01)
@@ -86,11 +88,12 @@ class PembayaranFakturController extends Controller
             $advanceUsed = $advanceSourceId ? round((float) $validated['uang_muka_dipakai'], 2) : 0.0;
             if ($advanceSourceId) {
                 $advanceSource = PembayaranFaktur::lockForUpdate()->with('invoice')->findOrFail($advanceSourceId);
+                $supplierUangMuka = (int) ($advanceSource->supplier_id ?: $advanceSource->invoice?->kode_supplier);
                 abort_if(
                     $advanceSource->status !== PembayaranFaktur::POSTED
                         || $advanceSource->jenis_selisih !== 'UANG_MUKA_SUPPLIER'
-                        || !$advanceSource->invoice
-                        || (int) $advanceSource->invoice->kode_supplier !== (int) $invoice->kode_supplier,
+                        || $supplierUangMuka === 0
+                        || $supplierUangMuka !== (int) $invoice->kode_supplier,
                     422,
                     'Sumber uang muka tidak valid untuk invoice/supplier ini.'
                 );
@@ -138,6 +141,7 @@ class PembayaranFakturController extends Controller
             $payment = PembayaranFaktur::create([
                 'payment_number'                   => $validated['payment_number'],
                 'invoice_lpb_id'                   => $invoice->id,
+                'supplier_id'                      => $invoice->kode_supplier,
                 'tanggal_pembayaran'                => $validated['tanggal_pembayaran'],
                 'metode_pembayaran'                => $validated['metode_pembayaran'],
                 'coa_kas_bank_id'                  => $validated['coa_kas_bank_id'],

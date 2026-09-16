@@ -13,7 +13,15 @@ use App\Models\PerakitanKit;
 use App\Models\PemakaianBarangAlokasiStok;
 use App\Models\LayerPersediaan;
 use App\Models\BaganAkun;
+use App\Models\DataPesanan;
+use App\Models\DataPesananBiaya;
+use App\Models\FakturPenjualan;
+use App\Models\PenerimaanPembayaran;
 use App\Models\ReturPembelian;
+use App\Models\ReturPenjualan;
+use App\Models\SuratJalan;
+use App\Models\AlokasiTransferGudang;
+use App\Models\TransferGudang;
 use App\Models\KategoriJasa;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +32,9 @@ class WmsAccountingService
     public function __construct(
         private AccountingPeriodService $periods,
         private InventoryCostCalculator $costCalculator,
-        private DocumentNumberService $numbers
+        private DocumentNumberService $numbers,
+        private KapitalisasiAsetService $kapitalisasi,
+        private DataPesananService $dataPesanan
     ) {}
 
     public function postLpb(PenerimaanBarang $lpb): Jurnal
@@ -40,8 +50,8 @@ class WmsAccountingService
             $category = $details->first()->kategori;
             $this->assertCategoryMapping($category);
             $amount = $details->sum(fn($detail) => (float) $detail->jumlah_barang_diterima * (float) $detail->harga);
-            $this->line($lines, $category->coa_persediaan_id, $amount, 0, "Persediaan {$category->katnama}");
-            $this->line($lines, $category->coa_clearing_lpb_id, 0, $amount, "GRNI {$category->katnama}");
+            $this->line($lines, $category->coa_persediaan_id, $amount, 0, "Persediaan {$category->katnama}", $lpb->gudang_id);
+            $this->line($lines, $category->coa_clearing_lpb_id, 0, $amount, "GRNI {$category->katnama}", $lpb->gudang_id);
         }
 
         return $this->post("LPB-{$lpb->id_lpb}", $lpb->tanggal, 'LPB', $lpb->id, "Penerimaan barang {$lpb->id_lpb}", $lines);
@@ -84,9 +94,9 @@ class WmsAccountingService
             $this->assertCategoryMapping($category);
             $amount = $details->sum('total_harga');
             if (!$invoice) {
-                $this->line($lines, $category->coa_clearing_lpb_id, $amount, 0, "Pengurangan GRNI {$category->katnama} (retur)");
+                $this->line($lines, $category->coa_clearing_lpb_id, $amount, 0, "Pengurangan GRNI {$category->katnama} (retur)", $retur->lpb?->gudang_id);
             }
-            $this->line($lines, $category->coa_persediaan_id, 0, $amount, "Pengurangan persediaan {$category->katnama} (retur)");
+            $this->line($lines, $category->coa_persediaan_id, 0, $amount, "Pengurangan persediaan {$category->katnama} (retur)", $retur->lpb?->gudang_id);
         }
 
         $journal = $this->post("RTV-{$retur->no_retur}", $retur->tanggal, 'RETUR_PEMBELIAN', $retur->id, "Retur pembelian {$retur->no_retur} atas LPB {$retur->lpb->id_lpb}", $lines);
@@ -150,9 +160,28 @@ class WmsAccountingService
             throw new RuntimeException('Nilai pemakaian NPK harus lebih besar dari nol.');
         }
 
+        $gudangId = $npk->id_gudang_asal;
+        $pesananProduksi = $npk->data_pesanan_id ? DataPesanan::find($npk->data_pesanan_id) : null;
+
+        if ($pesananProduksi) {
+            $akunDebit = AccountingSetting::accountId(AccountingSetting::BARANG_DALAM_PROSES);
+            $keteranganDebit = "Barang dalam proses {$pesananProduksi->nomor}";
+            $this->dataPesanan->catatBiaya(
+                $pesananProduksi,
+                DataPesananBiaya::NPK,
+                (int) $npk->id,
+                $amount,
+                $npk->tanggal,
+                "Pemakaian barang {$npk->kode}"
+            );
+        } else {
+            $akunDebit = $category->coa_beban_id;
+            $keteranganDebit = "Pemakaian {$category->katnama}";
+        }
+
         return $this->post("NPK-{$npk->kode}-{$npk->id}", $npk->tanggal, 'NPK', $npk->id, "Pemakaian barang {$npk->kode}", [
-            ['coa_id' => $category->coa_beban_id, 'debit' => $amount, 'kredit' => 0, 'keterangan' => "Pemakaian {$category->katnama}"],
-            ['coa_id' => $category->coa_persediaan_id, 'debit' => 0, 'kredit' => $amount, 'keterangan' => "Pengurangan persediaan {$category->katnama}"],
+            ['coa_id' => $akunDebit, 'gudang_id' => $gudangId, 'debit' => $amount, 'kredit' => 0, 'keterangan' => $keteranganDebit],
+            ['coa_id' => $category->coa_persediaan_id, 'gudang_id' => $gudangId, 'debit' => 0, 'kredit' => $amount, 'keterangan' => "Pengurangan persediaan {$category->katnama}"],
         ]);
     }
 
@@ -177,13 +206,13 @@ class WmsAccountingService
             }
 
             $this->line($lines, $kategori->coa_persediaan_id, $rakit ? 0 : $nilai, $rakit ? $nilai : 0,
-                ($rakit ? 'Komponen terpakai ' : 'Komponen kembali ') . $kategori->katnama);
+                ($rakit ? 'Komponen terpakai ' : 'Komponen kembali ') . $kategori->katnama, $perakitan->gudang_id);
         }
 
         $nilaiKit = round((float) $perakitan->nilai_total, 2);
         if ($nilaiKit > 0) {
             $this->line($lines, $kategoriKit->coa_persediaan_id, $rakit ? $nilaiKit : 0, $rakit ? 0 : $nilaiKit,
-                ($rakit ? 'Persediaan kit jadi ' : 'Kit terurai ') . $kategoriKit->katnama);
+                ($rakit ? 'Persediaan kit jadi ' : 'Kit terurai ') . $kategoriKit->katnama, $perakitan->gudang_id);
         }
 
         $lines = array_values(array_filter($lines, fn ($line) => abs((float) $line['debit'] - (float) $line['kredit']) > 0.001));
@@ -198,6 +227,227 @@ class WmsAccountingService
             'PERAKITAN_KIT',
             $perakitan->id,
             ($rakit ? 'Perakitan kit ' : 'Penguraian kit ') . $perakitan->nomor,
+            $lines,
+        );
+    }
+
+    public function postTransferGudang(TransferGudang $transfer): ?Jurnal
+    {
+        $this->periods->assertOpen($transfer->tanggal, 'Transfer gudang');
+        $transfer->loadMissing('details.bahan.tipeBarang');
+
+        $nilaiPerKategori = [];
+
+        foreach ($transfer->details as $detail) {
+            $kategori = $detail->bahan?->tipeBarang;
+            $this->assertCategoryMapping($kategori);
+
+            $nilai = (float) AlokasiTransferGudang::where('detail_transfer_gudang_id', $detail->id)
+                ->join('wms_layer_persediaan as tujuan', 'tujuan.id', '=', 'alokasi_transfer_gudangs.inventory_layer_tujuan_id')
+                ->sum(DB::raw('tujuan.initial_quantity * tujuan.unit_cost'));
+
+            if ($nilai <= 0) {
+                continue;
+            }
+
+            $nilaiPerKategori[$kategori->id] ??= ['kategori' => $kategori, 'nilai' => 0.0];
+            $nilaiPerKategori[$kategori->id]['nilai'] += $nilai;
+        }
+
+        $lines = [];
+
+        foreach ($nilaiPerKategori as $baris) {
+            $kategori = $baris['kategori'];
+            $nilai = round($baris['nilai'], 2);
+
+            if ($nilai <= 0) {
+                continue;
+            }
+
+            $this->line($lines, $kategori->coa_persediaan_id, $nilai, 0,
+                "Persediaan masuk {$kategori->katnama}", $transfer->gudang_tujuan_id);
+            $this->line($lines, $kategori->coa_persediaan_id, 0, $nilai,
+                "Persediaan keluar {$kategori->katnama}", $transfer->gudang_asal_id);
+        }
+
+        if ($lines === []) {
+            return null;
+        }
+
+        return $this->post(
+            "TRF-{$transfer->nomor_transfer}",
+            $transfer->tanggal,
+            'TRANSFER_GUDANG',
+            $transfer->id,
+            "Transfer gudang {$transfer->nomor_transfer}",
+            $lines,
+        );
+    }
+
+    public function postSuratJalan(SuratJalan $suratJalan): Jurnal
+    {
+        $this->periods->assertOpen($suratJalan->tanggal, 'Surat jalan');
+        $suratJalan->loadMissing('details.bahan.tipeBarang');
+
+        $lines = [];
+        $totalHpp = 0.0;
+
+        $dariStok = $suratJalan->details->whereNull('data_pesanan_id');
+        $dariProduksi = $suratJalan->details->whereNotNull('data_pesanan_id');
+
+        foreach ($dariStok->groupBy(fn ($detail) => $detail->bahan?->tipe_barang) as $details) {
+            $kategori = $details->first()->bahan?->tipeBarang;
+            $this->assertCategoryMapping($kategori);
+
+            $hpp = round((float) $details->sum(fn ($detail) => (float) $detail->hpp), 2);
+
+            if ($hpp <= 0) {
+                continue;
+            }
+
+            $totalHpp += $hpp;
+            $this->line($lines, $kategori->coa_persediaan_id, 0, $hpp,
+                "Pengurangan persediaan {$kategori->katnama} (surat jalan)", $suratJalan->gudang_id);
+        }
+
+        $hppProduksi = round((float) $dariProduksi->sum(fn ($detail) => (float) $detail->hpp), 2);
+
+        if ($hppProduksi > 0) {
+            $totalHpp += $hppProduksi;
+            $this->line($lines, AccountingSetting::accountId(AccountingSetting::BARANG_DALAM_PROSES), 0, $hppProduksi,
+                "Pelepasan barang dalam proses (surat jalan {$suratJalan->nomor})", $suratJalan->gudang_id);
+        }
+
+        if ($totalHpp <= 0) {
+            throw new RuntimeException('Surat jalan tidak memiliki nilai harga pokok untuk dijurnal.');
+        }
+
+        $this->line($lines, AccountingSetting::accountId(AccountingSetting::BEBAN_POKOK_PENJUALAN),
+            round($totalHpp, 2), 0, "Beban pokok penjualan {$suratJalan->nomor}", $suratJalan->gudang_id);
+
+        return $this->post(
+            "SJ-{$suratJalan->nomor}",
+            $suratJalan->tanggal,
+            'SURAT_JALAN',
+            $suratJalan->id,
+            "Surat jalan {$suratJalan->nomor}",
+            $lines,
+        );
+    }
+
+    public function postFakturPenjualan(FakturPenjualan $faktur): Jurnal
+    {
+        $this->periods->assertOpen($faktur->tanggal, 'Faktur penjualan');
+
+        $dpp = round((float) $faktur->total_dpp, 2);
+        $ppn = round((float) $faktur->total_ppn, 2);
+        $total = round((float) $faktur->grand_total, 2);
+
+        if ($dpp <= 0) {
+            throw new RuntimeException('Faktur penjualan harus memiliki nilai DPP lebih besar dari nol.');
+        }
+
+        $lines = [];
+        $this->line($lines, AccountingSetting::accountId(AccountingSetting::PIUTANG_USAHA), $total, 0,
+            "Piutang usaha {$faktur->nomor}");
+        $this->line($lines, AccountingSetting::accountId(AccountingSetting::PENJUALAN), 0, $dpp,
+            "Penjualan {$faktur->nomor}");
+
+        if ($ppn > 0) {
+            $this->line($lines, AccountingSetting::accountId(AccountingSetting::PPN_KELUARAN), 0, $ppn,
+                "PPN keluaran {$faktur->nomor}");
+        }
+
+        return $this->post(
+            "FJ-{$faktur->nomor}",
+            $faktur->tanggal,
+            'FAKTUR_PENJUALAN',
+            $faktur->id,
+            "Faktur penjualan {$faktur->nomor}",
+            $lines,
+        );
+    }
+
+    public function postPenerimaanPembayaran(PenerimaanPembayaran $pembayaran): Jurnal
+    {
+        $this->periods->assertOpen($pembayaran->tanggal, 'Penerimaan pembayaran');
+
+        $jumlah = round((float) $pembayaran->jumlah, 2);
+
+        if ($jumlah <= 0) {
+            throw new RuntimeException('Nilai penerimaan pembayaran harus lebih besar dari nol.');
+        }
+
+        $lines = [];
+        $this->line($lines, $pembayaran->coa_kas_bank_id, $jumlah, 0, "Penerimaan {$pembayaran->nomor}");
+        $this->line($lines, AccountingSetting::accountId(AccountingSetting::PIUTANG_USAHA), 0, $jumlah,
+            "Pelunasan piutang {$pembayaran->nomor}");
+
+        return $this->post(
+            "RC-{$pembayaran->nomor}",
+            $pembayaran->tanggal,
+            'PENERIMAAN_PEMBAYARAN',
+            $pembayaran->id,
+            "Penerimaan pembayaran {$pembayaran->nomor}",
+            $lines,
+        );
+    }
+
+    public function postReturPenjualan(ReturPenjualan $retur): Jurnal
+    {
+        $this->periods->assertOpen($retur->tanggal, 'Retur penjualan');
+        $retur->loadMissing('details.bahan.tipeBarang', 'suratJalan');
+
+        $dpp = round((float) $retur->total_dpp, 2);
+        $ppn = round((float) $retur->total_ppn, 2);
+        $total = round($dpp + $ppn, 2);
+
+        if ($dpp <= 0) {
+            throw new RuntimeException('Retur penjualan harus memiliki nilai DPP lebih besar dari nol.');
+        }
+
+        $lines = [];
+
+        $this->line($lines, AccountingSetting::accountId(AccountingSetting::RETUR_PENJUALAN), $dpp, 0,
+            "Retur penjualan {$retur->nomor}");
+
+        if ($ppn > 0) {
+            $this->line($lines, AccountingSetting::accountId(AccountingSetting::PPN_KELUARAN), $ppn, 0,
+                "Koreksi PPN keluaran {$retur->nomor}");
+        }
+
+        $this->line($lines, AccountingSetting::accountId(AccountingSetting::PIUTANG_USAHA), 0, $total,
+            "Pengurangan piutang {$retur->nomor}");
+
+        $gudangId = $retur->suratJalan?->gudang_id;
+        $totalHpp = 0.0;
+
+        foreach ($retur->details->groupBy(fn ($detail) => $detail->bahan?->tipe_barang) as $details) {
+            $kategori = $details->first()->bahan?->tipeBarang;
+            $this->assertCategoryMapping($kategori);
+
+            $hpp = round((float) $details->sum(fn ($detail) => (float) $detail->hpp), 2);
+
+            if ($hpp <= 0) {
+                continue;
+            }
+
+            $totalHpp += $hpp;
+            $this->line($lines, $kategori->coa_persediaan_id, $hpp, 0,
+                "Persediaan kembali {$kategori->katnama} (retur penjualan)", $gudangId);
+        }
+
+        if ($totalHpp > 0) {
+            $this->line($lines, AccountingSetting::accountId(AccountingSetting::BEBAN_POKOK_PENJUALAN), 0,
+                round($totalHpp, 2), "Koreksi beban pokok {$retur->nomor}", $gudangId);
+        }
+
+        return $this->post(
+            "RJ-{$retur->nomor}",
+            $retur->tanggal,
+            'RETUR_PENJUALAN',
+            $retur->id,
+            "Retur penjualan {$retur->nomor}",
             $lines,
         );
     }
@@ -293,17 +543,38 @@ class WmsAccountingService
             $amount = $details->sum(fn($detail) => (float) $detail->jumlah_barang_diterima * (float) $detail->harga);
             $this->line($lines, $category->coa_clearing_lpb_id, $amount, 0, "Penyelesaian GRNI {$category->katnama}");
         }
+        $jasaKapitalisasi = collect();
         foreach ($invoice->receipts->flatMap(fn($receipt) => $receipt->lpb->serviceDetails)->groupBy('servicePoDetail.service_category_id') as $details) {
             $category = $details->first()->servicePoDetail->category;
             if (!$category) {
                 throw new RuntimeException('Kategori jasa pada BAP tidak tersedia.');
             }
+            BaganAkun::assertUsable($category->grni_coa_id, [['LIABILITAS', 'KREDIT']], "GRNI jasa {$category->name}");
+
             $expensePairs = $category->code === KategoriJasa::PRODUCTION
                 ? [['ASET', 'DEBIT']]
                 : [['BEBAN', 'DEBIT']];
+
+            $dibebankan = $details;
+
+            if ($category->perlakuan === KategoriJasa::KAPITALISASI) {
+                $dibebankan = $details->filter(fn ($detail) => $detail->servicePoDetail->aset === null);
+
+                foreach ($details->diff($dibebankan) as $detail) {
+                    $aset = $detail->servicePoDetail->aset;
+                    $akunAset = $this->kapitalisasi->akunAsetUntuk($aset);
+                    BaganAkun::assertUsable($akunAset, [['ASET', 'DEBIT']], "aset kapitalisasi {$aset->nomor_aset}");
+                    $this->line($lines, $akunAset, (float) $detail->amount, 0, "Kapitalisasi jasa ke aset {$aset->nomor_aset}");
+                    $jasaKapitalisasi->push($detail);
+                }
+
+                if ($dibebankan->isEmpty()) {
+                    continue;
+                }
+            }
+
             BaganAkun::assertUsable($category->expense_coa_id, $expensePairs, "beban/WIP jasa {$category->name}");
-            BaganAkun::assertUsable($category->grni_coa_id, [['LIABILITAS', 'KREDIT']], "GRNI jasa {$category->name}");
-            $this->line($lines, $category->expense_coa_id, $details->sum('amount'), 0, "Penyelesaian jasa {$category->name}");
+            $this->line($lines, $category->expense_coa_id, $dibebankan->sum('amount'), 0, "Penyelesaian jasa {$category->name}");
         }
 
         if ((float) $invoice->ppn > 0) {
@@ -316,7 +587,13 @@ class WmsAccountingService
         $this->line($lines, AccountingSetting::accountId(AccountingSetting::DISKON_PEMBELIAN), 0, (float) $invoice->diskon, 'Diskon pembelian');
         $this->line($lines, AccountingSetting::accountId(AccountingSetting::HUTANG_USAHA), 0, (float) $invoice->grand_total, 'Hutang supplier');
 
-        return $this->post("INV-{$invoice->no_invoice}", $invoice->tanggal, 'INVOICE_SUPPLIER', $invoice->id, "Invoice supplier {$invoice->no_invoice}", $lines);
+        $journal = $this->post("INV-{$invoice->no_invoice}", $invoice->tanggal, 'INVOICE_SUPPLIER', $invoice->id, "Invoice supplier {$invoice->no_invoice}", $lines);
+
+        foreach ($jasaKapitalisasi as $detail) {
+            $this->kapitalisasi->catatDariJasa($detail, $journal->id, $invoice->tanggal);
+        }
+
+        return $journal;
     }
 
     public function postPayment(PembayaranFaktur $payment): Jurnal
@@ -439,7 +716,7 @@ class WmsAccountingService
         return $journal;
     }
 
-    private function line(array &$lines, ?int $accountId, float $debit, float $credit, string $description): void
+    private function line(array &$lines, ?int $accountId, float $debit, float $credit, string $description, ?int $gudangId = null): void
     {
         if ($debit <= 0 && $credit <= 0) {
             return;
@@ -447,7 +724,13 @@ class WmsAccountingService
         if (!$accountId) {
             throw new RuntimeException("Mapping akun untuk {$description} belum diatur.");
         }
-        $lines[] = ['coa_id' => $accountId, 'debit' => round($debit, 2), 'kredit' => round($credit, 2), 'keterangan' => $description];
+        $lines[] = [
+            'coa_id' => $accountId,
+            'gudang_id' => $gudangId,
+            'debit' => round($debit, 2),
+            'kredit' => round($credit, 2),
+            'keterangan' => $description,
+        ];
     }
 
     private function assertCategoryMapping($category): void

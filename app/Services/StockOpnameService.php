@@ -92,8 +92,8 @@ class StockOpnameService
                 $value = (float) $detail->difference_value;
                 if ($difference < 0) {
                     $value = $this->fifoValue($detail, abs($difference), $opname->warehouse_id, true);
-                    $this->line($lines, $detail->bahan->tipeBarang->coa_beban_selisih_opname_id, $value, 0, "Beban selisih opname {$bahan->nama}");
-                    $this->line($lines, $detail->bahan->tipeBarang->coa_persediaan_id, 0, $value, "Pengurangan persediaan {$bahan->nama}");
+                    $this->line($lines, $detail->bahan->tipeBarang->coa_beban_selisih_opname_id, $value, 0, "Beban selisih opname {$bahan->nama}", $opname->warehouse_id);
+                    $this->line($lines, $detail->bahan->tipeBarang->coa_persediaan_id, 0, $value, "Pengurangan persediaan {$bahan->nama}", $opname->warehouse_id);
                     $this->stokGudang->keluar($opname->warehouse_id, $bahan->id, abs($difference), $detail->unit_cost, 'OPNAME_KELUAR', 'STOCK_OPNAME', $opname->id, $opname->number);
                 } elseif ($difference > 0) {
                     LayerPersediaan::create([
@@ -106,8 +106,8 @@ class StockOpnameService
                         'remaining_quantity' => $difference,
                         'unit_cost' => $detail->unit_cost,
                     ]);
-                    $this->line($lines, $detail->bahan->tipeBarang->coa_persediaan_id, $value, 0, "Penambahan persediaan {$bahan->nama}");
-                    $this->line($lines, $detail->bahan->tipeBarang->coa_koreksi_opname_id, 0, $value, "Koreksi positif opname {$bahan->nama}");
+                    $this->line($lines, $detail->bahan->tipeBarang->coa_persediaan_id, $value, 0, "Penambahan persediaan {$bahan->nama}", $opname->warehouse_id);
+                    $this->line($lines, $detail->bahan->tipeBarang->coa_koreksi_opname_id, 0, $value, "Koreksi positif opname {$bahan->nama}", $opname->warehouse_id);
                     $this->stokGudang->masuk($opname->warehouse_id, $bahan->id, $difference, $detail->unit_cost, 'OPNAME_MASUK', 'STOCK_OPNAME', $opname->id, $opname->number);
                 }
             }
@@ -192,9 +192,9 @@ class StockOpnameService
         BaganAkun::assertUsable($category->coa_koreksi_opname_id, [['PENDAPATAN', 'KREDIT']], 'koreksi positif stock opname');
     }
 
-    private function line(array &$lines, ?int $accountId, float $debit, float $credit, string $description): void
+    private function line(array &$lines, ?int $accountId, float $debit, float $credit, string $description, ?int $gudangId = null): void
     {
         if (!$accountId) throw new RuntimeException("Mapping akun {$description} belum tersedia.");
-        $lines[] = ['coa_id' => $accountId, 'debit' => $debit, 'kredit' => $credit, 'keterangan' => $description];
+        $lines[] = ['coa_id' => $accountId, 'gudang_id' => $gudangId, 'debit' => $debit, 'kredit' => $credit, 'keterangan' => $description];
     }
 }

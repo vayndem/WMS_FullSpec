@@ -37,6 +37,14 @@ class JurnalPolicy
         return $user->isAccounting() && $jurnal->isManual() && $jurnal->isDraft();
     }
 
+    public function approve(User $user, Jurnal $jurnal): bool
+    {
+        return $user->isAccountingManager()
+            && $jurnal->isManual()
+            && $jurnal->isMenungguPersetujuan()
+            && (int) $jurnal->created_by !== (int) $user->id;
+    }
+
     public function reverse(User $user, Jurnal $jurnal): bool
     {
         return $user->isAccounting() && $jurnal->isManual() && $jurnal->status === 'POSTED';

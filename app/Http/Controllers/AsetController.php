@@ -7,6 +7,7 @@ use App\Http\Requests\StorePenyusutanAsetRequest;
 use App\Http\Requests\StoreAutomaticDepreciationRequest;
 use App\Http\Requests\StorePelepasanAsetRequest;
 use App\Models\Aset;
+use App\Models\Supplier;
 use App\Models\KategoriAset;
 use App\Models\BaganAkun;
 use App\Services\AsetAccountingService;
@@ -113,7 +114,12 @@ class AsetController extends Controller
         $aset->load(['category', 'acquisitionCreditAccount', 'depreciations.journal', 'disposal.journal', 'lampiran.user']);
         $financial = $request->user()->can('viewFinancials', Aset::class);
         $cashBanks = BaganAkun::where('is_active', true)->where('is_cash_bank', true)->orderBy('kode_akun')->get();
-        return view('aset.show', ['asset' => $aset, 'financial' => $financial, 'cashBanks' => $cashBanks]);
+        return view('aset.show', [
+            'asset' => $aset,
+            'financial' => $financial,
+            'cashBanks' => $cashBanks,
+            'suppliers' => Supplier::orderBy('nama')->get(),
+        ]);
     }
     public function edit(Aset $aset)
     {

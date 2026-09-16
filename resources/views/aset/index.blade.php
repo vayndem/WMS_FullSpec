@@ -46,7 +46,7 @@
                     <input name="q" value="{{ request('q') }}" class="input input-bordered md:col-span-2" placeholder="Cari aset..." onchange="this.form.submit()">
                     <select name="status" class="select select-bordered" onchange="this.form.submit()">
                         <option value="">Semua status</option>
-                        @foreach (['ACTIVE' => 'Aktif', 'SOLD' => 'Terjual', 'DISPOSED' => 'Dihapus'] as $k => $v)
+                        @foreach (['ACTIVE' => 'Aktif', 'SOLD' => 'Terjual', 'TRADED_IN' => 'Tukar Tambah', 'DISPOSED' => 'Dihapus'] as $k => $v)
                             <option value="{{ $k }}" @selected(request('status', 'ACTIVE') === $k)>{{ $v }}</option>
                         @endforeach
                     </select>

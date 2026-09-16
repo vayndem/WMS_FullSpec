@@ -23,6 +23,47 @@
             </div>
         @endif
 
+        @if ($financial)
+            <div class="card mb-4 border border-base-300 bg-base-100 shadow-sm">
+                <div class="border-b border-base-300 p-4">
+                    <h4 class="font-semibold">Nilai Persediaan per Gudang</h4>
+                    <p class="text-sm text-base-content/60">Dihitung dari dimensi gudang pada baris jurnal, jadi rupiah per gudang bisa ditarik langsung dari buku besar.</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Gudang</th>
+                                <th class="text-end">Nilai Buku Besar</th>
+                                <th class="text-end">Nilai Layer</th>
+                                <th class="text-end">Selisih</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($per_gudang as $baris)
+                                <tr>
+                                    <td>
+                                        {{ $baris['gudang'] }}
+                                        @if ($baris['gudang_id'] === null || $baris['gudang_id'] === '')
+                                            <span class="badge badge-ghost badge-sm">jurnal tanpa gudang</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-end">Rp {{ number_format($baris['nilai_buku_besar'], 2, ',', '.') }}</td>
+                                    <td class="text-end">Rp {{ number_format($baris['nilai_layer'], 2, ',', '.') }}</td>
+                                    <td class="text-end {{ abs($baris['selisih']) > .01 ? 'text-error font-semibold' : '' }}">Rp {{ number_format($baris['selisih'], 2, ',', '.') }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="4" class="py-3 text-center text-base-content/50">Belum ada nilai persediaan untuk direkonsiliasi.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                <div class="p-4 text-xs text-base-content/50">
+                    Stok yang sedang dalam perjalanan tidak dihitung di sini: jurnal transfer baru terbentuk saat barang diterima, jadi sampai penerimaan nilainya masih melekat pada gudang asal.
+                </div>
+            </div>
+        @endif
+
         @php($hasException = $quantity_exceptions || $reservation_exceptions || abs($global_quantity_difference) > .000001 || ($financial && abs($value_difference) > .01))
         <div role="alert" class="alert {{ $hasException ? 'alert-error' : 'alert-success' }} mb-4">
             <span>{{ $hasException ? 'Ditemukan ketidaksesuaian yang harus diselesaikan sebelum closing.' : 'Seluruh kontrol inventory sesuai.' }}</span>

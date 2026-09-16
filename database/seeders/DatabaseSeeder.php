@@ -92,6 +92,12 @@ class DatabaseSeeder extends Seeder
             ['kode_akun' => '1601', 'nama_akun' => 'Aset Pajak Tangguhan', 'kategori_akun' => 'ASET', 'posisi_normal' => 'DEBIT'],
             ['kode_akun' => '2108', 'nama_akun' => 'Liabilitas Pajak Tangguhan', 'kategori_akun' => 'LIABILITAS', 'posisi_normal' => 'KREDIT'],
             ['kode_akun' => '5307', 'nama_akun' => 'Beban Pajak Tangguhan', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT', 'klasifikasi_fiskal' => BaganAkun::FISKAL_BEDA_TETAP],
+            ['kode_akun' => '2109', 'nama_akun' => 'Hutang PPN Keluaran', 'kategori_akun' => 'LIABILITAS', 'posisi_normal' => 'KREDIT'],
+            ['kode_akun' => '1201', 'nama_akun' => 'Piutang Usaha', 'kategori_akun' => 'ASET', 'posisi_normal' => 'DEBIT'],
+            ['kode_akun' => '4101', 'nama_akun' => 'Penjualan', 'kategori_akun' => 'PENDAPATAN', 'posisi_normal' => 'KREDIT'],
+            ['kode_akun' => '4102', 'nama_akun' => 'Retur Penjualan', 'kategori_akun' => 'PENDAPATAN', 'posisi_normal' => 'DEBIT'],
+            ['kode_akun' => '5401', 'nama_akun' => 'Beban Pokok Penjualan', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT'],
+            ['kode_akun' => '1303', 'nama_akun' => 'Barang Dalam Proses Produksi', 'kategori_akun' => 'ASET', 'posisi_normal' => 'DEBIT'],
         ];
 
         foreach ($coas as $coa) {
@@ -121,6 +127,12 @@ class DatabaseSeeder extends Seeder
             AccountingSetting::ASET_PAJAK_TANGGUHAN => '1601',
             AccountingSetting::LIABILITAS_PAJAK_TANGGUHAN => '2108',
             AccountingSetting::BEBAN_PAJAK_TANGGUHAN => '5307',
+            AccountingSetting::PPN_KELUARAN => '2109',
+            AccountingSetting::PIUTANG_USAHA => '1201',
+            AccountingSetting::PENJUALAN => '4101',
+            AccountingSetting::RETUR_PENJUALAN => '4102',
+            AccountingSetting::BEBAN_POKOK_PENJUALAN => '5401',
+            AccountingSetting::BARANG_DALAM_PROSES => '1303',
         ];
         foreach ($accountMappings as $key => $code) {
             AccountingSetting::updateOrCreate(
@@ -177,7 +189,7 @@ class DatabaseSeeder extends Seeder
             [
                 'tipe_pembebanan_id'  => $tipe2->id,
                 'coa_persediaan_id'   => BaganAkun::where('kode_akun', '1302')->value('id'),
-                'coa_beban_id'        => BaganAkun::where('kode_akun', '1302')->value('id'),
+                'coa_beban_id'        => BaganAkun::where('kode_akun', '5202')->value('id'),
                 'coa_clearing_lpb_id' => BaganAkun::where('kode_akun', '2104')->value('id'),
                 'coa_beban_selisih_opname_id' => $coaOpnameLoss?->id,
                 'coa_koreksi_opname_id' => $coaOpnameGain?->id,

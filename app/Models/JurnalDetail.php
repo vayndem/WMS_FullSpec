@@ -15,6 +15,7 @@ class JurnalDetail extends Model
     protected $fillable = [
         'jurnal_id',
         'coa_id',
+        'gudang_id',
         'debit',
         'kredit',
         'keterangan',
@@ -28,5 +29,10 @@ class JurnalDetail extends Model
     public function coa(): BelongsTo
     {
         return $this->belongsTo(BaganAkun::class, 'coa_id');
+    }
+
+    public function gudang(): BelongsTo
+    {
+        return $this->belongsTo(Gudang::class, 'gudang_id');
     }
 }

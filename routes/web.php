@@ -7,3 +7,4 @@ require __DIR__.'/procurement.php';
 require __DIR__.'/finance.php';
 require __DIR__.'/accounting.php';
 require __DIR__.'/assets-and-services.php';
+require __DIR__.'/sales.php';

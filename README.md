@@ -2,15 +2,15 @@
 
 # 🏭 ERP · Modul WMS
 
-### Procure-to-Pay module of an ERP
+### Procure-to-Pay · Order-to-Cash · Make-to-Order, dalam satu modul ERP
 
-Warehouse • Procurement • Finance • Accounting — satu alur terkontrol, langsung terintegrasi ke jurnal akuntansi.
+Warehouse • Procurement • Sales • Production • Finance • Accounting — satu alur terkontrol, langsung terintegrasi ke jurnal akuntansi.
 
 [![Laravel](https://img.shields.io/badge/Laravel-12-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)](https://laravel.com)
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=for-the-badge&logo=php&logoColor=white)](https://php.net)
 [![MySQL](https://img.shields.io/badge/MySQL-Database-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com)
 [![Tailwind](https://img.shields.io/badge/Tailwind%20%2B%20daisyUI%20%2B%20Alpine-UI-38BDF8?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
-[![Tests](https://img.shields.io/badge/tests-79%20passed-22C55E?style=for-the-badge&logo=php&logoColor=white)](#-pengujian)
+[![Tests](https://img.shields.io/badge/tests-202%20passed-22C55E?style=for-the-badge&logo=php&logoColor=white)](#-pengujian)
 
 </div>
 
@@ -36,11 +36,17 @@ Warehouse • Procurement • Finance • Accounting — satu alur terkontrol, l
 
 <div align="center">
 
-`📝 Request` → `🛒 PO` → `📥 LPB/Penerimaan` → `🏬 Multi Gudang` → `🔧 NPK/Pemakaian` → `🧾 Invoice` → `💳 Pembayaran` → `📚 Jurnal`
+**Beli:** `📝 Request` → `🛒 PO` → `📥 LPB` → `🏬 Multi Gudang` → `🔧 NPK` → `🧾 Faktur Pembelian` → `💳 Pembayaran`
+
+**Jual:** `👤 Pelanggan` → `📋 Pesanan Penjualan` → `🚚 Surat Jalan` → `🧾 Faktur Penjualan` → `💰 Penerimaan`
+
+**Produksi:** `📋 Pesanan Penjualan` → `🏭 Perintah Kerja` → `🔧 NPK ke WIP` → `✅ Selesai` → `🚚 Surat Jalan`
+
+`📚 Semuanya bermuara ke Jurnal Akuntansi`
 
 </div>
 
-Dokumen operasional tidak berhenti sebagai catatan administratif — LPB, NPK, invoice, pembayaran, dan stock opname ikut memengaruhi stok, nilai persediaan, hutang, dan general ledger **di saat yang sama**.
+Dokumen operasional tidak berhenti sebagai catatan administratif — LPB, NPK, surat jalan, faktur, pembayaran, perintah kerja, dan stock opname ikut memengaruhi stok, nilai persediaan, hutang, piutang, barang dalam proses, dan general ledger **di saat yang sama**.
 
 <br>
 
@@ -83,6 +89,20 @@ flowchart LR
     H --> I["💳 Pembayaran"]
     F --> J["📚 Jurnal Akuntansi"]
     I --> J
+
+    L["👤 Pelanggan"] --> M["📋 Pesanan Penjualan"]
+    M --> N["🏭 Perintah Kerja"]
+    F --> N
+    N --> O["🔨 Barang Dalam Proses"]
+    E --> P["🚚 Surat Jalan"]
+    M --> P
+    O --> P
+    P --> Q["🧾 Faktur Penjualan"]
+    Q --> R["💰 Penerimaan Pembayaran"]
+    P --> J
+    Q --> J
+    R --> J
+
     J --> K["📊 Laporan Keuangan"]
 
     style A fill:#38BDF8,color:#0B1120
@@ -96,6 +116,13 @@ flowchart LR
     style I fill:#FB923C,color:#0B1120
     style J fill:#A78BFA,color:#0B1120
     style K fill:#22C55E,color:#0B1120
+    style L fill:#38BDF8,color:#0B1120
+    style M fill:#818CF8,color:#0B1120
+    style N fill:#F472B6,color:#0B1120
+    style O fill:#F472B6,color:#0B1120
+    style P fill:#34D399,color:#0B1120
+    style Q fill:#FB923C,color:#0B1120
+    style R fill:#FB923C,color:#0B1120
 ```
 
 ### Tabel alur
@@ -110,7 +137,7 @@ flowchart LR
 | 6 | 🧾 Invoice | Purchasing | Faktur Pembelian | GRNI → Hutang Usaha, status `PENDING_APPROVAL` |
 | 7 | 🕵️ Approval Invoice | **Accounting Manager** | — | Invoice diposting ke jurnal, siap dibayar (maker-checker) |
 | 8 | 💳 Pembayaran | Finance | Pembayaran Faktur | Hutang berkurang, jurnal Kas/Bank, PPh dipotong |
-| 9 | 📊 Pelaporan | Accounting | Laporan Keuangan | Neraca Saldo, Buku Besar, Laba Rugi, Neraca — HTML/PDF/Excel |
+| 9 | 📊 Pelaporan | Accounting | Laporan Keuangan | Lima laporan PSAK 1 (Laba Rugi, Neraca, Arus Kas, Perubahan Ekuitas, CALK) plus Neraca Saldo & Buku Besar — HTML/PDF/Excel |
 
 <br>
 
@@ -127,6 +154,13 @@ flowchart LR
 | ↩️ Retur Pembelian | `POSTED` → `REVERSED` (mengurangi hutang invoice atau jadi uang muka supplier bila sudah lunas) |
 | 🚚 Transfer Gudang | `DRAFT` → `DIAJUKAN` → `DIKIRIM` → `DITERIMA` atau `DIBATALKAN` |
 | 📋 Stock Opname | `DRAFT` → `SUBMITTED` → `APPROVED` → `POSTED` atau `REJECTED` |
+| 📋 Pesanan Penjualan | `OPEN` → `CLOSED` (otomatis saat seluruh baris terkirim penuh) atau `DIBATALKAN` |
+| 🚚 Surat Jalan | `DRAFT` → `POSTED` → `REVERSED` — posting mengurangi stok FIFO dan membentuk jurnal harga pokok |
+| 🧾 Faktur Penjualan | `DRAFT` → `POSTED` → `PARTIALLY_PAID` → `PAID` atau `VOID` |
+| 💰 Penerimaan Pembayaran | `POSTED` → `VOID` |
+| ↩️ Retur Penjualan | `POSTED` — stok kembali sebagai layer baru, faktur berkurang |
+| 🏭 Perintah Kerja | `DRAFT` → `DIRILIS` → `SELESAI` → `DITUTUP` atau `DIBATALKAN`. **Setelah `SELESAI` tidak menerima biaya baru** — harga pokok per unit sudah dikunci |
+| 🗳️ Permintaan Persetujuan | `PENDING` → `APPROVED` / `REJECTED` — pemohon tidak boleh menyetujui permintaannya sendiri |
 
 <br>
 
@@ -148,11 +182,24 @@ flowchart LR
 | 📊 Accounting | Bagan Akun (COA) & Mapping | Mapping persediaan, beban, GRNI, akun global |
 | 📊 Accounting | Jurnal | Jurnal otomatis, jurnal manual, reversal |
 | 📊 Accounting | Approval Invoice | Maker-checker — role **Accounting Manager** khusus approve invoice sebelum posting |
-| 📊 Accounting | Laporan Keuangan | Neraca Saldo, Buku Besar, Laba Rugi, Neraca — export PDF & Excel |
+| 📊 Accounting | Laporan Keuangan | Neraca Saldo, Buku Besar, Laba Rugi, Neraca, Arus Kas, Perubahan Ekuitas, CALK — export PDF & Excel (**lima laporan PSAK 1 lengkap**) |
+| 📊 Accounting | Antrean Persetujuan | Maker-checker untuk jurnal manual, pembalikan dokumen, dan perubahan bagan akun/mapping |
+| 🛒 Purchasing | Lacak Pembelian | Sebaran nilai satu penerimaan: masih stok, jadi beban, selisih opname, retur |
+| 🛒 Purchasing | Kartu Skor Supplier | Lead time, ketepatan terhadap target, nilai belanja, rasio retur, rasio reject QC |
+| 💰 Sales | Pelanggan | Master pelanggan: termin, plafon kredit, piutang berjalan |
+| 💰 Sales | Pesanan Penjualan | Pesanan pelanggan dengan DPP/PPN, ditarik jadi surat jalan |
+| 💰 Sales | Surat Jalan | Pengeluaran barang: konsumsi FIFO + jurnal harga pokok penjualan per gudang |
+| 💰 Sales | Faktur Penjualan | Piutang usaha + PPN Keluaran, NSFP wajib untuk faktur ber-PPN |
+| 💰 Sales | Penerimaan & Retur | Pelunasan piutang bertahap dan retur penjualan yang mengembalikan stok |
+| 🏭 Produksi | Perintah Kerja | Job costing aktual: material dan jasa menumpuk di Barang Dalam Proses, dilepas saat pengiriman |
 | 📊 Accounting | Dashboard Eksekutif | Tren nilai persediaan, aging hutang, top supplier, biaya per kategori (chart) |
 | 📊 Accounting | Kontrol | Kunci periode, tarif pajak, rekonsiliasi |
-| 🏢 Asset | Aset Tetap | Perolehan, penyusutan (manual & otomatis garis lurus), pelepasan |
+| 🏢 Asset | Aset Tetap | Perolehan, penyusutan (garis lurus & saldo menurun, manual/otomatis), pelepasan |
 | 🧰 Jasa | Pesanan & Penerimaan Jasa (BAP) | Jasa operasional/produksi, progress BAP |
+| 🧰 Jasa | Kapitalisasi Jasa ke Aset | Jasa yang menambah masa manfaat masuk nilai tercatat aset (PSAK 16), bukan beban |
+| 🧰 Jasa | Barang Keluar ke Vendor | Gate pass: barang kita keluar untuk diperbaiki lalu kembali — catatan kustodian, tanpa jurnal |
+| 🧰 Jasa | Barang Titipan Vendor | Unit pinjaman vendor selama perbaikan — di luar neraca, bukan persediaan maupun aset |
+| 🏢 Asset | Tukar Tambah (Trade-in) | Pelepasan aset via barter: PPN Keluaran atas nilai wajar, nilainya jadi uang muka supplier |
 | 🛰️ WMS Control | Traceability | Bin, lot, serial, expiry, block/release |
 | 🛰️ WMS Control | Warehouse Execution | QC, putaway, reservation, FEFO/FIFO picking |
 | 🛰️ WMS Control | Financial Control | Three-way match, landed cost, controlled reversal |
@@ -207,11 +254,15 @@ Standar transaksi inventory lainnya:
 
 ## 🏭 Gudang Produksi
 
-Sejak tahap 1, sistem sudah memiliki `Gudang Produksi`.
-
-- `Gudang Utama → Gudang Produksi` lewat `Transfer Gudang` (aman sebagai perpindahan internal stok).
-- `NPK` dari `Gudang Produksi` menjadi titik mulai pemakaian bahan.
+- `Gudang Utama → Gudang Produksi` lewat `Transfer Gudang`. Sejak 2026-09-16 perpindahan internal ini **membentuk jurnal** yang netral secara total — nilainya pindah antar dimensi gudang, bukan bertambah atau berkurang.
+- `NPK` dari `Gudang Produksi` adalah titik mulai pemakaian bahan.
 - `Stock Opname` tetap per gudang, termasuk gudang produksi.
+
+**Job costing (sejak 2026-09-16).** NPK yang ditandai ke sebuah **Perintah Kerja** tidak langsung jadi beban: biayanya menumpuk di `Barang Dalam Proses` bersama biaya jasa subkontrak yang dialokasikan ke perintah kerja yang sama. Saat produksi dilaporkan selesai, harga pokok per unit dikunci dan perintah kerja **berhenti menerima biaya**. Setiap pengiriman melepas WIP secara proporsional ke Beban Pokok Penjualan.
+
+Produksi di sini selalu untuk pesanan pelanggan, jadi keluarannya **tidak dibukukan sebagai stok barang jadi** — nilainya tetap di WIP sampai dikirim. NPK **tanpa** perintah kerja perilakunya tidak berubah sama sekali.
+
+Yang belum ada: BOM sebagai standar (sehingga belum ada selisih pemakaian material), serta penyerapan tenaga kerja dan overhead.
 
 Seeder default membuat: `Gudang Utama`, `Gudang Produksi`, `Gudang Consider`, `Gudang Rusak`.
 
@@ -224,12 +275,12 @@ Role disimpan di tabel `user_roles`, direferensikan oleh kolom `users.type`.
 | Type | Role | Akses Utama |
 |:-:|---|---|
 | 0 | 👑 SuperAdmin | Akses penuh tanpa pengecualian (`Gate::before`) |
-| 1 | 🛍️ Purchasing | Supplier, request, PO, LPB, invoice, jasa, visibilitas finansial operasional |
-| 2 | 💳 Finance | Melihat invoice, mencatat/void pembayaran supplier |
-| 3 | 📦 Warehouse | Operasional gudang **sesuai assignment gudang**, tanpa visibilitas finansial sensitif |
-| 4 | 📊 Accounting | COA, mapping, jurnal, pajak, period lock, rekonsiliasi, approval opname, aset |
-| 5 | 🏭 Produksi | Transfer, NPK, saldo stok, mutasi, opname sesuai assignment gudang |
-| 6 | 🕵️ Accounting Manager | **Approve invoice supplier saja** (maker-checker) sebelum posting ke jurnal & bisa dibayar |
+| 1 | 🛍️ Purchasing | Supplier, request, PO, LPB, invoice, jasa, pelanggan, pesanan penjualan, perintah kerja, analitik pengadaan |
+| 2 | 💳 Finance | Melihat invoice, mencatat/void pembayaran supplier, menerima pembayaran pelanggan |
+| 3 | 📦 Warehouse | Operasional gudang **sesuai assignment gudang** termasuk posting surat jalan, tanpa visibilitas finansial sensitif |
+| 4 | 📊 Accounting | COA, mapping, jurnal, pajak, period lock, rekonsiliasi, approval opname, aset, faktur penjualan, retur penjualan |
+| 5 | 🏭 Produksi | Transfer, NPK, saldo stok, mutasi, opname sesuai assignment gudang, serta perintah kerja produksi |
+| 6 | 🕵️ Accounting Manager | **Maker-checker**: approve invoice supplier, jurnal manual, pembalikan dokumen, dan perubahan COA/mapping |
 
 **Catatan:**
 
@@ -237,6 +288,7 @@ Role disimpan di tabel `user_roles`, direferensikan oleh kolom `users.type`.
 - `Warehouse` **dan** `Produksi` sama-sama dibatasi ke gudang yang di-assign di `pembagian_gudangs` (sejak 2026-09-13; sebelumnya `Warehouse` otomatis mendapat semua gudang aktif).
 - Operator yang belum punya assignment tidak melihat gudang manapun — ini disengaja, agar akses lintas lokasi harus diberikan secara sadar.
 - Semua role *kecuali Purchasing* sekarang bisa mengajukan Material Request; setiap user bisa melacak status request miliknya sendiri.
+- **Pemohon tidak boleh menyetujui permintaannya sendiri.** Aturan itu ditegakkan di service, bukan hanya policy, sehingga `SuperAdmin` pun tidak bisa melewatinya lewat `Gate::before`.
 
 <br>
 
@@ -287,6 +339,10 @@ Untuk frontend development:
 
 ```bash
 npm run dev
+
+# dua proses ini juga perlu jalan agar notifikasi dan penjadwalan aktif
+php artisan queue:work
+php artisan schedule:work
 ```
 
 > 💡 `php artisan migrate --seed` membuat master data **sekaligus** data demo — pakai untuk development/test saja. Untuk production, hindari `DatabaseSeeder` penuh.
@@ -297,8 +353,8 @@ npm run dev
 
 <div align="center">
 
-![Tests](https://img.shields.io/badge/tests-79%20passed-22C55E?style=flat-square)
-![Assertions](https://img.shields.io/badge/assertions-2%2C499%2B-38BDF8?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-202%20passed-22C55E?style=flat-square)
+![Assertions](https://img.shields.io/badge/assertions-4%2C201-38BDF8?style=flat-square)
 ![Case Sensitive](https://img.shields.io/badge/case--sensitivity-verified-A78BFA?style=flat-square)
 
 </div>
@@ -318,6 +374,11 @@ Suite saat ini mencakup:
 - 🛰️ WMS control, transfer in-transit, reservation/picking, three-way match, landed cost, reversal, rekonsiliasi
 - 💰 PPh multi-tipe (23/22/4(2) Final), penyusutan otomatis, retur pasca-invoice, maker-checker invoice
 - 📊 request workflow lintas role, dashboard per role, dashboard eksekutif, export Excel
+- 📒 lima laporan PSAK 1 — Arus Kas dan Perubahan Ekuitas punya tie-out sendiri ke buku besar dan ke neraca
+- 🛡️ maker-checker jurnal manual, pembalikan dokumen, dan perubahan COA/mapping
+- 🏬 dimensi gudang pada baris jurnal: nilai persediaan per gudang cocok dengan nilai layer-nya
+- 💰 penjualan end-to-end lewat HTTP: pesanan → surat jalan → faktur → pelunasan, plus retur penjualan
+- 🏭 produksi: akumulasi WIP dari NPK, penguncian harga pokok, pelepasan proporsional saat kirim, dan invarian WIP vs buku besar
 
 <br>
 
@@ -328,6 +389,12 @@ Suite saat ini mencakup:
 - 🐛 Gunakan `APP_DEBUG=false` di production.
 - ⚡ Jalankan `php artisan optimize` setelah konfigurasi production siap.
 - 🔒 Jangan commit `.env`, password, token, atau secret apa pun.
+
+**Dua proses wajib berjalan, bukan opsional (sejak 2026-09-12):**
+
+- ⚙️ **`php artisan queue:work`** — notifikasi persetujuan dan pengingat dikirim lewat antrean. Tanpa worker, notifikasinya mengendap di tabel `jobs` dan tidak pernah sampai. `QUEUE_CONNECTION` harus driver nyata (`database`), bukan `sync`.
+- ⏰ **`php artisan schedule:work`** (atau satu entri cron) — replenishment harian, pengingat tenggat, klasifikasi ABC mingguan, dan penyusutan bulanan semuanya terjadwal. Tanpa ini sistem kembali "baru sadar kalau ada yang klik".
+- 💾 Lampiran dokumen disimpan di disk privat `storage/app/lampiran` dan hanya keluar lewat route berotorisasi. Untuk pindah ke S3 cukup set `LAMPIRAN_DISK=s3`.
 
 <br>
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StorePesananJasaRequest;
 use App\Models\PesananJasa;
+use App\Models\Aset;
 use App\Models\KategoriJasa;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
@@ -114,6 +115,10 @@ class PesananJasaController extends Controller
     }
     private function formData(): array
     {
-        return ['suppliers' => Supplier::orderBy('nama')->get(), 'categories' => KategoriJasa::where('is_active', true)->orderBy('display_code')->get()];
+        return [
+            'suppliers' => Supplier::orderBy('nama')->get(),
+            'categories' => KategoriJasa::where('is_active', true)->orderBy('display_code')->get(),
+            'asets' => Aset::where('status', 'ACTIVE')->orderBy('name')->limit(300)->get(),
+        ];
     }
 }

@@ -33,6 +33,14 @@ class FinancialStatementTest extends TestCase
         $this->actingAs($accounting)->get(route('financial-statements.arus-kas.pdf'))->assertOk();
         $this->actingAs($accounting)->get(route('financial-statements.arus-kas.excel'))->assertOk();
 
+        $this->actingAs($accounting)->get(route('financial-statements.perubahan-ekuitas'))->assertOk()->assertSee('Laporan Perubahan Ekuitas');
+        $this->actingAs($accounting)->get(route('financial-statements.perubahan-ekuitas.pdf'))->assertOk();
+        $this->actingAs($accounting)->get(route('financial-statements.perubahan-ekuitas.excel'))->assertOk();
+
+        $this->actingAs($accounting)->get(route('financial-statements.calk'))->assertOk()->assertSee('Catatan atas Laporan Keuangan');
+        $this->actingAs($accounting)->get(route('financial-statements.calk.pdf'))->assertOk();
+        $this->actingAs($accounting)->get(route('financial-statements.calk.excel'))->assertOk();
+
         $this->actingAs($accounting)->get(route('financial-statements.pajak-penghasilan'))->assertOk()->assertSee('PPh Badan');
         $this->actingAs($accounting)->get(route('financial-statements.rekonsiliasi-fiskal'))->assertOk()->assertSee('Rekonsiliasi Fiskal');
         $this->actingAs($accounting)->get(route('financial-statements.rekonsiliasi-fiskal.pdf'))->assertOk();
@@ -48,6 +56,8 @@ class FinancialStatementTest extends TestCase
         $this->actingAs($purchasing)->get(route('financial-statements.laba-rugi'))->assertForbidden();
         $this->actingAs($purchasing)->get(route('financial-statements.neraca'))->assertForbidden();
         $this->actingAs($purchasing)->get(route('financial-statements.arus-kas'))->assertForbidden();
+        $this->actingAs($purchasing)->get(route('financial-statements.perubahan-ekuitas'))->assertForbidden();
+        $this->actingAs($purchasing)->get(route('financial-statements.calk'))->assertForbidden();
         $this->actingAs($purchasing)->get(route('financial-statements.pajak-penghasilan'))->assertForbidden();
         $this->actingAs($purchasing)->post(route('financial-statements.pajak-penghasilan.posting'), [
             'tahun_pajak' => today()->year,
@@ -80,6 +90,131 @@ class FinancialStatementTest extends TestCase
             ['OPERASI', 'INVESTASI', 'PENDANAAN'],
             $data['sections']->pluck('kelompok')->all()
         );
+    }
+
+    public function test_changes_in_equity_ties_out_to_the_balance_sheet(): void
+    {
+        $service = app(FinancialStatementService::class);
+        $data = $service->changesInEquity(today()->subYears(5), today());
+        $neraca = $service->balanceSheet(today());
+
+        $this->assertEqualsWithDelta(0.0, $data['selisih'], 0.01);
+        $this->assertEqualsWithDelta($neraca['total_ekuitas'], $data['total_saldo_akhir'], 0.01);
+        $this->assertEqualsWithDelta(
+            $data['total_saldo_awal'] + $data['total_setoran'] - $data['total_penarikan'] + $data['total_laba_bersih'],
+            $data['total_saldo_akhir'],
+            0.01
+        );
+
+        $labaRugi = $service->incomeStatement(today()->subYears(5), today());
+        $this->assertEqualsWithDelta($labaRugi['laba_bersih'], $data['total_laba_bersih'], 0.01);
+
+        $this->assertTrue(
+            $data['komponen']->contains(fn ($row) => $row['account'] === null),
+            'Komponen laba ditahan harus selalu hadir.'
+        );
+    }
+
+    public function test_equity_injection_shows_as_penambahan_and_keeps_the_statement_tied_out(): void
+    {
+        $service = app(FinancialStatementService::class);
+        $ekuitas = BaganAkun::where('kategori_akun', 'EKUITAS')->orderBy('kode_akun')->firstOrFail();
+        $kasBank = BaganAkun::where('is_cash_bank', true)->firstOrFail();
+
+        $sebelum = $service->changesInEquity(today()->startOfYear(), today());
+
+        $jurnal = \App\Models\Jurnal::create([
+            'no_jurnal' => 'TEST-EKUITAS-1',
+            'tanggal' => today(),
+            'keterangan' => 'Setoran modal tambahan',
+            'sumber_transaksi' => 'MANUAL',
+            'status' => 'POSTED',
+            'total_debit' => 7500000,
+            'total_kredit' => 7500000,
+        ]);
+        $jurnal->details()->createMany([
+            ['coa_id' => $kasBank->id, 'debit' => 7500000, 'kredit' => 0],
+            ['coa_id' => $ekuitas->id, 'debit' => 0, 'kredit' => 7500000],
+        ]);
+
+        $sesudah = $service->changesInEquity(today()->startOfYear(), today());
+
+        $this->assertEqualsWithDelta($sebelum['total_setoran'] + 7500000, $sesudah['total_setoran'], 0.01);
+        $this->assertEqualsWithDelta($sebelum['total_saldo_awal'], $sesudah['total_saldo_awal'], 0.01);
+        $this->assertEqualsWithDelta($sebelum['total_saldo_akhir'] + 7500000, $sesudah['total_saldo_akhir'], 0.01);
+        $this->assertEqualsWithDelta(0.0, $sesudah['selisih'], 0.01);
+
+        $baris = $sesudah['komponen']->firstWhere('account.id', $ekuitas->id);
+        $this->assertNotNull($baris, 'Akun ekuitas yang dimutasi harus muncul sebagai komponen.');
+        $this->assertEqualsWithDelta($baris['saldo_awal'] + $baris['setoran'] - $baris['penarikan'], $baris['saldo_akhir'], 0.01);
+    }
+
+    public function test_calk_pulls_its_numbers_from_the_ledger_and_balances(): void
+    {
+        $calk = app(\App\Services\CalkService::class)->susun(today()->startOfYear(), today());
+        $neraca = app(FinancialStatementService::class)->balanceSheet(today());
+
+        $bagian = $calk['rincian']->keyBy('judul');
+
+        $this->assertEqualsWithDelta($neraca['total_aset'], $bagian['Rincian Aset']['total'], 0.01);
+        $this->assertEqualsWithDelta($neraca['total_liabilitas'], $bagian['Rincian Liabilitas']['total'], 0.01);
+        $this->assertEqualsWithDelta($neraca['total_ekuitas'], $bagian['Rincian Ekuitas']['total'], 0.01);
+        $this->assertEqualsWithDelta(
+            $bagian['Rincian Aset']['total'],
+            $bagian['Rincian Liabilitas']['total'] + $bagian['Rincian Ekuitas']['total'],
+            0.01,
+            'Rincian CALK harus tetap menyeimbangkan neraca.'
+        );
+    }
+
+    public function test_calk_narrative_defaults_to_a_template_then_persists_what_is_saved(): void
+    {
+        $accounting = User::factory()->create(['type' => User::ROLE_ACCOUNTING]);
+        $service = app(\App\Services\CalkService::class);
+        $from = today()->startOfYear();
+        $to = today();
+
+        $sebelum = $service->susun($from, $to);
+        $this->assertTrue($sebelum['naratif']['kebijakan_akuntansi']['bawaan']);
+        $this->assertStringContainsString('FIFO', $sebelum['naratif']['kebijakan_akuntansi']['isi']);
+        $this->assertNull($sebelum['naratif']['gambaran_umum']['isi']);
+
+        $this->actingAs($accounting)->post(route('financial-statements.calk.simpan'), [
+            'from' => $from->format('Y-m-d'),
+            'to' => $to->format('Y-m-d'),
+            'gambaran_umum' => 'Entitas bergerak di bidang manufaktur.',
+            'kebijakan_akuntansi' => 'Kebijakan khusus entitas ini.',
+            'peristiwa_setelah_periode' => '',
+            'komitmen_kontinjensi' => '',
+        ])->assertRedirect();
+
+        $sesudah = $service->susun($from, $to);
+        $this->assertFalse($sesudah['naratif']['kebijakan_akuntansi']['bawaan']);
+        $this->assertSame('Kebijakan khusus entitas ini.', $sesudah['naratif']['kebijakan_akuntansi']['isi']);
+        $this->assertSame('Entitas bergerak di bidang manufaktur.', $sesudah['naratif']['gambaran_umum']['isi']);
+        $this->assertSame($accounting->id, $sesudah['catatan']->disusun_oleh);
+
+        $this->actingAs($accounting)->post(route('financial-statements.calk.simpan'), [
+            'from' => $from->format('Y-m-d'),
+            'to' => $to->format('Y-m-d'),
+            'gambaran_umum' => 'Direvisi.',
+        ])->assertRedirect();
+
+        $this->assertSame(1, \App\Models\CatatanLaporanKeuangan::whereDate('periode_dari', $from)->count());
+        $this->assertSame('Direvisi.', $service->susun($from, $to)['naratif']['gambaran_umum']['isi']);
+    }
+
+    public function test_calk_cannot_be_saved_by_a_non_accounting_role(): void
+    {
+        $purchasing = User::factory()->create(['type' => User::ROLE_PURCHASING]);
+
+        $this->actingAs($purchasing)->post(route('financial-statements.calk.simpan'), [
+            'from' => today()->startOfYear()->format('Y-m-d'),
+            'to' => today()->format('Y-m-d'),
+            'gambaran_umum' => 'Percobaan.',
+        ])->assertForbidden();
+
+        $this->assertSame(0, \App\Models\CatatanLaporanKeuangan::count());
     }
 
     public function test_fiscal_reconciliation_adds_back_permanent_differences_and_defers_timing_ones(): void

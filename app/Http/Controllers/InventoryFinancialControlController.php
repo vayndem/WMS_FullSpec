@@ -12,7 +12,9 @@ use App\Models\PenerimaanBarang;
 use App\Models\PemakaianBarang;
 use App\Models\ReturPembelian;
 use App\Services\DocumentNumberService;
-use App\Services\InventoryReversalService;
+use App\Models\PermintaanPersetujuan;
+use App\Services\PersetujuanOperasiService;
+use RuntimeException;
 use App\Services\LandedCostService;
 use App\Services\ThreeWayMatchService;
 use Illuminate\Http\RedirectResponse;
@@ -54,24 +56,60 @@ class InventoryFinancialControlController extends Controller
         return back()->with('success', 'Landed cost diposting ke layer dan GL.');
     }
 
-    public function reverseLpb(ReverseInventoryDocumentRequest $request, PenerimaanBarang $lpb, InventoryReversalService $service): RedirectResponse
+    public function reverseLpb(ReverseInventoryDocumentRequest $request, PenerimaanBarang $lpb, PersetujuanOperasiService $persetujuan): RedirectResponse
     {
-        $service->reverseLpb($lpb, $request->validated('reason'));
-
-        return back()->with('success', 'LPB dan jurnal berhasil dibalik.');
+        return $this->ajukanPembalikan(
+            $request,
+            $persetujuan,
+            PersetujuanOperasiService::REVERSE_LPB,
+            "Pembalikan penerimaan barang {$lpb->id_lpb}",
+            $lpb
+        );
     }
 
-    public function reverseNpk(ReverseInventoryDocumentRequest $request, PemakaianBarang $npk, InventoryReversalService $service): RedirectResponse
+    public function reverseNpk(ReverseInventoryDocumentRequest $request, PemakaianBarang $npk, PersetujuanOperasiService $persetujuan): RedirectResponse
     {
-        $service->reverseNpk($npk, $request->validated('reason'));
-
-        return back()->with('success', 'NPK, FIFO, stok, dan jurnal berhasil dibalik.');
+        return $this->ajukanPembalikan(
+            $request,
+            $persetujuan,
+            PersetujuanOperasiService::REVERSE_NPK,
+            "Pembalikan pemakaian barang {$npk->kode}",
+            $npk
+        );
     }
 
-    public function reverseReturPembelian(ReverseInventoryDocumentRequest $request, ReturPembelian $returPembelian, InventoryReversalService $service): RedirectResponse
+    public function reverseReturPembelian(ReverseInventoryDocumentRequest $request, ReturPembelian $returPembelian, PersetujuanOperasiService $persetujuan): RedirectResponse
     {
-        $service->reverseReturPembelian($returPembelian, $request->validated('reason'));
+        return $this->ajukanPembalikan(
+            $request,
+            $persetujuan,
+            PersetujuanOperasiService::REVERSE_RETUR,
+            "Pembalikan retur pembelian {$returPembelian->no_retur}",
+            $returPembelian
+        );
+    }
 
-        return back()->with('success', 'Retur pembelian, stok, dan jurnal berhasil dibalik.');
+    private function ajukanPembalikan(
+        ReverseInventoryDocumentRequest $request,
+        PersetujuanOperasiService $persetujuan,
+        string $subJenis,
+        string $ringkasan,
+        $dokumen
+    ): RedirectResponse {
+        try {
+            $permintaan = $persetujuan->ajukan(
+                PermintaanPersetujuan::PEMBALIKAN_DOKUMEN,
+                $subJenis,
+                $ringkasan,
+                [],
+                (string) $request->validated('reason'),
+                $request->user(),
+                $dokumen
+            );
+        } catch (RuntimeException $e) {
+            return back()->withErrors(['persetujuan' => $e->getMessage()]);
+        }
+
+        return back()->with('success', "Pembalikan diajukan sebagai {$permintaan->nomor} dan menunggu persetujuan Accounting Manager.");
     }
 }

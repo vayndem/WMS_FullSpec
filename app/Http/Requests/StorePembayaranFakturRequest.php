@@ -74,7 +74,9 @@ class StorePembayaranFakturRequest extends FormRequest
                 return;
             }
 
-            if (!$invoice || !$source->invoice || (int) $source->invoice->kode_supplier !== (int) $invoice->kode_supplier) {
+            $supplierUangMuka = (int) ($source->supplier_id ?: $source->invoice?->kode_supplier);
+
+            if (!$invoice || $supplierUangMuka === 0 || $supplierUangMuka !== (int) $invoice->kode_supplier) {
                 $validator->errors()->add('uang_muka_sumber_payment_id', 'Uang muka hanya bisa dipakai untuk invoice dari supplier yang sama.');
                 return;
             }

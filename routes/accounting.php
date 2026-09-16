@@ -7,6 +7,7 @@ use App\Http\Controllers\ExecutiveDashboardController;
 use App\Http\Controllers\FinancialStatementController;
 use App\Http\Controllers\JurnalController;
 use App\Http\Controllers\JurnalDetailController;
+use App\Http\Controllers\PermintaanPersetujuanController;
 use App\Http\Controllers\TaxRateController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,11 +22,17 @@ Route::middleware('auth')->group(function () {
     Route::get('jurnal-report/pdf', [JurnalController::class, 'reportPdf'])->name('jurnal.report.pdf');
     Route::get('jurnal-report/excel', [JurnalController::class, 'reportExcel'])->name('jurnal.report.excel');
     Route::post('jurnal/{jurnal}/post', [JurnalController::class, 'post'])->name('jurnal.post');
+    Route::post('jurnal/{jurnal}/approve', [JurnalController::class, 'approve'])->name('jurnal.approve');
+    Route::post('jurnal/{jurnal}/reject', [JurnalController::class, 'reject'])->name('jurnal.reject');
     Route::post('jurnal/{jurnal}/reverse', [JurnalController::class, 'reverse'])->name('jurnal.reverse');
     Route::resource('jurnal', JurnalController::class);
     Route::post('jurnal-detail', [JurnalDetailController::class, 'store'])->name('jurnal-detail.store');
     Route::put('jurnal-detail/{id}', [JurnalDetailController::class, 'update'])->name('jurnal-detail.update');
     Route::delete('jurnal-detail/{id}', [JurnalDetailController::class, 'destroy'])->name('jurnal-detail.destroy');
+
+    Route::get('permintaan-persetujuan', [PermintaanPersetujuanController::class, 'index'])->name('permintaan-persetujuan.index');
+    Route::post('permintaan-persetujuan/{permintaan}/approve', [PermintaanPersetujuanController::class, 'approve'])->name('permintaan-persetujuan.approve');
+    Route::post('permintaan-persetujuan/{permintaan}/reject', [PermintaanPersetujuanController::class, 'reject'])->name('permintaan-persetujuan.reject');
 
     Route::get('reconciliation', [AccountingReconciliationController::class, 'index'])->name('reconciliation.index');
     Route::get('reconciliation/{check}', [AccountingReconciliationController::class, 'show'])->name('reconciliation.show');
@@ -50,6 +57,13 @@ Route::middleware('auth')->group(function () {
     Route::get('financial-statements/arus-kas', [FinancialStatementController::class, 'arusKas'])->name('financial-statements.arus-kas');
     Route::get('financial-statements/arus-kas/pdf', [FinancialStatementController::class, 'arusKasPdf'])->name('financial-statements.arus-kas.pdf');
     Route::get('financial-statements/arus-kas/excel', [FinancialStatementController::class, 'arusKasExcel'])->name('financial-statements.arus-kas.excel');
+    Route::get('financial-statements/perubahan-ekuitas', [FinancialStatementController::class, 'perubahanEkuitas'])->name('financial-statements.perubahan-ekuitas');
+    Route::get('financial-statements/perubahan-ekuitas/pdf', [FinancialStatementController::class, 'perubahanEkuitasPdf'])->name('financial-statements.perubahan-ekuitas.pdf');
+    Route::get('financial-statements/perubahan-ekuitas/excel', [FinancialStatementController::class, 'perubahanEkuitasExcel'])->name('financial-statements.perubahan-ekuitas.excel');
+    Route::get('financial-statements/calk', [FinancialStatementController::class, 'calk'])->name('financial-statements.calk');
+    Route::post('financial-statements/calk', [FinancialStatementController::class, 'simpanCalk'])->name('financial-statements.calk.simpan');
+    Route::get('financial-statements/calk/pdf', [FinancialStatementController::class, 'calkPdf'])->name('financial-statements.calk.pdf');
+    Route::get('financial-statements/calk/excel', [FinancialStatementController::class, 'calkExcel'])->name('financial-statements.calk.excel');
     Route::get('financial-statements/neraca', [FinancialStatementController::class, 'neraca'])->name('financial-statements.neraca');
     Route::get('financial-statements/neraca/pdf', [FinancialStatementController::class, 'neracaPdf'])->name('financial-statements.neraca.pdf');
     Route::get('financial-statements/neraca/excel', [FinancialStatementController::class, 'neracaExcel'])->name('financial-statements.neraca.excel');

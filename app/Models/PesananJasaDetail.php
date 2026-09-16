@@ -30,6 +30,10 @@ class PesananJasaDetail extends Model
     {
         return $this->belongsTo(KategoriBahan::class, 'id_kategori');
     }
+    public function aset(): BelongsTo
+    {
+        return $this->belongsTo(Aset::class, 'aset_id');
+    }
     public function bapDetails(): HasMany
     {
         return $this->hasMany(PenerimaanJasaDetail::class, 'service_po_detail_id');

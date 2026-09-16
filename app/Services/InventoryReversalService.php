@@ -23,6 +23,7 @@ class InventoryReversalService
         private WmsAccountingService $accounting,
         private DocumentNumberService $numbers,
         private AccountingPeriodService $periods,
+        private DataPesananService $dataPesanan,
     ) {}
 
     public function reverseNpk(PemakaianBarang $npk, string $reason): PembalikanDokumen
@@ -35,6 +36,10 @@ class InventoryReversalService
             $unitCost = (float) $npk->harga_satuan;
             $quantity = (float) $npk->jumlah_stok > 0 ? (float) $npk->jumlah_stok : (float) $npk->jumlah;
             if ($quantity <= 0) throw new RuntimeException('Jumlah NPK tidak valid untuk reversal.');
+            $pesananProduksi = $npk->data_pesanan_id ? \App\Models\DataPesanan::find($npk->data_pesanan_id) : null;
+            if ($pesananProduksi) {
+                $this->dataPesanan->hapusBiaya($pesananProduksi, \App\Models\DataPesananBiaya::NPK, (int) $npk->id);
+            }
             $this->accounting->restoreStock($npk, false);
             $this->stock->masuk((int) $npk->id_gudang_asal, (int) $npk->id_barang, $quantity, $unitCost, 'REVERSAL_NPK', 'NPK', $npk->id, $reason);
             $journal = $this->accounting->reverseAutomaticJournal('NPK', $npk->id, "Reversal NPK {$npk->kode}: {$reason}");

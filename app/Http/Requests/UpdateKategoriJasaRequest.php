@@ -21,6 +21,7 @@ class UpdateKategoriJasaRequest extends FormRequest
         return [
             'expense_coa_id' => ['required', 'integer', $available],
             'grni_coa_id' => ['required', 'integer', $available],
+            'perlakuan' => ['required', Rule::in(array_keys(KategoriJasa::PERLAKUAN))],
             'is_active' => 'nullable|boolean',
         ];
     }

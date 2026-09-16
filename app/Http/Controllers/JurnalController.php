@@ -272,14 +272,43 @@ class JurnalController extends Controller
         $credit = round((float) $jurnal->details->sum('kredit'), 2);
         abort_if($debit <= 0 || abs($debit - $credit) > 0.01, 422, 'Jurnal belum seimbang.');
         $jurnal->update([
+            'status' => 'PENDING_APPROVAL',
+            'total_debit' => $debit,
+            'total_kredit' => $credit,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Jurnal diajukan dan menunggu persetujuan Accounting Manager sebelum masuk buku besar.',
+        ]);
+    }
+
+    public function approve($id)
+    {
+        $jurnal = Jurnal::with('details')->findOrFail($id);
+        $this->authorize('approve', $jurnal);
+        $this->periods->assertOpen($jurnal->tanggal, 'Jurnal manual');
+        $debit = round((float) $jurnal->details->sum('debit'), 2);
+        $credit = round((float) $jurnal->details->sum('kredit'), 2);
+        abort_if($debit <= 0 || abs($debit - $credit) > 0.01, 422, 'Jurnal belum seimbang.');
+        $jurnal->update([
             'status' => 'POSTED',
             'posted_by' => Auth::id(),
             'posted_at' => now(),
             'total_debit' => $debit,
-            'total_kredit' => $credit
+            'total_kredit' => $credit,
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Jurnal berhasil diposting dan sekarang terkunci.']);
+        return response()->json(['success' => true, 'message' => 'Jurnal disetujui, diposting, dan sekarang terkunci.']);
+    }
+
+    public function reject($id)
+    {
+        $jurnal = Jurnal::findOrFail($id);
+        $this->authorize('approve', $jurnal);
+        $jurnal->update(['status' => 'DRAFT']);
+
+        return response()->json(['success' => true, 'message' => 'Jurnal dikembalikan ke draft untuk diperbaiki.']);
     }
 
     public function reverse($id)

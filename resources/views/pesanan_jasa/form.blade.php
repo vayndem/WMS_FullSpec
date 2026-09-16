@@ -55,6 +55,16 @@
                             <input required name="items[{{ $i }}][unit]" class="input input-bordered md:col-span-1" value="{{ $row['unit'] ?? 'JOB' }}">
                             <input required type="number" min=".01" step=".01" name="items[{{ $i }}][unit_price]" class="input input-bordered md:col-span-2" data-money-input placeholder="Harga" value="{{ $row['unit_price'] ?? '' }}">
                             <button type="button" class="btn btn-outline btn-error remove-row md:col-span-1">&times;</button>
+                            <select name="items[{{ $i }}][aset_id]" class="select select-bordered select-sm md:col-span-5">
+                                <option value="">Tanpa aset (jasa dibebankan)</option>
+                                @foreach ($asets as $aset)
+                                    <option value="{{ $aset->id }}" @selected(($row['aset_id'] ?? null) == $aset->id)>{{ $aset->nomor_aset }} — {{ $aset->name }}</option>
+                                @endforeach
+                            </select>
+                            <input type="number" min="0" max="600" name="items[{{ $i }}][tambahan_umur_bulan]" class="input input-bordered input-sm md:col-span-3" placeholder="Tambahan umur (bulan)" value="{{ $row['tambahan_umur_bulan'] ?? '' }}">
+                            <p class="text-xs text-base-content/50 md:col-span-4">
+                                Isi aset hanya bila kategori jasanya berperlakuan <strong>Kapitalisasi</strong> (PSAK 16).
+                            </p>
                         </div>
                     @endforeach
                 </div>

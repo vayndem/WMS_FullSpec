@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\BaganAkun;
+use App\Http\Requests\SimpanCatatanLaporanKeuanganRequest;
 use App\Http\Requests\StorePerhitunganPajakPenghasilanRequest;
 use App\Models\PerhitunganPajakPenghasilan;
+use App\Services\CalkService;
 use App\Services\FinancialStatementService;
 use App\Services\PajakPenghasilanService;
 use App\Services\RekonsiliasiFiskalService;
@@ -21,6 +23,7 @@ class FinancialStatementController extends Controller
         private FinancialStatementService $statements,
         private RekonsiliasiFiskalService $fiskal,
         private PajakPenghasilanService $pph,
+        private CalkService $calk,
     ) {}
 
     private function fiskalSections(array $data, bool $formatted): array
@@ -450,6 +453,208 @@ class FinancialStatementController extends Controller
                 $this->arusKasSections($data, false)
             ),
             'laporan-arus-kas-' . now()->format('Ymd-His') . '.xlsx'
+        );
+    }
+
+    private function perubahanEkuitasData(Request $request): array
+    {
+        $from = $this->parseDate($request->input('from'), today()->startOfYear());
+        $to = $this->parseDate($request->input('to'), today());
+
+        return [$from, $to, $this->statements->changesInEquity($from, $to)];
+    }
+
+    private function perubahanEkuitasKolom(): array
+    {
+        return [
+            ['key' => 'nama', 'label' => 'Komponen Ekuitas', 'align' => 'left'],
+            ['key' => 'saldo_awal', 'label' => 'Saldo Awal', 'align' => 'right'],
+            ['key' => 'setoran', 'label' => 'Penambahan', 'align' => 'right'],
+            ['key' => 'penarikan', 'label' => 'Pengurangan', 'align' => 'right'],
+            ['key' => 'laba_bersih', 'label' => 'Laba (Rugi) Periode', 'align' => 'right'],
+            ['key' => 'saldo_akhir', 'label' => 'Saldo Akhir', 'align' => 'right'],
+        ];
+    }
+
+    private function perubahanEkuitasSections(array $data, bool $formatted): array
+    {
+        $uang = fn ($nilai) => $formatted ? 'Rp ' . number_format($nilai, 0, ',', '.') : (float) $nilai;
+
+        $sections = [[
+            'label' => 'Komponen Ekuitas',
+            'rows' => $data['komponen']->map(fn ($row) => [
+                'nama' => $row['nama'],
+                'saldo_awal' => $uang($row['saldo_awal']),
+                'setoran' => $uang($row['setoran']),
+                'penarikan' => $uang($row['penarikan']),
+                'laba_bersih' => $uang($row['laba_bersih']),
+                'saldo_akhir' => $uang($row['saldo_akhir']),
+            ]),
+            'subtotal' => [
+                'nama' => 'Total Ekuitas',
+                'saldo_awal' => $uang($data['total_saldo_awal']),
+                'setoran' => $uang($data['total_setoran']),
+                'penarikan' => $uang($data['total_penarikan']),
+                'laba_bersih' => $uang($data['total_laba_bersih']),
+                'saldo_akhir' => $uang($data['total_saldo_akhir']),
+            ],
+        ]];
+
+        $baris = fn (string $nama, $nilai) => [
+            'nama' => $nama,
+            'saldo_awal' => '',
+            'setoran' => '',
+            'penarikan' => '',
+            'laba_bersih' => '',
+            'saldo_akhir' => $uang($nilai),
+        ];
+
+        $rekonsiliasi = collect([
+            $baris('Ekuitas akhir menurut laporan ini', $data['total_saldo_akhir']),
+            $baris('Ekuitas akhir menurut neraca', $data['saldo_akhir_buku']),
+        ]);
+
+        if (abs($data['selisih']) >= 0.01) {
+            $rekonsiliasi->push($baris('Selisih', $data['selisih']));
+        }
+
+        $sections[] = ['label' => 'Rekonsiliasi dengan Neraca', 'rows' => $rekonsiliasi, 'subtotal' => null];
+
+        return $sections;
+    }
+
+    public function perubahanEkuitas(Request $request)
+    {
+        $this->authorize('viewFinancialStatements');
+
+        [$from, $to, $data] = $this->perubahanEkuitasData($request);
+
+        return view('financial_statements.perubahan-ekuitas', compact('from', 'to', 'data'));
+    }
+
+    public function perubahanEkuitasPdf(Request $request)
+    {
+        $this->authorize('viewFinancialStatements');
+
+        [$from, $to, $data] = $this->perubahanEkuitasData($request);
+
+        return Pdf::loadView('reports.financial-statement-pdf', [
+            'title' => 'Laporan Perubahan Ekuitas ' . $from->format('d-m-Y') . ' s.d. ' . $to->format('d-m-Y'),
+            'columns' => $this->perubahanEkuitasKolom(),
+            'sections' => $this->perubahanEkuitasSections($data, true),
+            'footer' => null,
+            'generatedAt' => now(),
+        ])->setPaper('a4', 'landscape')->stream('laporan-perubahan-ekuitas.pdf');
+    }
+
+    public function perubahanEkuitasExcel(Request $request)
+    {
+        $this->authorize('viewFinancialStatements');
+
+        [$from, $to, $data] = $this->perubahanEkuitasData($request);
+
+        return Excel::download(
+            new FinancialStatementExport(
+                $this->perubahanEkuitasKolom(),
+                $this->perubahanEkuitasSections($data, false)
+            ),
+            'laporan-perubahan-ekuitas-' . now()->format('Ymd-His') . '.xlsx'
+        );
+    }
+
+    private function calkData(Request $request): array
+    {
+        $from = $this->parseDate($request->input('from'), today()->startOfYear());
+        $to = $this->parseDate($request->input('to'), today());
+
+        return [$from, $to, $this->calk->susun($from, $to)];
+    }
+
+    private function calkSections(array $data, bool $formatted): array
+    {
+        $uang = fn ($nilai) => $formatted ? 'Rp ' . number_format($nilai, 0, ',', '.') : (float) $nilai;
+
+        $sections = [];
+
+        foreach ($data['naratif'] as $bagian) {
+            $teks = trim((string) $bagian['isi']);
+
+            $sections[] = [
+                'label' => $bagian['judul'],
+                'rows' => collect(preg_split('/\R/', $teks === '' ? 'Belum diisi.' : $teks))
+                    ->map(fn ($baris) => trim($baris))
+                    ->filter(fn ($baris) => $baris !== '')
+                    ->map(fn ($baris) => ['nama_akun' => $baris, 'jumlah' => ''])
+                    ->values(),
+                'subtotal' => null,
+            ];
+        }
+
+        foreach ($data['rincian'] as $bagian) {
+            $sections[] = [
+                'label' => $bagian['judul'],
+                'rows' => $bagian['baris']->map(fn ($baris) => [
+                    'nama_akun' => $baris['label'] . (isset($baris['catatan']) ? ' (' . $baris['catatan'] . ')' : ''),
+                    'jumlah' => $uang($baris['nilai']),
+                ]),
+                'subtotal' => ['nama_akun' => 'Jumlah', 'jumlah' => $uang($bagian['total'])],
+            ];
+        }
+
+        return $sections;
+    }
+
+    public function calk(Request $request)
+    {
+        $this->authorize('viewFinancialStatements');
+
+        [$from, $to, $data] = $this->calkData($request);
+
+        return view('financial_statements.calk', compact('from', 'to', 'data'));
+    }
+
+    public function simpanCalk(SimpanCatatanLaporanKeuanganRequest $request)
+    {
+        $from = $this->parseDate($request->input('from'), today()->startOfYear());
+        $to = $this->parseDate($request->input('to'), today());
+
+        $this->calk->simpan($from, $to, $request->validated(), $request->user()?->id);
+
+        return redirect()
+            ->route('financial-statements.calk', ['from' => $from->format('Y-m-d'), 'to' => $to->format('Y-m-d')])
+            ->with('success', 'Catatan atas laporan keuangan tersimpan.');
+    }
+
+    public function calkPdf(Request $request)
+    {
+        $this->authorize('viewFinancialStatements');
+
+        [$from, $to, $data] = $this->calkData($request);
+
+        return Pdf::loadView('reports.financial-statement-pdf', [
+            'title' => 'Catatan atas Laporan Keuangan ' . $from->format('d-m-Y') . ' s.d. ' . $to->format('d-m-Y'),
+            'columns' => [
+                ['key' => 'nama_akun', 'label' => 'Keterangan', 'align' => 'left'],
+                ['key' => 'jumlah', 'label' => 'Jumlah', 'align' => 'right'],
+            ],
+            'sections' => $this->calkSections($data, true),
+            'footer' => null,
+            'generatedAt' => now(),
+        ])->stream('catatan-atas-laporan-keuangan.pdf');
+    }
+
+    public function calkExcel(Request $request)
+    {
+        $this->authorize('viewFinancialStatements');
+
+        [$from, $to, $data] = $this->calkData($request);
+
+        return Excel::download(
+            new FinancialStatementExport(
+                [['key' => 'nama_akun', 'label' => 'Keterangan'], ['key' => 'jumlah', 'label' => 'Jumlah']],
+                $this->calkSections($data, false)
+            ),
+            'catatan-atas-laporan-keuangan-' . now()->format('Ymd-His') . '.xlsx'
         );
     }
 

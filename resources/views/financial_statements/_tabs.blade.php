@@ -11,8 +11,14 @@
     <a role="tab" href="{{ route('financial-statements.neraca') }}" class="tab {{ request()->routeIs('financial-statements.neraca') ? 'tab-active' : '' }}">
         <i class="fa-solid fa-building-columns"></i>&nbsp;Neraca
     </a>
+    <a role="tab" href="{{ route('financial-statements.perubahan-ekuitas') }}" class="tab {{ request()->routeIs('financial-statements.perubahan-ekuitas') ? 'tab-active' : '' }}">
+        <i class="fa-solid fa-arrow-trend-up"></i>&nbsp;Perubahan Ekuitas
+    </a>
     <a role="tab" href="{{ route('financial-statements.arus-kas') }}" class="tab {{ request()->routeIs('financial-statements.arus-kas') ? 'tab-active' : '' }}">
         <i class="fa-solid fa-money-bill-transfer"></i>&nbsp;Arus Kas
+    </a>
+    <a role="tab" href="{{ route('financial-statements.calk') }}" class="tab {{ request()->routeIs('financial-statements.calk') ? 'tab-active' : '' }}">
+        <i class="fa-solid fa-book-open"></i>&nbsp;CALK
     </a>
     <a role="tab" href="{{ route('financial-statements.rekonsiliasi-fiskal') }}" class="tab {{ request()->routeIs('financial-statements.rekonsiliasi-fiskal') ? 'tab-active' : '' }}">
         <i class="fa-solid fa-scale-unbalanced"></i>&nbsp;Rekonsiliasi Fiskal

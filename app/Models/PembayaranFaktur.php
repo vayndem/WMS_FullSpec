@@ -18,6 +18,7 @@ class PembayaranFaktur extends Model
     protected $fillable = [
         'payment_number',
         'invoice_lpb_id',
+        'supplier_id',
         'tanggal_pembayaran',
         'metode_pembayaran',
         'coa_kas_bank_id',

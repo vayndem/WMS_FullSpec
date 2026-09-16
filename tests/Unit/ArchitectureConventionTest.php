@@ -70,7 +70,7 @@ class ArchitectureConventionTest extends TestCase
     public function test_routes_are_split_by_domain_and_cacheable(): void
     {
         $web = file_get_contents(base_path('routes/web.php'));
-        foreach (['auth.php', 'administration.php', 'warehouse.php', 'procurement.php', 'finance.php', 'accounting.php', 'assets-and-services.php'] as $routeFile) {
+        foreach (['auth.php', 'administration.php', 'warehouse.php', 'procurement.php', 'finance.php', 'accounting.php', 'assets-and-services.php', 'sales.php'] as $routeFile) {
             $this->assertStringContainsString($routeFile, $web);
             $this->assertFileExists(base_path('routes/'.$routeFile));
         }

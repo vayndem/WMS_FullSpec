@@ -34,6 +34,8 @@ class Aset extends Model
     public function acquisitionCreditAccount() { return $this->belongsTo(BaganAkun::class, 'acquisition_credit_coa_id'); }
     public function depreciations() { return $this->hasMany(PenyusutanAset::class, 'aset_id'); }
     public function disposal() { return $this->hasOne(PelepasanAset::class, 'aset_id'); }
+    public function kapitalisasi() { return $this->hasMany(KapitalisasiAset::class, 'aset_id'); }
+    public function pengeluaranDetails() { return $this->hasMany(PengeluaranBarangDetail::class, 'aset_id'); }
 
     public function suggestedMonthlyDepreciation(): float
     {

@@ -39,6 +39,11 @@ class Jurnal extends Model
         return $this->status === 'DRAFT';
     }
 
+    public function isMenungguPersetujuan(): bool
+    {
+        return $this->status === 'PENDING_APPROVAL';
+    }
+
     public function details(): HasMany
     {
         return $this->hasMany(JurnalDetail::class, 'jurnal_id');

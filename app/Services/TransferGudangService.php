@@ -13,7 +13,7 @@ use RuntimeException;
 
 class TransferGudangService
 {
-    public function __construct(private StokGudangService $stok, private DocumentOperationGuard $operations) {}
+    public function __construct(private StokGudangService $stok, private DocumentOperationGuard $operations, private WmsAccountingService $akuntansi) {}
 
     public function konfirmasi(TransferGudang $transfer): TransferGudang
     {
@@ -96,6 +96,7 @@ class TransferGudangService
                 $detail->update(['jumlah_diterima' => $quantity, 'jumlah_selisih' => (float) $detail->jumlah_dikirim - $quantity]);
             }
             $transfer->update(['status' => TransferGudang::DITERIMA, 'diterima_oleh' => Auth::id(), 'diterima_pada' => now(), 'catatan_penerimaan' => $notes, 'dikonfirmasi_oleh' => Auth::id(), 'dikonfirmasi_pada' => now()]);
+            $this->akuntansi->postTransferGudang($transfer);
             return $transfer->fresh('details');
         });
     }
