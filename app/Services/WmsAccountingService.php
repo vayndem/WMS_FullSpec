@@ -406,18 +406,31 @@ class WmsAccountingService
             throw new RuntimeException('Retur penjualan harus memiliki nilai DPP lebih besar dari nol.');
         }
 
+
         $lines = [];
 
-        $this->line($lines, AccountingSetting::accountId(AccountingSetting::RETUR_PENJUALAN), $dpp, 0,
-            "Retur penjualan {$retur->nomor}");
+        $faktur = $retur->faktur_penjualan_id ? FakturPenjualan::find($retur->faktur_penjualan_id) : null;
+        $adaPiutang = $faktur && $faktur->isTertagih();
 
-        if ($ppn > 0) {
-            $this->line($lines, AccountingSetting::accountId(AccountingSetting::PPN_KELUARAN), $ppn, 0,
-                "Koreksi PPN keluaran {$retur->nomor}");
+        if ($adaPiutang) {
+            if ($total > (float) $faktur->sisa_tagihan + 0.005) {
+                throw new RuntimeException(
+                    "Nilai retur {$retur->nomor} melebihi sisa tagihan faktur {$faktur->nomor}. "
+                    . 'Sistem ini belum punya mekanisme pengembalian uang ke pelanggan, jadi retur sebesar itu tidak bisa dijurnal.'
+                );
+            }
+
+            $this->line($lines, AccountingSetting::accountId(AccountingSetting::RETUR_PENJUALAN), $dpp, 0,
+                "Retur penjualan {$retur->nomor}");
+
+            if ($ppn > 0) {
+                $this->line($lines, AccountingSetting::accountId(AccountingSetting::PPN_KELUARAN), $ppn, 0,
+                    "Koreksi PPN keluaran {$retur->nomor}");
+            }
+
+            $this->line($lines, AccountingSetting::accountId(AccountingSetting::PIUTANG_USAHA), 0, $total,
+                "Pengurangan piutang {$retur->nomor}");
         }
-
-        $this->line($lines, AccountingSetting::accountId(AccountingSetting::PIUTANG_USAHA), 0, $total,
-            "Pengurangan piutang {$retur->nomor}");
 
         $gudangId = $retur->suratJalan?->gudang_id;
         $totalHpp = 0.0;
@@ -674,6 +687,7 @@ class WmsAccountingService
         ]);
         $reversal->details()->createMany($original->details->map(fn($line) => [
             'coa_id' => $line->coa_id,
+            'gudang_id' => $line->gudang_id,
             'debit' => $line->kredit,
             'kredit' => $line->debit,
             'keterangan' => 'Pembalik: ' . $line->keterangan,

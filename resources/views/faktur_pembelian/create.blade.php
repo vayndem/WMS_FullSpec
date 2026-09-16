@@ -78,7 +78,7 @@
                             <label class="label"><span class="label-text font-semibold">No. Invoice Supplier <span class="text-error">*</span></span></label>
                             <input type="text" x-model="form.no_invoice" class="input input-bordered" placeholder="Masukkan Nomor Invoice" required>
                         </div>
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div class="form-control">
                                 <label class="label"><span class="label-text font-semibold">Tanggal Invoice <span class="text-error">*</span></span></label>
                                 <input type="date" x-model="form.tanggal" class="input input-bordered" required>
@@ -160,7 +160,7 @@
                         </div>
                         <div class="mb-2">
                             <label class="label"><span class="label-text font-semibold">Mata Uang Asing (opsional)</span></label>
-                            <div class="grid grid-cols-3 gap-2">
+                            <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
                                 <select x-model="form.mata_uang_asing" class="select select-bordered select-sm">
                                     <option value="">Tidak ada (IDR)</option>
                                     <option value="USD">USD</option>

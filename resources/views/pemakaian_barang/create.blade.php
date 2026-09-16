@@ -20,6 +20,18 @@
                         placeholder="Masukkan kode pesanan (opsional)">
                 </div>
                 <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold">Perintah Kerja Produksi</span></label>
+                    <select name="data_pesanan_id" data-app-picker class="select select-bordered">
+                        <option value="">Bukan untuk produksi (langsung jadi beban)</option>
+                        @foreach ($perintahKerja as $wo)
+                            <option value="{{ $wo->id }}" data-gudang="{{ $wo->gudang_id }}" @selected(old('data_pesanan_id', null) == $wo->id)>
+                                {{ $wo->nomor }} &middot; {{ $wo->bahanHasil?->nama }} &middot; {{ $wo->pesananPenjualan?->pelanggan?->nama }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <span class="label-text-alt mt-1 text-base-content/50">Kalau diisi, biaya pemakaian ini masuk ke Barang Dalam Proses, bukan langsung ke beban. Gudang harus sama dengan gudang perintah kerja.</span>
+                </div>
+                <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Tanggal Transaksi <span
                                 class="text-error">*</span></span></label>
                     <input type="date" name="tanggal" class="input input-bordered" value="{{ date('Y-m-d') }}"

@@ -17,7 +17,7 @@ class StoreReturPenjualanRequest extends FormRequest
             'tanggal' => ['required', 'date'],
             'alasan' => ['required', 'string', 'min:10', 'max:1000'],
             'details' => ['required', 'array', 'min:1'],
-            'details.*.surat_jalan_detail_id' => ['required', 'integer', 'exists:wms_surat_jalan_detail,id'],
+            'details.*.surat_jalan_detail_id' => ['required', 'integer', 'distinct', 'exists:wms_surat_jalan_detail,id'],
             'details.*.jumlah' => ['required', 'numeric', 'min:0'],
         ];
     }

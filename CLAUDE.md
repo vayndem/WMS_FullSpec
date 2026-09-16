@@ -110,6 +110,12 @@ Yajra `datatables()->of(...)` endpoints hand column names straight to the `wmsDa
 
 A `\bPembelian\b` replace over `.php` files corrupted three COA seed labels and four user-facing flash messages, because the entity name is also an ordinary Indonesian word. The test suite does **not** catch corrupted display strings. **Eyeball every hit after any bulk replace** — and note that raw-string table joins with aliases (`DB::table('x as d')`) escape a naive `['"]x['"]` grep.
 
+### 9. `@php(...)` with a long expression silently stops compiling the rest of the file
+
+`@php($x = ...)` is matched by a balanced-parenthesis regex. Feed it a long enough expression and the match **fails silently**: Blade emits a bare `<?php` with no closing tag, so everything after it stays in PHP mode and the page dies with a parse error pointing at some unrelated `@endforeach` far below. The reconciliation page was broken this way from commit `a6f8694` and no test caught it, because no test opened the page.
+
+**Use the block form `@php ... @endphp` for anything beyond a trivial assignment.** And note the failure mode: a Blade parse error naming a directive you did not touch usually means an *earlier* directive failed to compile. This bit twice in one session — the second time on a freshly written `@php($presisi = abs($value - round($value)) > 0.000001 ? 6 : 0)`, minutes after the trap was documented. `KualitasTampilanTest::test_every_blade_view_compiles_to_valid_php` now compiles every view and lints the output, so it cannot reach a browser again.
+
 ### 8. Tests that stop at the service boundary miss most defects
 
 Of 11 defects a review found in the jasa build, **ten lived outside the service layer** — controller guards, Blade forms, the void/reversal path, cross-line arithmetic inside one document — and every one of them survived a green test suite because the tests called services directly. **A feature spanning HTTP → service → ledger needs at least one test that enters through the route.**
@@ -298,6 +304,18 @@ Verified against the regulations on 2026-09-11; this does not change when the co
 - **Jasa repair/pemeliharaan** — PPh 23 at 2% (mesin, peralatan, listrik, AC, bangunan). A repair that merely restores is an expense; one that extends useful life or capacity must be **capitalized** (PSAK 16).
 - **Sewa** — withholding splits by object: **selain** tanah/bangunan → PPh 23 2%; tanah dan/atau bangunan → **PPh 4(2) Final**.
 - **Tukar tambah** — **not a service.** Penyerahan barang via tukar-menukar; per UU PPN Pasal 1A barter is a PPN object and the DPP is **nilai wajar**, not book value. Classifying it as jasa gets both the DPP and the tax type wrong.
+
+### Safety nets added after the 2026-09-16 review
+
+A code review found 11 defects that all survived a green suite, because every one lived in a layer the tests never entered — controller guards, Blade forms, policies, and cross-document arithmetic. Two standing tests now cover that blind spot:
+
+- **`SmokeSemuaHalamanTest`** fires every named GET route as Super Admin and fails on any 5xx. On its first run it found three more breaks nobody had reported: the reconciliation page's Blade parse error (trap 9), a `request.show`/`edit` route pointing at controller methods that do not exist, and three report PDFs whose columns omit `align`, which the shared `table-pdf` view dereferenced unguarded. It also asserts a **ceiling on how many routes get skipped** for unresolvable parameters, so coverage cannot quietly rot.
+- **`KualitasTampilanTest`** renders every parameterless page and checks the HTML itself, not just the status: every view must compile to valid PHP, no raw Blade directive or uncompiled `{{ $x }}` may reach the browser, no listing may be silently empty without saying so, and every table must have a scroll wrapper. It also caught a Blade break within minutes of that break being introduced.
+- **`AksesPerRoleTest`** is an explicit contract of which pages each role must be able to open and which must be refused. Super Admin smoke-testing cannot catch this class at all — `Gate::before` opens everything — and two of the eleven defects were exactly this shape: the sales menu buried inside the Accounting-only sidebar section, and Accounting Manager getting 403 on the journal list it is supposed to approve.
+
+A UI sweep in the same pass fixed what those nets then measured: four views whose tables could not scroll horizontally and four with grids that never stacked on mobile (both are hard requirements in **Frontend conventions**); a warehouse-assignment delete with no confirmation; the "Match ulang" button rendered for roles that lack `matchSupplierInvoice`; and **eight raw role checks in Blade replaced with the gates they were duplicating** (`isWarehouseOperator() || isSuperAdmin()` is just `@can('operateWarehouse')` — `Gate::before` already covers Super Admin, and the duplicate would drift the moment a gate changed). The reconciliation listing was also unbounded — it rendered every (gudang × bahan) pair — and now defaults to showing only the rows in exception, capped, with the summary counts still computed from the full set.
+
+Decisions from those fixes worth keeping: a sales return on an **uninvoiced** delivery posts only the cost side and never touches Piutang Usaha; a return worth more than the invoice's outstanding is **refused** rather than clamped, because there is no customer-refund mechanism; delivery and invoice quantities are counted from the **documents that exist** (including drafts) rather than from `jumlah_terkirim`/`jumlah_terfaktur`, which only move at posting; and a draft sales invoice can now be **deleted**, since drafts legitimately claim quantity and there was otherwise no way to release a mistaken one.
 
 ### Earlier work, in one line each
 

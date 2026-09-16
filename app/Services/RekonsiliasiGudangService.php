@@ -41,7 +41,20 @@ class RekonsiliasiGudangService
             ->whereNotIn('stock_status', ['REVERSED', 'TRANSFER_SHORTAGE', 'IN_TRANSIT'])
             ->groupBy('gudang_id')
             ->select('gudang_id', DB::raw('SUM(remaining_quantity * unit_cost) as nilai'))
+            ->pluck('nilai', 'gudang_id')
+            ->map(fn ($nilai) => (float) $nilai);
+
+        $transit = DB::table('wms_layer_persediaan as l')
+            ->join('alokasi_transfer_gudangs as a', 'a.inventory_layer_tujuan_id', '=', 'l.id')
+            ->join('wms_layer_persediaan as asal', 'asal.id', '=', 'a.inventory_layer_asal_id')
+            ->where('l.stock_status', 'IN_TRANSIT')
+            ->groupBy('asal.gudang_id')
+            ->select('asal.gudang_id', DB::raw('SUM(l.remaining_quantity * l.unit_cost) as nilai'))
             ->pluck('nilai', 'gudang_id');
+
+        foreach ($transit as $gudangId => $nilai) {
+            $layer[$gudangId] = round(($layer[$gudangId] ?? 0) + (float) $nilai, 2);
+        }
 
         $gudang = DB::table('gudangs')->pluck('nama', 'id');
 

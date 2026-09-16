@@ -114,6 +114,14 @@
                                             @click="AppAlert.confirm('Setelah diposting jurnal akan terkunci. Lanjutkan?').then(r => r.isConfirmed && postJurnal(row.id))">
                                             <i class="fa-solid fa-check"></i>
                                         </button>
+                                        <button type="button" x-show="row.can_approve" class="btn btn-success btn-sm" title="Setujui dan posting"
+                                            @click="AppAlert.confirm('Setujui jurnal ini? Setelah disetujui jurnal langsung diposting dan terkunci.').then(r => r.isConfirmed && putuskanJurnal(row.id, 'approve'))">
+                                            <i class="fa-solid fa-check-double"></i>
+                                        </button>
+                                        <button type="button" x-show="row.can_approve" class="btn btn-outline btn-warning btn-sm" title="Kembalikan ke draft"
+                                            @click="AppAlert.confirm('Kembalikan jurnal ini ke draft untuk diperbaiki?').then(r => r.isConfirmed && putuskanJurnal(row.id, 'reject'))">
+                                            <i class="fa-solid fa-rotate-left"></i>
+                                        </button>
                                         <button type="button" x-show="row.can_reverse" class="btn btn-outline btn-error btn-sm" title="Balik jurnal"
                                             @click="AppAlert.confirm('Buat jurnal pembalik? Transaksi sumber tidak otomatis dibatalkan.').then(r => r.isConfirmed && reverseJurnal(row.id))">
                                             <i class="fa-solid fa-rotate-left"></i>
@@ -225,6 +233,17 @@
                             dialogEl.showModal();
                         } catch (error) {
                             window.AppAlert.error('Gagal mengambil data detail jurnal.');
+                        }
+                    },
+                    async putuskanJurnal(id, aksi) {
+                        try {
+                            const response = await fetch(`{{ url('jurnal') }}/${id}/${aksi}`, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '' } });
+                            const data = await response.json().catch(() => ({}));
+                            if (!response.ok) { window.AppAlert.error(data.message || 'Gagal memproses keputusan.'); return; }
+                            window.AppAlert.success(data.message || 'Keputusan tersimpan.');
+                            this.reload();
+                        } catch (error) {
+                            window.AppAlert.error('Gagal memproses keputusan.');
                         }
                     },
                     async postJurnal(id) {

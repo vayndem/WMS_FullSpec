@@ -57,10 +57,14 @@ class SupplierScorecardService
     {
         $selisih = 'DATEDIFF(lpb.tanggal, po.tanggal)';
 
+        $nilaiPerLpb = DB::table('wms_penerimaan_barang_detail')
+            ->groupBy('id_lpb')
+            ->select('id_lpb', DB::raw('SUM(jumlah_barang_diterima * harga) as nilai'));
+
         return DB::table('wms_penerimaan_barang as lpb')
             ->join('wms_pesanan_pembelian as po', 'po.no_po', '=', 'lpb.no_po')
             ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
-            ->leftJoin('wms_penerimaan_barang_detail as d', 'd.id_lpb', '=', 'lpb.id_lpb')
+            ->leftJoinSub($nilaiPerLpb, 'n', 'n.id_lpb', '=', 'lpb.id_lpb')
             ->where('lpb.document_type', 'GOODS')
             ->where('lpb.status', 'POSTED')
             ->whereBetween('lpb.tanggal', [$from->toDateString(), $to->toDateString()])
@@ -68,12 +72,12 @@ class SupplierScorecardService
             ->select([
                 's.id as supplier_id',
                 's.nama as supplier',
-                DB::raw('COUNT(DISTINCT lpb.id) as penerimaan'),
+                DB::raw('COUNT(lpb.id) as penerimaan'),
                 DB::raw("ROUND(AVG({$selisih}), 1) as lead_time_rata"),
                 DB::raw("MIN({$selisih}) as lead_time_tercepat"),
                 DB::raw("MAX({$selisih}) as lead_time_terlama"),
-                DB::raw("COUNT(DISTINCT CASE WHEN {$selisih} <= {$targetLeadTime} THEN lpb.id END) as penerimaan_tepat"),
-                DB::raw('COALESCE(SUM(d.jumlah_barang_diterima * d.harga), 0) as nilai_pembelian'),
+                DB::raw("SUM(CASE WHEN {$selisih} <= {$targetLeadTime} THEN 1 ELSE 0 END) as penerimaan_tepat"),
+                DB::raw('COALESCE(SUM(n.nilai), 0) as nilai_pembelian'),
             ])
             ->orderByDesc('nilai_pembelian')
             ->get()

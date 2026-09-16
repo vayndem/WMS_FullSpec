@@ -56,7 +56,7 @@
                         </div>
                     </div>
 
-                    <div class="max-h-80 overflow-y-auto rounded-box border border-base-300">
+                    <div class="max-h-80 overflow-auto rounded-box border border-base-300">
                         <table class="table table-sm">
                             <thead>
                                 <tr>

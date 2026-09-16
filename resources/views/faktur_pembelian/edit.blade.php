@@ -113,7 +113,7 @@
                         </div>
                         <div class="mb-2">
                             <label class="label"><span class="label-text font-semibold">Mata Uang Asing (opsional)</span></label>
-                            <div class="grid grid-cols-3 gap-2">
+                            <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
                                 <select name="mata_uang_asing" class="select select-bordered select-sm">
                                     <option value="" @selected(!$invoice->mata_uang_asing)>Tidak ada (IDR)</option>
                                     @foreach (['USD', 'EUR', 'SGD', 'JPY', 'CNY'] as $currency)

@@ -9,12 +9,12 @@ class JurnalPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isAccounting();
+        return $user->isAccounting() || $user->isAccountingManager();
     }
 
     public function view(User $user, Jurnal $jurnal): bool
     {
-        return $user->isAccounting();
+        return $user->isAccounting() || $user->isAccountingManager();
     }
 
     public function create(User $user): bool

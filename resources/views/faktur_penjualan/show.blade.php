@@ -10,12 +10,21 @@
                     <span class="badge {{ $faktur->status === 'PAID' ? 'badge-success' : ($faktur->status === 'DRAFT' ? 'badge-ghost' : 'badge-warning') }}">{{ $faktur->status }}</span>
                 </p>
             </div>
-            @can('post', $faktur)
-                <form method="POST" action="{{ route('faktur-penjualan.post', $faktur) }}">
-                    @csrf
-                    <button type="submit" class="btn btn-primary btn-sm">Posting Faktur</button>
-                </form>
-            @endcan
+            <div class="flex gap-2">
+                @can('post', $faktur)
+                    <form method="POST" action="{{ route('faktur-penjualan.post', $faktur) }}">
+                        @csrf
+                        <button type="submit" class="btn btn-primary btn-sm">Posting Faktur</button>
+                    </form>
+                @endcan
+                @can('delete', $faktur)
+                    <form method="POST" action="{{ route('faktur-penjualan.destroy', $faktur) }}"
+                        onsubmit="return confirm('Hapus faktur draft ini? Surat jalannya bisa difakturkan ulang setelah dihapus.')">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="btn btn-ghost btn-sm">Hapus Draft</button>
+                    </form>
+                @endcan
+            </div>
         </div>
         @if (session('success'))
             <div class="alert alert-success mb-4"><i class="fa-solid fa-circle-check"></i><span>{{ session('success') }}</span></div>

@@ -26,6 +26,7 @@
             <div class="grid grid-cols-1 gap-4 p-4 lg:grid-cols-2">
                 <div>
                     <h6 class="mb-2 font-bold text-primary">Menuju Penghasilan Kena Pajak</h6>
+                    <div class="overflow-x-auto">
                     <table class="table table-sm">
                         <tbody>
                             @foreach ([
@@ -46,10 +47,12 @@
                             </tr>
                         </tbody>
                     </table>
+                    </div>
                 </div>
 
                 <div>
                     <h6 class="mb-2 font-bold text-warning">PPh Terutang</h6>
+                    <div class="overflow-x-auto">
                     <table class="table table-sm">
                         <tbody>
                             <tr>
@@ -66,8 +69,10 @@
                             </tr>
                         </tbody>
                     </table>
+                    </div>
 
                     <h6 class="mb-2 mt-4 font-bold text-info">Pajak Tangguhan (PSAK 46)</h6>
+                    <div class="overflow-x-auto">
                     <table class="table table-sm">
                         <tbody>
                             <tr>
@@ -88,6 +93,7 @@
                             </tr>
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
 
@@ -121,6 +127,7 @@
             <div class="card border border-base-300 bg-base-100 shadow-sm">
                 <div class="border-b border-base-300 p-4"><h5 class="font-bold">Riwayat Perhitungan</h5></div>
                 <div class="overflow-x-auto">
+                    <div class="overflow-x-auto">
                     <table class="table table-sm">
                         <thead><tr><th>Tahun</th><th class="text-end">Laba Fiskal</th><th class="text-end">PKP</th><th class="text-end">PPh Terutang</th><th class="text-end">Pajak Tangguhan</th><th>Jurnal</th></tr></thead>
                         <tbody>
@@ -136,6 +143,7 @@
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
         @endif

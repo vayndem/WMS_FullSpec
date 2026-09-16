@@ -21,7 +21,7 @@ class StoreSuratJalanRequest extends FormRequest
             'pengirim' => ['nullable', 'string', 'max:100'],
             'keterangan' => ['nullable', 'string', 'max:1000'],
             'details' => ['required', 'array', 'min:1'],
-            'details.*.pesanan_penjualan_detail_id' => ['required', 'integer', 'exists:wms_pesanan_penjualan_detail,id'],
+            'details.*.pesanan_penjualan_detail_id' => ['required', 'integer', 'distinct', 'exists:wms_pesanan_penjualan_detail,id'],
             'details.*.jumlah' => ['required', 'numeric', 'min:0'],
         ];
     }

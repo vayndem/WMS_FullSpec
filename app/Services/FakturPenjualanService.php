@@ -64,7 +64,6 @@ class FakturPenjualanService
                     'total_harga' => round($sisa * $harga, 2),
                 ]);
 
-                $detail->update(['jumlah_terfaktur' => (float) $detail->jumlah]);
                 $adaBaris = true;
             }
 
@@ -108,6 +107,11 @@ class FakturPenjualanService
             }
 
             $jurnal = $this->akuntansi->postFakturPenjualan($faktur);
+
+            foreach ($faktur->details as $baris) {
+                SuratJalanDetail::whereKey($baris->surat_jalan_detail_id)
+                    ->update(['jumlah_terfaktur' => DB::raw('jumlah_terfaktur + ' . (float) $baris->jumlah)]);
+            }
 
             $faktur->update([
                 'status' => FakturPenjualan::POSTED,

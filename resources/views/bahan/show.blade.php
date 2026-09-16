@@ -94,7 +94,7 @@
             <div class="card border border-base-300 bg-base-100 shadow-sm lg:col-span-5">
                 <div class="card-body p-4">
                     <h5 class="mb-3 font-bold">Informasi Master</h5>
-                    <dl class="grid grid-cols-2 gap-y-2 text-sm">
+                    <dl class="grid grid-cols-1 gap-y-2 text-sm sm:grid-cols-2">
                         <dt class="text-base-content/50">Kategori</dt>
                         <dd>{{ $bahan->kategoriBahan->katnama ?? '-' }}</dd>
                         <dt class="text-base-content/50">Tipe barang</dt>
@@ -118,7 +118,7 @@
                         $difference = (float) $bahan->stok_onhand - $layerQuantity;
                         $isValid = abs($difference) <= 0.000001;
                     @endphp
-                    <div class="grid grid-cols-3 gap-3">
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                         <div>
                             <p class="text-sm text-base-content/50">Total layer aktif</p>
                             <p class="text-lg font-bold">{{ number_format($layerQuantity, 2, ',', '.') }} {{ $bahan->satuan }}</p>

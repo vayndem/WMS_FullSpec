@@ -36,7 +36,6 @@ class ReturPenjualanService
             )->whereIn('status', [
                 FakturPenjualan::POSTED,
                 FakturPenjualan::PARTIALLY_PAID,
-                FakturPenjualan::PAID,
             ])->first();
 
             $retur = ReturPenjualan::create([
@@ -150,6 +149,13 @@ class ReturPenjualanService
     private function kurangiFaktur(FakturPenjualan $faktur, ReturPenjualan $retur): void
     {
         $nilai = round((float) $retur->total_dpp + (float) $retur->total_ppn, 2);
+
+        if ($nilai > (float) $faktur->sisa_tagihan + 0.005) {
+            throw new RuntimeException(
+                "Nilai retur melebihi sisa tagihan faktur {$faktur->nomor}. "
+                . 'Sistem ini belum punya mekanisme pengembalian uang ke pelanggan.'
+            );
+        }
 
         $grandTotal = max(0, round((float) $faktur->grand_total - $nilai, 2));
         $dibayar = round((float) $faktur->pembayaran()

@@ -30,7 +30,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('request-report/pdf', [MaterialRequestController::class, 'reportPdf'])->name('request.report.pdf');
     Route::get('request-report/excel', [MaterialRequestController::class, 'reportExcel'])->name('request.report.excel');
-    Route::resource('request', MaterialRequestController::class);
+    Route::resource('request', MaterialRequestController::class)->only(['index', 'create', 'store']);
     Route::get('request/{request}/approve', [MaterialRequestController::class, 'approveForm'])->name('request.approveForm');
     Route::post('request/{request}/approve', [MaterialRequestController::class, 'processApprove'])->name('request.processApprove');
     Route::resource('requestdetail', RequestDetailController::class)->except(['create', 'edit']);

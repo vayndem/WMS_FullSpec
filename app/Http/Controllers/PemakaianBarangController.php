@@ -217,6 +217,15 @@ class PemakaianBarangController extends Controller
         return Excel::download(new GenericTableExport($columns, $rows), 'daftar-npk-' . now()->format('Ymd-His') . '.xlsx');
     }
 
+    private function perintahKerjaTerbuka($user)
+    {
+        return \App\Models\DataPesanan::with(['pesananPenjualan.pelanggan', 'bahanHasil'])
+            ->whereIn('status', [\App\Models\DataPesanan::DRAFT, \App\Models\DataPesanan::DIRILIS])
+            ->whereIn('gudang_id', $user->accessibleGudangIds('npk'))
+            ->orderByDesc('tanggal')
+            ->get();
+    }
+
     public function create()
     {
         $this->authorize('create', PemakaianBarang::class);
@@ -225,8 +234,9 @@ class PemakaianBarangController extends Controller
         $gudangs = $this->availableWarehouses(request()->user(), 'npk');
         $documentNumber = $this->numbers->external('NPK');
         $reservations = ReservasiPersediaan::with(['bahan', 'gudang'])->whereIn('gudang_id', request()->user()->accessibleGudangIds('npk'))->whereIn('status', ['ACTIVE', 'PICKED'])->get();
+        $perintahKerja = $this->perintahKerjaTerbuka(request()->user());
 
-        return view('pemakaian_barang.create', compact('bahans', 'gudangs', 'documentNumber', 'reservations'));
+        return view('pemakaian_barang.create', compact('bahans', 'gudangs', 'documentNumber', 'reservations', 'perintahKerja'));
     }
 
     public function store(StorePemakaianBarangRequest $request)
@@ -301,7 +311,9 @@ class PemakaianBarangController extends Controller
         $gudangs = $this->availableWarehouses(request()->user(), 'npk');
         $reservations = ReservasiPersediaan::with(['bahan', 'gudang'])->whereIn('gudang_id', request()->user()->accessibleGudangIds('npk'))->whereIn('status', ['ACTIVE', 'PICKED'])->get();
 
-        return view('pemakaian_barang.edit', compact('npk', 'bahans', 'gudangs', 'reservations'));
+        $perintahKerja = $this->perintahKerjaTerbuka(request()->user());
+
+        return view('pemakaian_barang.edit', compact('npk', 'bahans', 'gudangs', 'reservations', 'perintahKerja'));
     }
 
     public function update(UpdatePemakaianBarangRequest $request, $id)

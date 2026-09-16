@@ -25,7 +25,7 @@
             <div class="card border border-base-300 bg-base-100 shadow-sm lg:col-span-5">
                 <div class="card-body p-4">
                     <h5 class="font-bold">Identitas Aset</h5>
-                    <dl class="mt-2 grid grid-cols-2 gap-y-2 text-sm">
+                    <dl class="mt-2 grid grid-cols-1 gap-y-2 text-sm sm:grid-cols-2">
                         @foreach (['Nomor Seri' => $asset->serial_number, 'Lokasi' => $asset->location, 'Penanggung Jawab' => $asset->responsible_person, 'Kondisi' => $asset->condition, 'Tanggal Perolehan' => $asset->acquisition_date->format('d-m-Y'), 'Jenis Perolehan' => $asset->acquisition_type] as $k => $v)
                             <dt class="text-base-content/50">{{ $k }}</dt>
                             <dd>{{ $v ?: '-' }}</dd>
@@ -37,7 +37,7 @@
                 <div class="card border border-base-300 bg-base-100 shadow-sm lg:col-span-7">
                     <div class="card-body p-4">
                         <h5 class="font-bold">Nilai Finansial</h5>
-                        <div class="mt-2 grid grid-cols-2 gap-3">
+                        <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
                             @foreach ([['Harga perolehan', $asset->acquisition_cost], ['Akumulasi penyusutan', $asset->accumulated_depreciation], ['Nilai buku', $asset->book_value], ['Nilai residu', $asset->residual_value], ['Saran garis lurus/bulan', $asset->suggestedMonthlyDepreciation()]] as [$k, $v])
                                 <div>
                                     <p class="text-sm text-base-content/50">{{ $k }}</p>
@@ -56,7 +56,7 @@
                     @csrf
                     <div class="p-4">
                         <h5 class="font-bold">Posting Penyusutan Manual</h5>
-                        <div class="mt-2 grid grid-cols-2 gap-2">
+                        <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                             <div class="form-control">
                                 <label class="label"><span class="label-text">Tanggal</span></label>
                                 <input required type="date" name="posting_date" value="{{ today()->format('Y-m-d') }}" class="input input-bordered">

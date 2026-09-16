@@ -188,6 +188,30 @@
                                     </a>
                                 </li>
                             @endcan
+                            @can('viewExecutiveDashboard')
+                                <li class="{{ request()->routeIs('executive-dashboard.*') ? 'active' : '' }}">
+                                    <a href="{{ route('executive-dashboard.index') }}" class="svg-icon">
+                                        <i class="fa-solid fa-chart-line"></i><span>Dashboard Eksekutif</span>
+                                    </a>
+                                </li>
+                            @endcan
+                        </ul>
+                    </li>
+                @endif
+
+                @if (Auth::user()->can('viewAny', App\Models\Pelanggan::class) ||
+                        Auth::user()->can('viewAny', App\Models\PesananPenjualan::class) ||
+                        Auth::user()->can('viewAny', App\Models\SuratJalan::class) ||
+                        Auth::user()->can('viewAny', App\Models\FakturPenjualan::class) ||
+                        Auth::user()->can('viewAny', App\Models\DataPesanan::class) ||
+                        Auth::user()->can('viewProcurementAnalytics'))
+                    <li
+                        class="{{ request()->routeIs('pelanggan.*') || request()->routeIs('pesanan-penjualan.*') || request()->routeIs('surat-jalan.*') || request()->routeIs('faktur-penjualan.*') || request()->routeIs('data-pesanan.*') || request()->routeIs('lacak-pembelian.*') || request()->routeIs('supplier-scorecard.*') ? 'active' : '' }}">
+                        <a href="#penjualan" class="svg-icon"
+                            aria-expanded="{{ request()->routeIs('pelanggan.*') || request()->routeIs('pesanan-penjualan.*') || request()->routeIs('surat-jalan.*') || request()->routeIs('faktur-penjualan.*') || request()->routeIs('data-pesanan.*') || request()->routeIs('lacak-pembelian.*') || request()->routeIs('supplier-scorecard.*') ? 'true' : 'false' }}">
+                            <i class="fa-solid fa-cart-shopping"></i><span>Penjualan &amp; Produksi</span>
+                        </a>
+                        <ul class="sub-menu">
                             @can('viewAny', App\Models\Pelanggan::class)
                                 <li class="{{ request()->routeIs('pelanggan.*') ? 'active' : '' }}">
                                     <a href="{{ route('pelanggan.index') }}" class="svg-icon">
@@ -201,6 +225,8 @@
                                         <i class="fa-solid fa-cart-arrow-down"></i><span>Pesanan Penjualan</span>
                                     </a>
                                 </li>
+                            @endcan
+                            @can('viewAny', App\Models\SuratJalan::class)
                                 <li class="{{ request()->routeIs('surat-jalan.*') ? 'active' : '' }}">
                                     <a href="{{ route('surat-jalan.index') }}" class="svg-icon">
                                         <i class="fa-solid fa-truck-fast"></i><span>Surat Jalan</span>
@@ -230,13 +256,6 @@
                                 <li class="{{ request()->routeIs('supplier-scorecard.*') ? 'active' : '' }}">
                                     <a href="{{ route('supplier-scorecard.index') }}" class="svg-icon">
                                         <i class="fa-solid fa-ranking-star"></i><span>Kartu Skor Supplier</span>
-                                    </a>
-                                </li>
-                            @endcan
-                            @can('viewExecutiveDashboard')
-                                <li class="{{ request()->routeIs('executive-dashboard.*') ? 'active' : '' }}">
-                                    <a href="{{ route('executive-dashboard.index') }}" class="svg-icon">
-                                        <i class="fa-solid fa-chart-line"></i><span>Dashboard Eksekutif</span>
                                     </a>
                                 </li>
                             @endcan
@@ -376,7 +395,7 @@
                     auth()->user()->can('viewAny', App\Models\MutasiStok::class) ||
                     auth()->user()->can('viewAny', App\Models\PengaturanBahanGudang::class) ||
                     auth()->user()->can('viewAny', App\Models\PembagianGudang::class)
-                    || auth()->user()->isPurchasing() || auth()->user()->isAccounting()
+                    || auth()->user()->can('viewWmsControl')
                 ))
                     <li class="{{ request()->routeIs('gudangs.*','stok-gudangs.*','pembagian-gudangs.*','pengaturan-bahan-gudangs.*','transfer-gudangs.*','pemeriksaan-considers.*','mutasi-stoks.*','rekonsiliasi-gudangs.*','wms-control.*') ? 'active' : '' }}">
                         <a href="#multi-gudang" class="svg-icon">

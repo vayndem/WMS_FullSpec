@@ -8,7 +8,10 @@
             @foreach ([['Master Qty', $master_quantity], ['Gudang Qty', $warehouse_quantity], ['In Transit', $transit_quantity], ['Selisih Global', $global_quantity_difference]] as [$label, $value])
                 <div class="card border border-base-300 bg-base-100 p-4 shadow-sm">
                     <p class="text-sm text-base-content/50">{{ $label }}</p>
-                    <p class="text-xl font-bold {{ abs($value) > 0.000001 && str_contains($label, 'Selisih') ? 'text-error' : '' }}">{{ number_format($value, 6, ',', '.') }}</p>
+                    @php
+                        $presisi = abs($value - round($value)) > 0.000001 ? 6 : 0;
+                    @endphp
+                    <p class="text-xl font-bold {{ abs($value) > 0.000001 && str_contains($label, 'Selisih') ? 'text-error' : '' }}">{{ number_format($value, $presisi, ',', '.') }}</p>
                 </div>
             @endforeach
         </div>
@@ -64,12 +67,41 @@
             </div>
         @endif
 
-        @php($hasException = $quantity_exceptions || $reservation_exceptions || abs($global_quantity_difference) > .000001 || ($financial && abs($value_difference) > .01))
+        @php
+            $hasException = $quantity_exceptions
+                || $reservation_exceptions
+                || abs($global_quantity_difference) > .000001
+                || ($financial && abs($value_difference) > .01)
+                || ($financial && ($value_exceptions_per_gudang ?? 0) > 0);
+        @endphp
         <div role="alert" class="alert {{ $hasException ? 'alert-error' : 'alert-success' }} mb-4">
             <span>{{ $hasException ? 'Ditemukan ketidaksesuaian yang harus diselesaikan sebelum closing.' : 'Seluruh kontrol inventory sesuai.' }}</span>
         </div>
 
         <div class="card border border-base-300 bg-base-100 shadow-sm">
+            <form method="GET" class="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 p-4">
+                <label class="label cursor-pointer justify-start gap-3">
+                    <input type="hidden" name="hanya_selisih" value="0">
+                    <input type="checkbox" name="hanya_selisih" value="1" @checked($hanya_selisih)
+                        class="checkbox checkbox-sm" onchange="this.form.submit()">
+                    <span class="label-text">Tampilkan hanya baris yang selisih</span>
+                </label>
+                <span class="text-sm text-base-content/60">
+                    Menampilkan {{ number_format(min($total_ditampilkan, $batas_baris), 0, ',', '.') }}
+                    dari {{ number_format($total_ditampilkan, 0, ',', '.') }} baris
+                    @if ($total_ditampilkan !== $total_baris)
+                        (total {{ number_format($total_baris, 0, ',', '.') }} pasangan gudang &times; bahan)
+                    @endif
+                </span>
+            </form>
+
+            @if ($total_ditampilkan > $batas_baris)
+                <div class="alert alert-info mx-4 mt-4">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>Daftar dipotong pada {{ number_format($batas_baris, 0, ',', '.') }} baris agar halaman tetap ringan. Angka ringkasan dan jumlah selisih di atas tetap dihitung dari seluruh data.</span>
+                </div>
+            @endif
+
             <div class="overflow-x-auto">
                 <table class="table">
                     <thead>
@@ -86,7 +118,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($rows as $r)
+                        @forelse ($rows as $r)
                             @php
                                 $selisihQty = abs((float) $r->selisih) > 0.000001;
                                 $selisihRsv = abs((float) $r->selisih_reservasi) > 0.000001;
@@ -94,11 +126,11 @@
                             <tr class="{{ $selisihQty || $selisihRsv ? 'bg-error/10' : '' }}">
                                 <td>{{ $r->gudang_nama }}</td>
                                 <td class="font-semibold">{{ $r->bahan_nama }}</td>
-                                <td>{{ $r->stok_tersedia }}</td>
-                                <td>{{ $r->layer_quantity }}</td>
-                                <td>{{ $r->selisih }}</td>
-                                <td>{{ $r->stok_direservasi }}</td>
-                                <td class="{{ $selisihRsv ? 'font-bold text-error' : '' }}">{{ $r->reservasi_hidup }}</td>
+                                <td>{{ rtrim(rtrim(number_format((float) $r->stok_tersedia, 6, ',', '.'), '0'), ',') }}</td>
+                                <td>{{ rtrim(rtrim(number_format((float) $r->layer_quantity, 6, ',', '.'), '0'), ',') }}</td>
+                                <td>{{ rtrim(rtrim(number_format((float) $r->selisih, 6, ',', '.'), '0'), ',') }}</td>
+                                <td>{{ rtrim(rtrim(number_format((float) $r->stok_direservasi, 6, ',', '.'), '0'), ',') }}</td>
+                                <td class="{{ $selisihRsv ? 'font-bold text-error' : '' }}">{{ rtrim(rtrim(number_format((float) $r->reservasi_hidup, 6, ',', '.'), '0'), ',') }}</td>
                                 @if ($financial)<td>Rp {{ number_format($r->layer_value, 2, ',', '.') }}</td>@endif
                                 <td>
                                     <span class="badge {{ !$selisihQty && !$selisihRsv ? 'badge-success' : 'badge-error' }}">
@@ -111,7 +143,13 @@
                                     </span>
                                 </td>
                             </tr>
-                        @endforeach
+                        @empty
+                            <tr>
+                                <td colspan="9" class="py-6 text-center text-base-content/50">
+                                    {{ $hanya_selisih ? 'Tidak ada baris yang selisih. Seluruh kontrol inventory sesuai.' : 'Belum ada saldo gudang untuk direkonsiliasi.' }}
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>

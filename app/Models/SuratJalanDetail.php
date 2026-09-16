@@ -47,8 +47,20 @@ class SuratJalanDetail extends Model
         return $this->hasMany(SuratJalanAlokasi::class, 'surat_jalan_detail_id');
     }
 
+    public function fakturDetails()
+    {
+        return $this->hasMany(FakturPenjualanDetail::class, 'surat_jalan_detail_id');
+    }
+
+    public function jumlahTerikatFaktur(): float
+    {
+        return round((float) $this->fakturDetails()
+            ->whereHas('faktur', fn ($query) => $query->where('status', '!=', FakturPenjualan::VOID))
+            ->sum('jumlah'), 6);
+    }
+
     public function sisaFaktur(): float
     {
-        return round((float) $this->jumlah - (float) $this->jumlah_terfaktur, 6);
+        return round((float) $this->jumlah - $this->jumlahTerikatFaktur(), 6);
     }
 }

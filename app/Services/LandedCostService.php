@@ -35,10 +35,12 @@ class LandedCostService
                 $account = $layer->bahan?->tipeBarang?->coa_persediaan_id;
                 if (!$account) throw new RuntimeException('Mapping akun persediaan bahan landed cost belum lengkap.');
                 BaganAkun::assertUsable($account, [['ASET', 'DEBIT']], 'landed cost persediaan');
-                $debits[$account] = ($debits[$account] ?? 0) + (float) $allocation->allocated_amount;
+                $kunci = $account . ':' . (int) $layer->gudang_id;
+                $debits[$kunci] ??= ['coa_id' => $account, 'gudang_id' => $layer->gudang_id, 'jumlah' => 0.0];
+                $debits[$kunci]['jumlah'] += (float) $allocation->allocated_amount;
             }
             BaganAkun::assertUsable($cost->credit_coa_id, [['LIABILITAS', 'KREDIT'], ['ASET', 'KREDIT']], 'lawan landed cost');
-            $lines = collect($debits)->map(fn ($amount, $account) => ['coa_id' => $account, 'debit' => round($amount, 2), 'kredit' => 0, 'keterangan' => 'Kapitalisasi landed cost'])->values()->all();
+            $lines = collect($debits)->map(fn ($baris) => ['coa_id' => $baris['coa_id'], 'gudang_id' => $baris['gudang_id'], 'debit' => round($baris['jumlah'], 2), 'kredit' => 0, 'keterangan' => 'Kapitalisasi landed cost'])->values()->all();
             $lines[] = ['coa_id' => $cost->credit_coa_id, 'debit' => 0, 'kredit' => (float) $cost->total_amount, 'keterangan' => 'Lawan landed cost'];
             $journal = Jurnal::create(['no_jurnal' => $this->numbers->financial('JR', $cost->date), 'tanggal' => $cost->date, 'keterangan' => 'Landed cost ' . $cost->number, 'sumber_transaksi' => 'LANDED_COST', 'reff_id' => $cost->id, 'status' => 'POSTED', 'created_by' => Auth::id(), 'posted_by' => Auth::id(), 'posted_at' => now(), 'total_debit' => $cost->total_amount, 'total_kredit' => $cost->total_amount]);
             $journal->details()->createMany($lines);

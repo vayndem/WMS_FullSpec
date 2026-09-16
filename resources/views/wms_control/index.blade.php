@@ -10,7 +10,7 @@
                 <h3 class="text-2xl font-bold">WMS Control Center</h3>
                 <p class="text-base-content/60">Traceability, execution, costing, dan planning dalam satu standar transaksi.</p>
             </div>
-            @if (auth()->user()->isWarehouseOperator() || auth()->user()->isSuperAdmin())
+            @if (auth()->user()->can('operateWarehouse'))
                 <form method="POST" action="{{ route('wms-control.replenishment') }}">
                     @csrf
                     <button class="btn btn-primary">Hitung Replenishment</button>
@@ -31,7 +31,7 @@
             @endforeach
         </div>
 
-        @if (auth()->user()->isWarehouseOperator() || auth()->user()->isSuperAdmin())
+        @if (auth()->user()->can('operateWarehouse'))
             <div class="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
                 <div class="card border border-base-300 bg-base-100 p-4 shadow-sm">
                     <h5 class="mb-3 font-bold">Tambah Bin / Lokasi</h5>
@@ -156,7 +156,7 @@
                                         @endif
                                     </td>
                                     <td>
-                                        @if (auth()->user()->isWarehouseOperator() || auth()->user()->isSuperAdmin())
+                                        @if (auth()->user()->can('operateWarehouse'))
                                             <form method="POST" action="{{ route('wms-control.lots.block', $l) }}">
                                                 @csrf
                                                 @method('PATCH')
@@ -191,7 +191,7 @@
                                                 <span class="badge {{ $s->status === 'AVAILABLE' ? 'badge-success' : ($s->status === 'ISSUED' ? 'badge-info' : 'badge-ghost') }}">{{ $s->status }}</span>
                                             </td>
                                             <td>
-                                                @if (auth()->user()->isWarehouseOperator() || auth()->user()->isSuperAdmin())
+                                                @if (auth()->user()->can('operateWarehouse'))
                                                     <form method="POST" action="{{ route('wms-control.serials.status', $s) }}" class="flex gap-1">
                                                         @csrf
                                                         @method('PATCH')
@@ -214,7 +214,7 @@
             @endif
         </div>
 
-        @if (auth()->user()->isWarehouseOperator() || auth()->user()->isSuperAdmin())
+        @if (auth()->user()->can('operateWarehouse'))
             <div class="card mb-4 border border-base-300 bg-base-100 shadow-sm">
                 <div class="border-b border-base-300 p-4"><h5 class="font-bold">Receiving, QC &amp; Putaway</h5></div>
                 <div class="p-4">
@@ -288,10 +288,14 @@
                                     <td>{{ $i->match_status }}</td>
                                     <td>{{ count(data_get($i->match_summary, 'issues', [])) }}</td>
                                     <td>
-                                        <form method="POST" action="{{ route('wms-control.faktur-pembelian.match', $i) }}">
-                                            @csrf
-                                            <button class="btn btn-outline btn-primary btn-sm">Match ulang</button>
-                                        </form>
+                                        @can('matchSupplierInvoice')
+                                            <form method="POST" action="{{ route('wms-control.faktur-pembelian.match', $i) }}">
+                                                @csrf
+                                                <button class="btn btn-outline btn-primary btn-sm">Match ulang</button>
+                                            </form>
+                                        @else
+                                            <span class="text-xs text-base-content/40">&mdash;</span>
+                                        @endcan
                                     </td>
                                 </tr>
                             @endforeach
@@ -389,7 +393,7 @@
                                     <span class="badge {{ $s->priority === 'CRITICAL' ? 'badge-error' : ($s->priority === 'HIGH' ? 'badge-warning' : 'badge-ghost') }}">{{ $s->priority }}</span>
                                 </td>
                                 <td class="text-right">
-                                    @if (auth()->user()->isWarehouseOperator() || auth()->user()->isSuperAdmin())
+                                    @if (auth()->user()->can('operateWarehouse'))
                                         <form method="POST" action="{{ route('wms-control.replenishment.request', $s) }}">
                                             @csrf
                                             <button class="btn btn-sm btn-primary" {{ (float) $s->suggested_quantity <= 0 ? 'disabled' : '' }}>
@@ -407,7 +411,7 @@
             </div>
         </div>
 
-        @if (auth()->user()->isAccounting() || auth()->user()->isSuperAdmin())
+        @if (auth()->user()->can('controlInventoryFinance'))
             <div class="card mb-4 border border-base-300 bg-base-100 shadow-sm">
                 <div class="border-b border-base-300 p-4"><h5 class="font-bold">Controlled Reversal</h5></div>
                 <div class="grid grid-cols-1 gap-4 p-4 lg:grid-cols-2">

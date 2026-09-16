@@ -22,7 +22,7 @@ class StorePelangganRequest extends FormRequest
         $id = $this->route('pelanggan')?->id;
 
         return [
-            'kode' => ['required', 'string', 'max:30', Rule::unique('pelanggans', 'kode')->ignore($id)->whereNull('deleted_at')],
+            'kode' => ['required', 'string', 'max:30', Rule::unique('pelanggans', 'kode')->ignore($id)],
             'nama' => ['required', 'string', 'max:191'],
             'npwp' => ['nullable', 'string', 'max:30'],
             'telp' => ['nullable', 'string', 'max:30'],

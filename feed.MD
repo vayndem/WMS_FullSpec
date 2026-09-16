@@ -451,7 +451,7 @@ Catatan:
 
 Status terakhir (16 September 2026):
 
-- 202 tests passed, 4.201 assertions
+- 227 tests passed, 4.370 assertions
 - architecture convention test: 6 passed
 - diverifikasi berturut-turut setelah `migrate:fresh --seed`, bukan sekali jalan
 
@@ -495,7 +495,8 @@ Daftar yang masih relevan per 2026-09-16:
 6. stok dalam perjalanan masih menempel ke gudang asal sampai diterima, karena jurnal transfer baru terbentuk saat penerimaan — memperbaikinya butuh akun "Persediaan Dalam Perjalanan", sebuah keputusan akuntansi
 7. perintah kerja yang dibatalkan setelah menyerap biaya belum punya jalur hapus buku — butuh keputusan akun kerugian
 8. `plafon_kredit` pelanggan dicatat dan ditampilkan tapi belum ditegakkan — memblokir pesanan karena plafon adalah keputusan kebijakan
-9. suite tes berjalan dekat plafon memori PHP; `phpunit.xml` menyetel `memory_limit=512M` agar deterministik. Kalau export terus bertambah besar, alihkan tes export ke koleksi `Excel::fake()` daripada mengunduh sungguhan
+9. `request.show`/`request.edit`/`request.update`/`request.destroy` sempat terdaftar sebagai route padahal metodenya tidak ada di controller; resource-nya sekarang dibatasi ke `index`/`create`/`store` — kalau memang perlu halaman detail request, metodenya harus ditulis dulu
+10. suite tes berjalan dekat plafon memori PHP; `phpunit.xml` menyetel `memory_limit=512M` agar deterministik. Kalau export terus bertambah besar, alihkan tes export ke koleksi `Excel::fake()` daripada mengunduh sungguhan
 
 **Bukan lagi utang teknis** (dipertahankan sebagai catatan historis): UI manajemen user + reset password + audit login, `.env.example`, NSFP pada faktur pembelian, lima laporan PSAK 1 lengkap termasuk Arus Kas, Perubahan Ekuitas dan CALK, PPh 22/4(2) Final, depresiasi otomatis garis lurus & saldo menurun, rekonsiliasi fiskal + PPh Badan + pajak tangguhan + kompensasi kerugian, field multi-currency ringan + PPN Impor, retur pembelian pasca-invoice, rename sweep baku Indonesia, migrasi Tailwind/daisyUI/Alpine, Material Request lintas role, dashboard task grid + chart + pengingat + progres, Dashboard Eksekutif, export Excel di seluruh laporan, scheduler + notifikasi terantre, lampiran dokumen, antrean kerja operator, cycle count ABC, wave picking, kitting, seluruh celah jasa (kapitalisasi, gate pass, barang titipan, tukar tambah), Lacak Pembelian, Kartu Skor Supplier, **maker-checker yang kini mencakup jurnal manual/pembalikan dokumen/perubahan COA**, **penilaian persediaan per gudang lewat dimensi gudang pada baris jurnal**, **sisi AR/penjualan lengkap**, dan **perintah kerja produksi dengan barang dalam proses**.
 

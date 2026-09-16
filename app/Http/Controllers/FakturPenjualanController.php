@@ -61,6 +61,18 @@ class FakturPenjualanController extends Controller
         return back()->with('success', 'Faktur penjualan diposting: piutang dan PPN keluaran terbentuk.');
     }
 
+    public function destroy(FakturPenjualan $faktur)
+    {
+        $this->authorize('delete', $faktur);
+
+        $nomor = $faktur->nomor;
+        $faktur->details()->delete();
+        $faktur->delete();
+
+        return redirect()->route('faktur-penjualan.index')
+            ->with('success', "Faktur draft {$nomor} dihapus. Surat jalannya bisa difakturkan ulang.");
+    }
+
     public function bayar(StorePenerimaanPembayaranRequest $request, FakturPenjualan $faktur)
     {
         try {

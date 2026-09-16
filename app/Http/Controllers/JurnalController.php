@@ -44,6 +44,7 @@ class JurnalController extends Controller
                 })
                 ->addColumn('can_post', fn($row) => $request->user()->can('post', $row))
                 ->addColumn('can_reverse', fn($row) => $request->user()->can('reverse', $row))
+                ->addColumn('can_approve', fn($row) => $request->user()->can('approve', $row))
                 ->make(true);
         }
 

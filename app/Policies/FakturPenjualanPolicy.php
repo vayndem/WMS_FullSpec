@@ -27,6 +27,11 @@ class FakturPenjualanPolicy
         return $user->isAccounting() && $faktur->isDraft();
     }
 
+    public function delete(User $user, FakturPenjualan $faktur): bool
+    {
+        return $user->isAccounting() && $faktur->isDraft();
+    }
+
     public function terimaPembayaran(User $user, FakturPenjualan $faktur): bool
     {
         return $user->isFinance() && $faktur->isTertagih();

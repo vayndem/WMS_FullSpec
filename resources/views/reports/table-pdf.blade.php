@@ -39,7 +39,7 @@
             <tr>
                 <th style="width: 24px;">No</th>
                 @foreach ($columns as $column)
-                    <th class="{{ $column['align'] === 'right' ? 'right' : '' }}">{{ $column['label'] }}</th>
+                    <th class="{{ ($column['align'] ?? 'left') === 'right' ? 'right' : '' }}">{{ $column['label'] }}</th>
                 @endforeach
             </tr>
         </thead>
@@ -48,7 +48,7 @@
                 <tr>
                     <td>{{ $loop->iteration }}</td>
                     @foreach ($columns as $column)
-                        <td class="{{ $column['align'] === 'right' ? 'right' : '' }}">{{ $row[$column['key']] ?? '-' }}</td>
+                        <td class="{{ ($column['align'] ?? 'left') === 'right' ? 'right' : '' }}">{{ $row[$column['key']] ?? '-' }}</td>
                     @endforeach
                 </tr>
             @empty

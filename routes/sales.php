@@ -34,4 +34,5 @@ Route::middleware('auth')->group(function () {
     Route::get('faktur-penjualan/{faktur}', [FakturPenjualanController::class, 'show'])->name('faktur-penjualan.show');
     Route::post('faktur-penjualan/{faktur}/post', [FakturPenjualanController::class, 'post'])->name('faktur-penjualan.post');
     Route::post('faktur-penjualan/{faktur}/bayar', [FakturPenjualanController::class, 'bayar'])->name('faktur-penjualan.bayar');
+    Route::delete('faktur-penjualan/{faktur}', [FakturPenjualanController::class, 'destroy'])->name('faktur-penjualan.destroy');
 });
