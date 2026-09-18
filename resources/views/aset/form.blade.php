@@ -14,7 +14,7 @@
             <div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-4">
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Nomor Aset</span></label>
-                    <input name="nomor_aset" class="input input-bordered bg-base-200" value="{{ $editing ? $asset->nomor_aset : $documentNumber }}" readonly>
+                    <input class="input input-bordered bg-base-200" value="{{ $editing ? $asset->nomor_aset : $documentNumber }}" readonly disabled>
                     <span class="label-text-alt mt-1 text-base-content/50">Kode finansial internal dengan penanda AS.</span>
                 </div>
                 <div class="form-control md:col-span-2">

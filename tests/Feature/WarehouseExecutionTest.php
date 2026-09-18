@@ -297,26 +297,22 @@ class WarehouseExecutionTest extends TestCase
             'nama' => "Supplier {$tanda}", 'alamat' => 'Jl. QC', 'telp' => '08110000' . random_int(10, 99), 'pembayaran' => 'Transfer',
         ]);
 
-        $poNumber = $numbers->financial('PO');
-        $this->actingAs($purchasing)->postJson(route('pembelian.store'), [
-            'no_po' => $poNumber,
+        $poNumber = $this->actingAs($purchasing)->postJson(route('pembelian.store'), [
             'tanggal' => today()->toDateString(),
             'supplier_id' => $supplier->id,
             'gudang_id' => $gudang->id,
             'is_ppn' => 0,
             'details' => $bahans->map(fn ($b) => ['bahan_id' => $b->id, 'harga' => 5000, 'jumlah' => 4])->all(),
-        ])->assertCreated();
+        ])->assertCreated()->json('data.no_po');
 
-        $noLpb = $numbers->external('LPB');
-        $this->actingAs($warehouse)->postJson(route('penerimaan-barang.store'), [
-            'id_lpb' => $noLpb,
+        $noLpb = $this->actingAs($warehouse)->postJson(route('penerimaan-barang.store'), [
             'tanggal' => today()->toDateString(),
             'no_po' => $poNumber,
             'no_sj' => "SJ-{$tanda}",
             'details' => $bahans->map(fn ($b) => [
                 'id_bahan' => $b->id, 'id_kategori' => $b->kategori, 'jumlah_barang_diterima' => 4,
             ])->all(),
-        ])->assertCreated();
+        ])->assertCreated()->json('data.id_lpb');
 
         return \App\Models\PenerimaanBarang::with('details')->where('id_lpb', $noLpb)->firstOrFail();
     }

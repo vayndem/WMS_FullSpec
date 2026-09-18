@@ -40,6 +40,15 @@
                     </select>
                 </div>
                 <div class="form-control">
+                    <label class="label"><span class="label-text">Sales</span></label>
+                    <select name="sales_user_id" data-app-picker class="select select-bordered select-sm">
+                        <option value="">{{ auth()->user()->name }} (pembuat)</option>
+                        @foreach ($sales as $item)
+                            <option value="{{ $item->id }}" @selected(old('sales_user_id') == $item->id)>{{ $item->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="form-control">
                     <label class="label"><span class="label-text">Nomor PO Pelanggan</span></label>
                     <input type="text" name="nomor_po_pelanggan" value="{{ old('nomor_po_pelanggan') }}" class="input input-bordered input-sm">
                 </div>

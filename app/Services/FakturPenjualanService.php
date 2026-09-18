@@ -37,6 +37,7 @@ class FakturPenjualanService
                 'tanggal' => $tanggal,
                 'jatuh_tempo' => $data['jatuh_tempo'] ?? now()->parse($tanggal)->addDays($terminHari)->toDateString(),
                 'pelanggan_id' => $suratJalan->pelanggan_id,
+                'sales_user_id' => $pesanan?->sales_user_id,
                 'no_faktur_pajak' => $data['no_faktur_pajak'] ?? null,
                 'is_ppn' => (bool) ($pesanan?->is_ppn ?? true),
                 'tarif_ppn' => $pesanan?->tarif_ppn ?? 11,

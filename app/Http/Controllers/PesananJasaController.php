@@ -51,7 +51,7 @@ class PesananJasaController extends Controller
     public function create()
     {
         $this->authorize('create', PesananJasa::class);
-        return view('pesanan_jasa.form', $this->formData() + ['documentNumber' => $this->numbers->financial('PJ')]);
+        return view('pesanan_jasa.form', $this->formData() + ['documentNumber' => $this->numbers->preview(DocumentNumberService::FINANCIAL, 'PJ')]);
     }
     public function store(StorePesananJasaRequest $request)
     {
@@ -60,6 +60,7 @@ class PesananJasaController extends Controller
             $items = $data['items'];
             unset($data['items']);
             $subtotal = collect($items)->sum(fn($x) => (float)$x['quantity'] * (float)$x['unit_price']);
+            $data['no_po'] = $this->numbers->financial('PJ');
             $po = PesananJasa::create($data + ['document_type' => 'SERVICE', 'total_exclude' => $subtotal, 'total_include' => $subtotal, 'grand_total' => $subtotal, 'no_order' => '-', 'status' => PesananJasa::OPEN]);
             foreach ($items as $item) {
                 $category = KategoriJasa::findOrFail($item['service_category_id']);

@@ -90,7 +90,7 @@ class PenerimaanJasaController extends Controller
                 fn($query) => $query->where('status', PenerimaanBarang::POSTED)
             )
             ->latest('tanggal')->get();
-        $documentNumber = $this->numbers->external('BAP');
+        $documentNumber = $this->numbers->preview(DocumentNumberService::EXTERNAL, 'BAP');
         $financial = request()->user()->can('viewFinancials', PenerimaanJasa::class);
         return view('penerimaan_jasa.create', compact('orders', 'documentNumber', 'financial'));
     }
@@ -100,7 +100,7 @@ class PenerimaanJasaController extends Controller
             $data = $request->validated();
             $po = PesananJasa::where('no_po', $data['no_po'])->lockForUpdate()->firstOrFail();
             $bap = PenerimaanJasa::create([
-                'id_lpb' => $data['id_lpb'],
+                'id_lpb' => $this->numbers->external('BAP'),
                 'tanggal' => $data['tanggal'],
                 'no_po' => $po->no_po,
                 'no_sj' => $data['no_sj'],

@@ -6,11 +6,11 @@
 
 Warehouse • Procurement • Sales • Production • Finance • Accounting — satu alur terkontrol, langsung terintegrasi ke jurnal akuntansi.
 
-[![Laravel](https://img.shields.io/badge/Laravel-12-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)](https://laravel.com)
-[![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=for-the-badge&logo=php&logoColor=white)](https://php.net)
+[![Laravel](https://img.shields.io/badge/Laravel-12.69-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)](https://laravel.com)
+[![PHP](https://img.shields.io/badge/PHP-8.3-777BB4?style=for-the-badge&logo=php&logoColor=white)](https://php.net)
 [![MySQL](https://img.shields.io/badge/MySQL-Database-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com)
 [![Tailwind](https://img.shields.io/badge/Tailwind%20%2B%20daisyUI%20%2B%20Alpine-UI-38BDF8?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
-[![Tests](https://img.shields.io/badge/tests-227%20passed-22C55E?style=for-the-badge&logo=php&logoColor=white)](#-pengujian)
+[![Tests](https://img.shields.io/badge/tests-245%20passed-22C55E?style=for-the-badge&logo=php&logoColor=white)](#-pengujian)
 
 </div>
 
@@ -38,9 +38,9 @@ Warehouse • Procurement • Sales • Production • Finance • Accounting �
 
 **Beli:** `📝 Request` → `🛒 PO` → `📥 LPB` → `🏬 Multi Gudang` → `🔧 NPK` → `🧾 Faktur Pembelian` → `💳 Pembayaran`
 
-**Jual:** `👤 Pelanggan` → `📋 Pesanan Penjualan` → `🚚 Surat Jalan` → `🧾 Faktur Penjualan` → `💰 Penerimaan`
+**Jual:** `👤 Pelanggan` → `📋 Pesanan Penjualan` → `🚚 Surat Jalan` → `🧾 Faktur Penjualan` → `💰 Penerimaan` → `⏳ Umur Piutang`
 
-**Produksi:** `📋 Pesanan Penjualan` → `🏭 Perintah Kerja` → `🔧 NPK ke WIP` → `✅ Selesai` → `🚚 Surat Jalan`
+**Produksi:** `📋 Pesanan Penjualan` → `🏭 Perintah Kerja` → `🔧 NPK ke WIP` → `✅ Selesai` → `🚚 Surat Jalan`  ·  standar `🧩 BOM` → `📐 Varians Pemakaian`
 
 `📚 Semuanya bermuara ke Jurnal Akuntansi`
 
@@ -52,7 +52,7 @@ Dokumen operasional tidak berhenti sebagai catatan administratif — LPB, NPK, s
 
 ## 🏗️ Standar Arsitektur
 
-- 🗂️ Route dipisahkan per domain — `routes/auth.php`, `warehouse.php`, `procurement.php`, `finance.php`, `accounting.php`, `assets-and-services.php`.
+- 🗂️ Route dipisahkan per domain — `routes/auth.php`, `warehouse.php`, `procurement.php`, `finance.php`, `accounting.php`, `assets-and-services.php`, `sales.php`.
 - 🎯 Controller = HTTP orchestration saja; validasi wajib di `app/Http/Requests`, proses lintas model di `app/Services`.
 - 🔐 Policy ditemukan otomatis lewat konvensi Laravel. Gate hanya untuk capability lintas model.
 - 🔡 Nama class dan file mengikuti PSR-4 dengan casing identik.
@@ -184,14 +184,18 @@ flowchart LR
 | 📊 Accounting | Approval Invoice | Maker-checker — role **Accounting Manager** khusus approve invoice sebelum posting |
 | 📊 Accounting | Laporan Keuangan | Neraca Saldo, Buku Besar, Laba Rugi, Neraca, Arus Kas, Perubahan Ekuitas, CALK — export PDF & Excel (**lima laporan PSAK 1 lengkap**) |
 | 📊 Accounting | Antrean Persetujuan | Maker-checker untuk jurnal manual, pembalikan dokumen, dan perubahan bagan akun/mapping |
-| 🛒 Purchasing | Lacak Pembelian | Sebaran nilai satu penerimaan: masih stok, jadi beban, selisih opname, retur |
+| 🛒 Purchasing | Lacak Pembelian | Sebaran nilai satu penerimaan: masih stok, jadi beban, terjual, selisih opname, retur |
 | 🛒 Purchasing | Kartu Skor Supplier | Lead time, ketepatan terhadap target, nilai belanja, rasio retur, rasio reject QC |
 | 💰 Sales | Pelanggan | Master pelanggan: termin, plafon kredit, piutang berjalan |
 | 💰 Sales | Pesanan Penjualan | Pesanan pelanggan dengan DPP/PPN, ditarik jadi surat jalan |
 | 💰 Sales | Surat Jalan | Pengeluaran barang: konsumsi FIFO + jurnal harga pokok penjualan per gudang |
 | 💰 Sales | Faktur Penjualan | Piutang usaha + PPN Keluaran, NSFP wajib untuk faktur ber-PPN |
 | 💰 Sales | Penerimaan & Retur | Pelunasan piutang bertahap dan retur penjualan yang mengembalikan stok |
+| 💰 Sales | Umur Piutang | Sisa tagihan per pelanggan dalam lima ember umur, bisa ditarik per tanggal acuan, dengan tie-out ke buku besar |
+| 💰 Sales | Kinerja Sales | Pesanan, penjualan, retur, dan piutang beredar per sales pemegang pelanggan |
 | 🏭 Produksi | Perintah Kerja | Job costing aktual: material dan jasa menumpuk di Barang Dalam Proses, dilepas saat pengiriman |
+| 🏭 Produksi | BOM | Komponen standar per bahan hasil, satu BOM aktif per bahan |
+| 🏭 Produksi | Varians Pemakaian | Pemakaian aktual perintah kerja versus standar BOM — boros, hemat, atau di luar BOM |
 | 📊 Accounting | Dashboard Eksekutif | Tren nilai persediaan, aging hutang, top supplier, biaya per kategori (chart) |
 | 📊 Accounting | Kontrol | Kunci periode, tarif pajak, rekonsiliasi |
 | 🏢 Asset | Aset Tetap | Perolehan, penyusutan (garis lurus & saldo menurun, manual/otomatis), pelepasan |
@@ -208,6 +212,7 @@ flowchart LR
 | 🛰️ WMS Control | Gelombang Pengambilan | Wave/batch picking: gabungkan banyak perintah ambil jadi satu gelombang, urut jalur bin |
 | 🛰️ WMS Control | Slotting ABC | Saran pemindahan bin: barang cepat bergerak ke bin dekat jalur ambil |
 | 🛰️ WMS Control | Kitting & Bundling | Rakit/urai kit dari beberapa bahan, nilai FIFO komponen pindah utuh ke kit |
+| 🛰️ WMS Control | Cross Dock | Barang yang baru diterima langsung dikunci untuk pesanan penjualan yang menunggu, tanpa lewat penyimpanan |
 | 📦 Warehouse | Cycle Count ABC | Hitung fisik parsial per kelas ABC — A bulanan, B triwulan, C tahunan |
 | 📈 Semua Dashboard | Task Grid + Chart | Setiap role melihat seluruh tugas outstanding-nya sebagai kartu yang bisa diklik, plus grafik ringkasan |
 
@@ -262,7 +267,9 @@ Standar transaksi inventory lainnya:
 
 Produksi di sini selalu untuk pesanan pelanggan, jadi keluarannya **tidak dibukukan sebagai stok barang jadi** — nilainya tetap di WIP sampai dikirim. NPK **tanpa** perintah kerja perilakunya tidak berubah sama sekali.
 
-Yang belum ada: BOM sebagai standar (sehingga belum ada selisih pemakaian material), serta penyerapan tenaga kerja dan overhead.
+**Standar dan varians (sejak 2026-09-18).** `BOM` menyimpan komponen standar per bahan hasil — satu BOM aktif per bahan. Laporan **Varians Pemakaian** membandingkan pemakaian NPK aktual sebuah perintah kerja dengan standarnya, dan menandai tiap baris sebagai boros, hemat, sesuai, atau **di luar BOM** untuk bahan yang tidak pernah direncanakan. Varians ini **murni pelaporan dan tidak menjurnal apa pun**: costing sudah berbasis pemakaian aktual, jadi menjurnal varians akan menghitung ganda.
+
+Yang belum ada: penyerapan tenaga kerja dan overhead, serta routing/work centre.
 
 Seeder default membuat: `Gudang Utama`, `Gudang Produksi`, `Gudang Consider`, `Gudang Rusak`.
 
@@ -314,7 +321,7 @@ Seeder default membuat akun berikut (khusus development/demo):
 
 ### Prasyarat
 
-- 🐘 PHP 8.2 atau lebih baru
+- 🐘 PHP 8.2 atau lebih baru — **wajib**, bukan anjuran. `vendor/composer/platform_check.php` menolak booting di bawah itu, dan `composer` pun harus dipanggil dengan binary PHP yang sama (dikembangkan di PHP 8.3.26)
 - 📦 Composer
 - 🟢 Node.js dan npm
 - 🗄️ MySQL
@@ -345,6 +352,8 @@ php artisan queue:work
 php artisan schedule:work
 ```
 
+> ⚙️ **Skeleton Laravel 12.** Sejak 2026-09-18 aplikasi memakai skeleton Laravel 11/12: tidak ada lagi `app/Http/Kernel.php`, `app/Console/Kernel.php`, `app/Exceptions/Handler.php`, maupun stub di `app/Http/Middleware/`. Middleware, exception, penjadwalan, dan pemuatan route dikonfigurasi di `bootstrap/app.php`; daftar provider ada di `bootstrap/providers.php`.
+
 > 💡 `php artisan migrate --seed` membuat master data **sekaligus** data demo — pakai untuk development/test saja. Untuk production, hindari `DatabaseSeeder` penuh.
 
 <br>
@@ -353,13 +362,14 @@ php artisan schedule:work
 
 <div align="center">
 
-![Tests](https://img.shields.io/badge/tests-227%20passed-22C55E?style=flat-square)
-![Assertions](https://img.shields.io/badge/assertions-4%2C370-38BDF8?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-245%20passed-22C55E?style=flat-square)
+![Assertions](https://img.shields.io/badge/assertions-4%2C584-38BDF8?style=flat-square)
 ![Case Sensitive](https://img.shields.io/badge/case--sensitivity-verified-A78BFA?style=flat-square)
 
 </div>
 
 ```bash
+npm install && npm run build                  # wajib: tanpa manifest Vite semua halaman 500
 php artisan test                              # full suite
 php artisan test --filter=TestClassName       # satu class
 composer test:case-sensitive                  # cek casing ala Linux CI, dari Windows
@@ -379,6 +389,11 @@ Suite saat ini mencakup:
 - 🏬 dimensi gudang pada baris jurnal: nilai persediaan per gudang cocok dengan nilai layer-nya
 - 💰 penjualan end-to-end lewat HTTP: pesanan → surat jalan → faktur → pelunasan, plus retur penjualan
 - 🏭 produksi: akumulasi WIP dari NPK, penguncian harga pokok, pelepasan proporsional saat kirim, dan invarian WIP vs buku besar
+- ⏳ umur piutang: penempatan ember, tanggal acuan mundur, tie-out subledger vs buku besar, dan sales yang ikut tersalin ke faktur
+- 🔁 cross dock: reservasi saat ditandai, pelepasan saat surat jalan diposting, dan pemecahan tanda saat kirim sebagian
+- 🧩 BOM dan varians pemakaian, termasuk perintah kerja tanpa BOM
+
+> ⚠️ Jalankan `npm install && npm run build` sebelum `php artisan test`. Tanpa manifest Vite, setiap halaman melempar 500 dan suite gagal massal tanpa ada cacat kode.
 
 <br>
 

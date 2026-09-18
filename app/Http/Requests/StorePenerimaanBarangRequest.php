@@ -19,7 +19,6 @@ class StorePenerimaanBarangRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'id_lpb'                           => ['required', 'string', 'max:30', 'regex:/^[A-Z]{3}\d{9}$/', 'unique:wms_penerimaan_barang,id_lpb'],
             'tanggal'                          => 'required|date',
             'no_po'                            => 'required|string|exists:wms_pesanan_pembelian,no_po',
             'no_sj'                            => 'required|string|max:250',

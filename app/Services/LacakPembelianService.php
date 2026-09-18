@@ -33,6 +33,7 @@ class LacakPembelianService
             'total_sisa_stok' => $jumlahkan('sisa_stok'),
             'total_beban_npk' => $jumlahkan('beban_npk'),
             'total_selisih_opname' => $jumlahkan('selisih_opname'),
+            'total_terjual' => $jumlahkan('terjual'),
             'total_retur' => $jumlahkan('retur'),
             'total_tidak_terlacak' => $jumlahkan('tidak_terlacak'),
         ];
@@ -48,10 +49,11 @@ class LacakPembelianService
         $sisaStok = $this->sisaStok($layers);
         $bebanNpk = $this->bebanNpk($layerIds);
         $selisihOpname = $this->selisihOpname($layerIds);
+        $terjual = $this->terjual($layerIds);
         $retur = $this->retur($detail);
 
         $nilaiMasuk = round($nilaiPembelian + $biayaTambahan, 2);
-        $terlacak = round($sisaStok + $bebanNpk + $selisihOpname + $retur, 2);
+        $terlacak = round($sisaStok + $bebanNpk + $selisihOpname + $terjual + $retur, 2);
 
         return [
             'detail' => $detail,
@@ -65,6 +67,7 @@ class LacakPembelianService
             'sisa_stok' => $sisaStok,
             'beban_npk' => $bebanNpk,
             'selisih_opname' => $selisihOpname,
+            'terjual' => $terjual,
             'retur' => $retur,
             'tidak_terlacak' => round($nilaiMasuk - $terlacak, 2),
             'sebaran_gudang' => $this->sebaranGudang($layers),
@@ -128,6 +131,17 @@ class LacakPembelianService
         }
 
         return round((float) PemakaianBarangAlokasiStok::whereIn('inventory_layer_id', $layerIds)->sum('total_cost'), 2);
+    }
+
+    private function terjual(array $layerIds): float
+    {
+        if (empty($layerIds)) {
+            return 0.0;
+        }
+
+        return round((float) DB::table('wms_surat_jalan_alokasi')
+            ->whereIn('inventory_layer_id', $layerIds)
+            ->sum('total_hpp'), 2);
     }
 
     private function selisihOpname(array $layerIds): float

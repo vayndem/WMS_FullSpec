@@ -18,6 +18,7 @@ class PenerimaanBarangService
     public function __construct(
         private WmsAccountingService $accounting,
         private StokGudangService $stokGudang,
+        private DocumentNumberService $numbers,
     ) {}
 
     public function kelebihanPenerimaan(PesananPembelian $po, array $details): array
@@ -65,7 +66,7 @@ class PenerimaanBarangService
     private function buatHeader(PesananPembelian $po, array $data, User $user): PenerimaanBarang
     {
         return PenerimaanBarang::create([
-            'id_lpb' => $data['id_lpb'],
+            'id_lpb' => $this->numbers->external('LPB'),
             'tanggal' => $data['tanggal'],
             'no_po' => $data['no_po'],
             'gudang_id' => $po->gudang_id,

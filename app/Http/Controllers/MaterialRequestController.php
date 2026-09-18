@@ -147,7 +147,7 @@ class MaterialRequestController extends Controller
         $bahans = Bahan::orderBy('nama', 'asc')->get();
         $gudangs = Gudang::where('aktif', true)->orderBy('nama')->get();
         $kategoris = KategoriBahan::orderBy('katnama')->get();
-        $documentNumber = $this->numbers->internal('REQ', 'PO');
+        $documentNumber = $this->numbers->preview(DocumentNumberService::INTERNAL, 'REQ', 'PO');
 
         return view('request.create', compact('bahans', 'gudangs', 'kategoris', 'documentNumber'));
     }
@@ -158,7 +158,7 @@ class MaterialRequestController extends Controller
 
         $reqHeader = DB::transaction(function () use ($validated) {
             $reqHeader = MaterialRequest::create([
-                'no_request'   => $validated['no_request'],
+                'no_request'   => $this->numbers->internal('REQ', 'PO'),
                 'status'       => MaterialRequest::PENDING,
                 'requested_by' => Auth::id(),
             ]);

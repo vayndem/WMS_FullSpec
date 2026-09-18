@@ -16,7 +16,6 @@ class StoreMaterialRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'no_request'          => ['required', 'string', 'max:30', 'regex:/^[A-Z]{3}-[A-Z]{2,3}-\d{7}$/', 'unique:requests,no_request'],
             'items'                => 'required|array|min:1',
             'items.*.bahan_id'     => 'nullable|exists:bahans,id',
             'items.*.nama_barang'  => 'required|string|max:255',

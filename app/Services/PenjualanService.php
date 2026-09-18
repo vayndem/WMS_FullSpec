@@ -20,6 +20,7 @@ class PenjualanService
         private WmsAccountingService $akuntansi,
         private DocumentNumberService $numbers,
         private DataPesananService $dataPesanan,
+        private CrossDockService $crossDock,
     ) {}
 
     public function buatPesanan(array $data, User $user): PesananPenjualan
@@ -29,6 +30,7 @@ class PenjualanService
                 'nomor' => $this->numbers->external('SOP'),
                 'tanggal' => $data['tanggal'],
                 'pelanggan_id' => $data['pelanggan_id'],
+                'sales_user_id' => $data['sales_user_id'] ?? $user->id,
                 'gudang_id' => $data['gudang_id'],
                 'nomor_po_pelanggan' => $data['nomor_po_pelanggan'] ?? null,
                 'is_ppn' => (bool) ($data['is_ppn'] ?? true),
@@ -144,6 +146,8 @@ class PenjualanService
             if (!$suratJalan->isDraft()) {
                 throw new RuntimeException('Hanya surat jalan draft yang dapat diposting.');
             }
+
+            $this->crossDock->lepaskanUntukPengiriman($suratJalan);
 
             $totalHpp = 0.0;
 

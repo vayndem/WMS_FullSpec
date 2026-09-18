@@ -133,15 +133,13 @@ class WmsControlFrameworkTest extends TestCase
         $bahan = Bahan::whereNotNull('kategori')->firstOrFail();
         $supplier = Supplier::create(['nama' => 'Supplier Uji Expiry', 'alamat' => 'Jl. Expiry', 'telp' => '0800000097', 'pembayaran' => 'Transfer']);
 
-        $poNumber = $numbers->financial('PO');
-        $this->actingAs($purchasing)->postJson(route('pembelian.store'), [
-            'no_po' => $poNumber,
+        $poNumber = $this->actingAs($purchasing)->postJson(route('pembelian.store'), [
             'tanggal' => today()->toDateString(),
             'supplier_id' => $supplier->id,
             'gudang_id' => $gudang->id,
             'is_ppn' => 0,
             'details' => [['bahan_id' => $bahan->id, 'harga' => 5000, 'jumlah' => 10]],
-        ])->assertCreated();
+        ])->assertCreated()->json('data.no_po');
 
         $expiry = today()->addDays(15);
         $this->actingAs($warehouse)->postJson(route('penerimaan-barang.store'), [
@@ -245,15 +243,13 @@ class WmsControlFrameworkTest extends TestCase
         $bahan = Bahan::whereNotNull('kategori')->firstOrFail();
         $supplier = Supplier::create(['nama' => 'Supplier Uji Konflik', 'alamat' => 'Jl. Konflik', 'telp' => '0800000094', 'pembayaran' => 'Transfer']);
 
-        $poNumber = $numbers->financial('PO');
-        $this->actingAs($purchasing)->postJson(route('pembelian.store'), [
-            'no_po' => $poNumber,
+        $poNumber = $this->actingAs($purchasing)->postJson(route('pembelian.store'), [
             'tanggal' => today()->toDateString(),
             'supplier_id' => $supplier->id,
             'gudang_id' => $gudang->id,
             'is_ppn' => 0,
             'details' => [['bahan_id' => $bahan->id, 'harga' => 5000, 'jumlah' => 20]],
-        ])->assertCreated();
+        ])->assertCreated()->json('data.no_po');
 
         $kirim = fn (string $expiry) => $this->actingAs($warehouse)->postJson(route('penerimaan-barang.store'), [
             'id_lpb' => $numbers->external('LPB'),
@@ -289,15 +285,13 @@ class WmsControlFrameworkTest extends TestCase
         $bahan->update(['wajib_lot' => true, 'wajib_expiry' => true]);
         $supplier = Supplier::create(['nama' => 'Supplier Uji Lot', 'alamat' => 'Jl. Lot', 'telp' => '0800000096', 'pembayaran' => 'Transfer']);
 
-        $poNumber = $numbers->financial('PO');
-        $this->actingAs($purchasing)->postJson(route('pembelian.store'), [
-            'no_po' => $poNumber,
+        $poNumber = $this->actingAs($purchasing)->postJson(route('pembelian.store'), [
             'tanggal' => today()->toDateString(),
             'supplier_id' => $supplier->id,
             'gudang_id' => $gudang->id,
             'is_ppn' => 0,
             'details' => [['bahan_id' => $bahan->id, 'harga' => 5000, 'jumlah' => 10]],
-        ])->assertCreated();
+        ])->assertCreated()->json('data.no_po');
 
         $payload = fn (array $detail) => [
             'id_lpb' => $numbers->external('LPB'),
@@ -333,19 +327,15 @@ class WmsControlFrameworkTest extends TestCase
         $bahans = Bahan::whereNotNull('kategori')->take(2)->get();
         $supplier = Supplier::create(['nama' => "Supplier {$tanda}", 'alamat' => 'Jl. Putaway', 'telp' => '08000000' . random_int(10, 99), 'pembayaran' => 'Transfer']);
 
-        $poNumber = $numbers->financial('PO');
-        $this->actingAs($purchasing)->postJson(route('pembelian.store'), [
-            'no_po' => $poNumber,
+        $poNumber = $this->actingAs($purchasing)->postJson(route('pembelian.store'), [
             'tanggal' => today()->toDateString(),
             'supplier_id' => $supplier->id,
             'gudang_id' => $gudang->id,
             'is_ppn' => 0,
             'details' => $bahans->map(fn ($b) => ['bahan_id' => $b->id, 'harga' => 5000, 'jumlah' => 4])->all(),
-        ])->assertCreated();
+        ])->assertCreated()->json('data.no_po');
 
-        $noLpb = $numbers->external('LPB');
-        $this->actingAs($warehouse)->postJson(route('penerimaan-barang.store'), [
-            'id_lpb' => $noLpb,
+        $noLpb = $this->actingAs($warehouse)->postJson(route('penerimaan-barang.store'), [
             'tanggal' => today()->toDateString(),
             'no_po' => $poNumber,
             'no_sj' => "SJ-{$tanda}",
@@ -354,7 +344,7 @@ class WmsControlFrameworkTest extends TestCase
                 'id_kategori' => $b->kategori,
                 'jumlah_barang_diterima' => 4,
             ])->all(),
-        ])->assertCreated();
+        ])->assertCreated()->json('data.id_lpb');
 
         return PenerimaanBarang::with('details')->where('id_lpb', $noLpb)->firstOrFail();
     }

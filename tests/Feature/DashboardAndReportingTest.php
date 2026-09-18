@@ -195,9 +195,7 @@ class DashboardAndReportingTest extends TestCase
             ->assertOk()->json('data');
         $this->assertTrue(collect($ownIndex)->contains(fn ($row) => (int) $row['id'] === $materialRequest->id));
 
-        $poNumber = $numbers->financial('PO');
-        $this->actingAs($purchasing)->postJson(route('pembelian.store'), [
-            'no_po' => $poNumber,
+        $poNumber = $this->actingAs($purchasing)->postJson(route('pembelian.store'), [
             'tanggal' => today()->toDateString(),
             'supplier_id' => $supplier->id,
             'gudang_id' => $gudang->id,
@@ -208,7 +206,7 @@ class DashboardAndReportingTest extends TestCase
                 'jumlah' => 10,
                 'request_detail_id' => $detail->id,
             ]],
-        ])->assertCreated();
+        ])->assertCreated()->json('data.no_po');
 
         $materialRequest->refresh();
         $detail->refresh();

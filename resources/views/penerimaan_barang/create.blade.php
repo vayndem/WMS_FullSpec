@@ -12,7 +12,7 @@
                     <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
                         <div class="form-control">
                             <label class="label"><span class="label-text font-semibold">Nomor Penerimaan Barang</span></label>
-                            <input type="text" class="input input-bordered bg-base-200" name="id_lpb" value="{{ $documentNumber }}" readonly>
+                            <input type="text" class="input input-bordered bg-base-200" value="{{ $documentNumber }}" readonly disabled>
                         </div>
                         <div class="form-control">
                             <label class="label"><span class="label-text font-semibold">Nomor PO <span class="text-error">*</span></span></label>

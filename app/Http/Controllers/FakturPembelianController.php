@@ -64,7 +64,7 @@ class FakturPembelianController extends Controller
         }
 
         $paymentNumber = $request->user()->isFinance()
-            ? $this->numbers->financial('PY')
+            ? $this->numbers->preview(DocumentNumberService::FINANCIAL, 'PY')
             : null;
         return view('faktur_pembelian.index', compact('paymentNumber'));
     }

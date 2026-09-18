@@ -8,7 +8,7 @@ Untuk gambaran produk dan alur bisnis yang lebih singkat, lihat [README.md](READ
 
 | Komponen | Implementasi |
 |---|---|
-| Backend | PHP 8.2+, Laravel 12 |
+| Backend | PHP 8.2+ (dikembangkan di 8.3.26), Laravel 12.69 |
 | Database | MySQL |
 | Web auth | Laravel session auth |
 | API auth | Laravel Sanctum |
@@ -19,6 +19,17 @@ Untuk gambaran produk dan alur bisnis yang lebih singkat, lihat [README.md](READ
 | Test | PHPUnit 11 |
 
 Arsitektur aplikasi berbentuk modular monolith Laravel.
+
+### 1.1 Skeleton Laravel 12 (sejak 2026-09-18)
+
+Framework benar-benar dinaikkan dari Laravel 10 ke Laravel 12 pada 2026-09-18, sekaligus memakai skeleton Laravel 11/12. Berkas berikut **sudah tidak ada lagi** dan itu disengaja: `app/Http/Kernel.php`, `app/Console/Kernel.php`, `app/Exceptions/Handler.php`, `app/Providers/RouteServiceProvider.php`, serta seluruh stub di `app/Http/Middleware/`.
+
+- Middleware group dan alias, redirect tamu/pengguna, trusted proxy, trim string, `dontFlash`, penjadwalan, dan pemuatan route semuanya dikonfigurasi di **`bootstrap/app.php`**.
+- Daftar provider aplikasi pindah ke **`bootstrap/providers.php`**; `config/app.php` hanya menyisakan `ServiceProvider::defaultProviders()`.
+- Rate limiter `login` dan `api` pindah ke `AppServiceProvider::boot()`; perilakunya tidak berubah.
+- **`->withEvents(discover: false)` wajib dipertahankan.** Laravel 12 mendaftarkan `EventServiceProvider` bawaan yang melakukan penemuan listener otomatis di `app/Listeners`. Bila dibiarkan menyala, listener `CatatAktivitasAutentikasi` terpasang **dua kali**, sehingga satu percobaan login gagal menulis dua baris audit dan throttle tercapai di separuh jumlah percobaan.
+- Broadcasting tetap nonaktif: `routes/channels.php` sengaja tidak dioper ke `withRouting()`.
+- `config/` sengaja dibiarkan dalam bentuk Laravel 10 yang lebih lengkap, karena berisi setelan nyata termasuk `konstanta_ppn`.
 
 ## 2. Lapisan aplikasi
 
@@ -323,6 +334,37 @@ Empat hal yang sebelumnya tidak bisa dicatat sistem:
 - Saat dilaporkan selesai, harga pokok per unit dikunci dan perintah kerja **berhenti menerima biaya**. Konsekuensinya: NPK yang perintah kerjanya sudah disegel tidak bisa dibalik.
 - Keluaran tidak dibukukan sebagai stok barang jadi. Tiap pengiriman melepas WIP secara proporsional ke Beban Pokok Penjualan; perintah kerja tutup saat terkirim penuh.
 
+### 6.11 Umur piutang dan sales (sejak 2026-09-18)
+
+- `PiutangAgingService` mengelompokkan sisa tagihan ke lima ember yang **persis sama** dengan `apAgingBuckets()` di sisi hutang, supaya kedua sisi terbaca dalam skala yang sama.
+- Laporan ini punya **tanggal acuan**. Karena retur penjualan memotong `grand_total` faktur di tempat, nilai retur yang tanggalnya **sesudah** tanggal acuan ditambahkan kembali; tanpa itu piutang periode lalu terbaca terlalu kecil. Pembayaran hanya dihitung sampai tanggal acuan.
+- Faktur `VOID` dikeluarkan sepenuhnya, sama seperti sisi hutang. Faktur yang di-void **setelah** tanggal acuan karenanya tidak muncul pada laporan mundur — batas yang disengaja.
+- Laporan menampilkan **tie-out** terhadap saldo buku besar Piutang Usaha dan menandai selisihnya merah. Tie-out **dimatikan saat difilter per pelanggan**, karena `wms_jurnal_detail` tidak punya dimensi pelanggan.
+- `wms_pesanan_penjualan.sales_user_id` mencatat sales pemegang pelanggan dan **disalin ke `wms_faktur_penjualan.sales_user_id`** saat faktur dibuat, sehingga pengalihan pesanan tidak memindahkan penjualan yang sudah tertagih. Standarnya adalah pembuat dokumen; **tidak ada role baru** — siapa pun pengguna aktif bisa ditunjuk.
+- `KinerjaSalesService` merangkum pesanan, penjualan DPP, retur, penjualan bersih, dan piutang beredar per sales dalam satu rentang tanggal.
+
+### 6.12 Cross dock (sejak 2026-09-18)
+
+- Cross dock adalah **janji, bukan perpindahan**: ia memakai `ReservasiPersediaan` yang sudah ada, bukan status layer baru, sehingga invariant "saldo gudang = jumlah layer" tidak tersentuh.
+- Usulannya mempertemukan baris penerimaan barang 14 hari terakhir dengan baris pesanan penjualan terbuka di **gudang yang sama** dan bahan yang sama, dibatasi oleh sisa pesanan, sisa baris LPB, dan stok bebas.
+- Karena `StokGudangService::keluar()` menuntut *tersedia − direservasi ≥ jumlah*, reservasi cross dock justru akan menghalangi pengirimannya sendiri. Maka `postingSuratJalan()` **melepas tanda cross dock milik baris pesanan itu sebelum mengonsumsi stok**.
+- Pengiriman **sebagian** memecah tanda: bagian terkirim menjadi `DIKIRIM`, sisanya direservasi ulang sebagai baris baru.
+
+### 6.13 BOM dan varians pemakaian (sejak 2026-09-18)
+
+- `wms_bom` menyimpan komponen standar per bahan hasil; hanya **satu BOM aktif per bahan**, dijaga di service.
+- Varians membandingkan standar (jumlah BOM × basis perintah kerja) dengan pemakaian NPK aktual pada perintah kerja itu. Basisnya `jumlah_selesai` bila sudah selesai, selain itu `jumlah_rencana`.
+- **Varians tidak menjurnal apa pun.** Costing produksi berbasis pemakaian aktual dan materialnya sudah masuk WIP saat NPK diposting; menjurnal varians di atasnya akan menghitung ganda.
+- Bahan yang terpakai tapi tidak ada di BOM tampil sebagai **DI LUAR BOM**, bukan disembunyikan. Penilaian memakai harga rata-rata aktual, mundur ke harga layer terbaru, dan **null bila keduanya tidak ada** — bukan nol, yang akan terbaca sebagai "tidak ada selisih".
+
+### 6.14 Penomoran dokumen (diperbaiki 2026-09-18)
+
+- `DocumentNumberService` punya dua mode. `external()`/`financial()`/`internal()` **mengalokasikan** (menaikkan `document_sequences.last_number`) dan hanya boleh dipanggil saat dokumen benar-benar disimpan. `preview(...)` **membaca** dan tidak menulis apa pun — itu yang dipakai form dan field "nomor berikutnya".
+- Sebelum 2026-09-18, tiga belas titik tampilan memanggil metode yang mengalokasikan, sehingga **membuka form lalu batal membakar satu nomor dokumen secara permanen** dan meninggalkan lubang pada urutan yang justru ada untuk keperluan audit.
+- Form lalu mengirim balik nomor itu sebagai input readonly dan controller memercayainya — artinya nomor dokumen, tulang punggung audit, **ditentukan klien**. Sekarang setiap `store()` mengalokasikan sendiri di sisi server dan mengabaikan kiriman klien; aturan `required`/`regex`/`unique` untuk field nomor dihapus dari `Store*Request` karena hanya ada untuk mengawasi input yang kini tidak dipakai.
+- Konsekuensi untuk tes: tes yang memanggil route store **tidak boleh memilih nomornya sendiri**, melainkan membacanya dari respons (`->json('data.no_po')`, `->json('data.id_lpb')`).
+- `StokGudangService::saldo()` juga bukan pembacaan murni — ia melakukan `insertOrIgnore` dan `lockForUpdate()`. Jalur baca harus query `StokGudang` langsung.
+
 ## 7. Dashboard
 
 Dashboard aktif:
@@ -414,6 +456,7 @@ Urutan utama `DatabaseSeeder`:
 6. supplier dan bahan demo
 7. seeder demo transaksi
 8. sinkronisasi multi-warehouse demo data
+9. `PenjualanDanProduksiDemoSeeder`
 
 Pada sinkronisasi multi-warehouse:
 
@@ -421,6 +464,8 @@ Pada sinkronisasi multi-warehouse:
 - user `Produksi` otomatis di-assign ke `Gudang Produksi`
 
 `UserRoleSeeder`/`UserSeeder` sekarang juga membuat role dan akun `accounting_manager` (lihat [3.4](#34-development-accounts)).
+
+`PenjualanDanProduksiDemoSeeder` (2026-09-18) sengaja berjalan **setelah** sinkronisasi multi-warehouse, karena baru di sanalah `StokGudang` terisi dan alur penjualan butuh saldo yang bisa dijual. Ia membuat dua pelanggan, satu penjualan produksi lengkap (perintah kerja + NPK + surat jalan + faktur + pembayaran sebagian), satu penjualan dagang yang sudah lewat jatuh tempo, satu BOM beserta varians boros/hemat, dan satu tanda cross dock. Tanggal penjualan mundurnya **diambil dari `transaction_date` layer yang benar-benar ada**, sebab `ambilLayer()` menolak layer yang lebih baru dari tanggal dokumen. Tiap skenario dibungkus agar dataset demo yang tipis hanya memunculkan peringatan, bukan menggagalkan `migrate:fresh --seed`.
 
 ## 10. Installation
 

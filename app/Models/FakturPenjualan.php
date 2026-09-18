@@ -21,7 +21,7 @@ class FakturPenjualan extends Model
     protected $table = 'wms_faktur_penjualan';
 
     protected $fillable = [
-        'nomor', 'tanggal', 'jatuh_tempo', 'pelanggan_id', 'no_faktur_pajak',
+        'nomor', 'tanggal', 'jatuh_tempo', 'pelanggan_id', 'sales_user_id', 'no_faktur_pajak',
         'is_ppn', 'tarif_ppn', 'total_dpp', 'total_ppn', 'grand_total', 'sisa_tagihan',
         'status', 'keterangan', 'journal_id', 'dibuat_oleh', 'diposting_oleh', 'diposting_pada',
     ];
@@ -41,6 +41,11 @@ class FakturPenjualan extends Model
     public function pelanggan(): BelongsTo
     {
         return $this->belongsTo(Pelanggan::class, 'pelanggan_id');
+    }
+
+    public function sales(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'sales_user_id');
     }
 
     public function details(): HasMany

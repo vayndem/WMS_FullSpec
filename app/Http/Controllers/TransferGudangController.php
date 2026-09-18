@@ -36,7 +36,7 @@ class TransferGudangController extends Controller
     public function create()
     {
         $this->authorize('create', TransferGudang::class);
-        return view('transfer_gudangs.form', $this->formData() + ['transfer' => new TransferGudang(['nomor_transfer' => $this->numbers->internal('TRF', 'GDG'), 'tanggal' => today()])]);
+        return view('transfer_gudangs.form', $this->formData() + ['transfer' => new TransferGudang(['nomor_transfer' => $this->numbers->preview(DocumentNumberService::INTERNAL, 'TRF', 'GDG'), 'tanggal' => today()])]);
     }
     public function store(StoreTransferGudangRequest $r)
     {
@@ -48,6 +48,7 @@ class TransferGudangController extends Controller
             $d = $r->validated();
             $details = $d['details'];
             unset($d['details']);
+            $d['nomor_transfer'] = $this->numbers->internal('TRF', 'GDG');
             $d += ['status' => TransferGudang::DRAFT, 'dibuat_oleh' => Auth::id()];
             $m = TransferGudang::create($d);
             $m->details()->createMany($details);

@@ -291,7 +291,7 @@ class PenerimaanBarangController extends Controller
             ->orderBy('no_po', 'desc')
             ->get();
         $kategoris = KategoriBahan::all();
-        $documentNumber = $this->numbers->external('LPB');
+        $documentNumber = $this->numbers->preview(DocumentNumberService::EXTERNAL, 'LPB');
 
         return view('penerimaan_barang.create', compact('pos', 'kategoris', 'documentNumber'));
     }

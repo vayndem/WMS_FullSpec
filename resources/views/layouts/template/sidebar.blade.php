@@ -204,6 +204,9 @@
                         Auth::user()->can('viewAny', App\Models\SuratJalan::class) ||
                         Auth::user()->can('viewAny', App\Models\FakturPenjualan::class) ||
                         Auth::user()->can('viewAny', App\Models\DataPesanan::class) ||
+                        Auth::user()->can('viewAny', App\Models\Bom::class) ||
+                        Auth::user()->can('viewPiutangAging') ||
+                        Auth::user()->can('viewKinerjaSales') ||
                         Auth::user()->can('viewProcurementAnalytics'))
                     <li
                         class="{{ request()->routeIs('pelanggan.*') || request()->routeIs('pesanan-penjualan.*') || request()->routeIs('surat-jalan.*') || request()->routeIs('faktur-penjualan.*') || request()->routeIs('data-pesanan.*') || request()->routeIs('lacak-pembelian.*') || request()->routeIs('supplier-scorecard.*') ? 'active' : '' }}">
@@ -240,10 +243,38 @@
                                     </a>
                                 </li>
                             @endcan
+                            @can('viewAny', App\Models\Bom::class)
+                                <li class="{{ request()->routeIs('bom.*') ? 'active' : '' }}">
+                                    <a href="{{ route('bom.index') }}" class="svg-icon">
+                                        <i class="fa-solid fa-sitemap"></i><span>BOM</span>
+                                    </a>
+                                </li>
+                            @endcan
+                            @can('viewAny', App\Models\DataPesanan::class)
+                                <li class="{{ request()->routeIs('varians-pemakaian.*') ? 'active' : '' }}">
+                                    <a href="{{ route('varians-pemakaian.index') }}" class="svg-icon">
+                                        <i class="fa-solid fa-scale-unbalanced"></i><span>Varians Pemakaian</span>
+                                    </a>
+                                </li>
+                            @endcan
                             @can('viewAny', App\Models\FakturPenjualan::class)
                                 <li class="{{ request()->routeIs('faktur-penjualan.*') ? 'active' : '' }}">
                                     <a href="{{ route('faktur-penjualan.index') }}" class="svg-icon">
                                         <i class="fa-solid fa-file-invoice"></i><span>Faktur Penjualan</span>
+                                    </a>
+                                </li>
+                            @endcan
+                            @can('viewKinerjaSales')
+                                <li class="{{ request()->routeIs('kinerja-sales.*') ? 'active' : '' }}">
+                                    <a href="{{ route('kinerja-sales.index') }}" class="svg-icon">
+                                        <i class="fa-solid fa-user-check"></i><span>Kinerja Sales</span>
+                                    </a>
+                                </li>
+                            @endcan
+                            @can('viewPiutangAging')
+                                <li class="{{ request()->routeIs('piutang-aging.*') ? 'active' : '' }}">
+                                    <a href="{{ route('piutang-aging.index') }}" class="svg-icon">
+                                        <i class="fa-solid fa-hourglass-half"></i><span>Umur Piutang</span>
                                     </a>
                                 </li>
                             @endcan
@@ -411,6 +442,13 @@
                             @can('reconcile', App\Models\StokGudang::class)<li><a href="{{ route('rekonsiliasi-gudangs.index') }}"><span>Rekonsiliasi</span></a></li>@endcan
                             <li><a href="{{ route('wms-control.index') }}"><span>WMS Control Center</span></a></li>
                             <li><a href="{{ route('antrean-kerja.index') }}"><span>Antrean Kerja Saya</span></a></li>
+                            @can('viewAny', App\Models\CrossDock::class)
+                                <li class="{{ request()->routeIs('cross-dock.*') ? 'active' : '' }}">
+                                    <a href="{{ route('cross-dock.index') }}" class="svg-icon">
+                                        <i class="fa-solid fa-right-left"></i><span>Cross Dock</span>
+                                    </a>
+                                </li>
+                            @endcan
                             @can('operateWarehouse')
                                 <li><a href="{{ route('gelombang-pengambilan.index') }}"><span>Gelombang Pengambilan</span></a></li>
                                 <li><a href="{{ route('slotting.index') }}"><span>Saran Slotting</span></a></li>

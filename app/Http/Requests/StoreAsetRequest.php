@@ -17,7 +17,6 @@ class StoreAsetRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nomor_aset' => ['required', 'string', 'max:30', 'regex:/^\d{2}-\d{2}-[A-Z]{2}-(?:I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)-\d{3}$/', Rule::unique('wms_asets', 'nomor_aset')->ignore($this->route('aset'))],
             'kategori_aset_id' => 'required|exists:wms_kategori_asets,id',
             'name' => 'required|string|max:180',
             'serial_number' => 'nullable|string|max:120',

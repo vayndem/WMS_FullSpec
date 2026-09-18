@@ -54,7 +54,7 @@ class ReturPembelianController extends Controller
                 return $invoice && in_array($invoice->status, [FakturPembelian::VOID, FakturPembelian::PENDING_APPROVAL], true);
             })
             ->values();
-        $documentNumber = $this->numbers->external('RTV');
+        $documentNumber = $this->numbers->preview(DocumentNumberService::EXTERNAL, 'RTV');
 
         return view('retur_pembelian.create', compact('lpbs', 'documentNumber'));
     }
@@ -111,7 +111,7 @@ class ReturPembelianController extends Controller
             $this->periods->assertOpen($validated['tanggal'], 'Retur pembelian');
 
             $retur = ReturPembelian::create([
-                'no_retur' => $validated['no_retur'],
+                'no_retur' => $this->numbers->external('RTV'),
                 'lpb_id' => $lpb->id,
                 'tanggal' => $validated['tanggal'],
                 'alasan' => $validated['alasan'],
@@ -178,7 +178,7 @@ class ReturPembelianController extends Controller
             'success' => true,
             'message' => 'Retur pembelian berhasil dicatat, mengurangi stok dan GRNI.',
             'data' => $retur,
-            'next_document_number' => $this->numbers->external('RTV'),
+            'next_document_number' => $this->numbers->preview(DocumentNumberService::EXTERNAL, 'RTV'),
         ], 201);
     }
 

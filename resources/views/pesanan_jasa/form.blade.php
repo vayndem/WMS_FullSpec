@@ -12,7 +12,7 @@
                 <div class="mb-4 grid grid-cols-1 gap-3 md:grid-cols-4">
                     <div class="form-control">
                         <label class="label"><span class="label-text font-semibold">No PO Jasa</span></label>
-                        <input name="no_po" class="input input-bordered bg-base-200" value="{{ $editing ? $po->no_po : $documentNumber }}" readonly>
+                        <input class="input input-bordered bg-base-200" value="{{ $editing ? $po->no_po : $documentNumber }}" readonly disabled>
                         <span class="label-text-alt mt-1 text-base-content/50">Kode finansial jasa menggunakan penanda PJ.</span>
                     </div>
                     <div class="form-control">

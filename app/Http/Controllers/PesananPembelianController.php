@@ -60,7 +60,7 @@ class PesananPembelianController extends Controller
                 ->make(true);
         }
 
-        $documentNumber = $this->numbers->financial('PO');
+        $documentNumber = $this->numbers->preview(DocumentNumberService::FINANCIAL, 'PO');
         $gudangs = Gudang::where('aktif', true)->where('jenis', Gudang::NORMAL)->orderBy('nama')->get();
         return view('pembelian.index', compact('documentNumber', 'gudangs'));
     }
@@ -167,7 +167,7 @@ class PesananPembelianController extends Controller
         $validated = $request->validated();
 
         $pembelian = DB::transaction(function () use ($validated) {
-            $noPo = $validated['no_po'];
+            $noPo = $this->numbers->financial('PO');
             $ppnPercent = $validated['is_ppn'] ? PesananPembelianPolicy::PPN_RATE : 0;
 
             $pembelian = PesananPembelian::create([
@@ -221,7 +221,7 @@ class PesananPembelianController extends Controller
             'success' => true,
             'message' => 'Pesanan Pembelian (PO) berhasil dibuat.',
             'data'    => $pembelian,
-            'next_document_number' => $this->numbers->financial('PO'),
+            'next_document_number' => $this->numbers->preview(DocumentNumberService::FINANCIAL, 'PO'),
         ], 201);
     }
 

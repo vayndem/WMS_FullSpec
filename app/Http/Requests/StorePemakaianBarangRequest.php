@@ -15,7 +15,6 @@ class StorePemakaianBarangRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'kode'             => ['required', 'string', 'max:30', 'regex:/^[A-Z]{3}\d{9}$/', 'unique:wms_pemakaian_barang,kode'],
             'kode_datapesanan' => 'nullable|string|max:100',
             'data_pesanan_id'  => ['nullable', 'integer', 'exists:wms_data_pesanan,id'],
             'tanggal'          => 'required|date',

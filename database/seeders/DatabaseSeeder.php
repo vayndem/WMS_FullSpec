@@ -304,6 +304,8 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->syncMultiWarehouseDemoData();
+
+        $this->call(PenjualanDanProduksiDemoSeeder::class);
     }
 
     private function syncMultiWarehouseDemoData(): void

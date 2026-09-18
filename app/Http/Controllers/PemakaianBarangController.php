@@ -232,7 +232,7 @@ class PemakaianBarangController extends Controller
 
         $bahans = Bahan::with('stokGudangs')->orderBy('nama', 'asc')->get();
         $gudangs = $this->availableWarehouses(request()->user(), 'npk');
-        $documentNumber = $this->numbers->external('NPK');
+        $documentNumber = $this->numbers->preview(DocumentNumberService::EXTERNAL, 'NPK');
         $reservations = ReservasiPersediaan::with(['bahan', 'gudang'])->whereIn('gudang_id', request()->user()->accessibleGudangIds('npk'))->whereIn('status', ['ACTIVE', 'PICKED'])->get();
         $perintahKerja = $this->perintahKerjaTerbuka(request()->user());
 
@@ -249,6 +249,7 @@ class PemakaianBarangController extends Controller
             $isKeluar = $validated['status'] === PemakaianBarang::POSTED;
             $bahan = Bahan::lockForUpdate()->findOrFail($validated['id_barang']);
 
+            $validated['kode'] = $this->numbers->external('NPK');
             $validated['id_user'] = $request->user()->id ?? 0;
             $validated['jumlah_terkirim'] = $isKeluar ? $validated['jumlah'] : 0;
             $validated['tgl_terkirim'] = $isKeluar ? ($validated['tanggal'] ?? now()) : null;

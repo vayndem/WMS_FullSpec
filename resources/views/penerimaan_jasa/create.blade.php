@@ -26,7 +26,7 @@
                     <div class="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                         <div class="form-control">
                             <label class="label"><span class="label-text font-semibold">No Penerimaan Jasa</span></label>
-                            <input name="id_lpb" class="input input-bordered bg-base-200" value="{{ $documentNumber }}" readonly>
+                            <input class="input input-bordered bg-base-200" value="{{ $documentNumber }}" readonly disabled>
                             <span class="label-text-alt mt-1 text-base-content/50">Format nomor mengikuti tanggal dokumen.</span>
                         </div>
                         <div class="form-control">

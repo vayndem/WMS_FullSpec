@@ -182,7 +182,7 @@ class PembayaranFakturController extends Controller
             'success' => true,
             'message' => 'Transaksi pembayaran berhasil dicatat dan diposting ke Jurnal COA.',
             'data'    => $invoiceDetail,
-            'next_document_number' => $this->numbers->financial('PY'),
+            'next_document_number' => $this->numbers->preview(DocumentNumberService::FINANCIAL, 'PY'),
         ], 201);
     }
 

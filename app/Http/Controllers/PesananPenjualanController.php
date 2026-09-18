@@ -8,6 +8,7 @@ use App\Models\Bahan;
 use App\Models\Gudang;
 use App\Models\Pelanggan;
 use App\Models\PesananPenjualan;
+use App\Models\User;
 use App\Services\PenjualanService;
 use Illuminate\Http\Request;
 use RuntimeException;
@@ -22,7 +23,7 @@ class PesananPenjualanController extends Controller
 
         $status = $request->input('status');
 
-        $pesanan = PesananPenjualan::with(['pelanggan', 'gudang'])
+        $pesanan = PesananPenjualan::with(['pelanggan', 'gudang', 'sales'])
             ->when($status, fn ($query) => $query->where('status', $status))
             ->orderByDesc('tanggal')
             ->orderByDesc('id')
@@ -40,6 +41,7 @@ class PesananPenjualanController extends Controller
             'pelanggan' => Pelanggan::aktif()->orderBy('nama')->get(),
             'gudang' => Gudang::where('jenis', Gudang::NORMAL)->orderBy('nama')->get(),
             'bahan' => Bahan::orderBy('nama')->limit(500)->get(['id', 'nama', 'satuan']),
+            'sales' => User::where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -59,7 +61,7 @@ class PesananPenjualanController extends Controller
     {
         $this->authorize('view', $pesanan);
 
-        $pesanan->load(['pelanggan', 'gudang', 'details.bahan', 'suratJalan']);
+        $pesanan->load(['pelanggan', 'gudang', 'sales', 'details.bahan', 'suratJalan']);
 
         return view('pesanan_penjualan.show', compact('pesanan'));
     }

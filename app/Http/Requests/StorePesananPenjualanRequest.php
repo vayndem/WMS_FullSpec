@@ -17,6 +17,7 @@ class StorePesananPenjualanRequest extends FormRequest
         return [
             'tanggal' => ['required', 'date'],
             'pelanggan_id' => ['required', 'integer', 'exists:pelanggans,id'],
+            'sales_user_id' => ['nullable', 'integer', 'exists:users,id'],
             'gudang_id' => ['required', 'integer', 'exists:gudangs,id'],
             'nomor_po_pelanggan' => ['nullable', 'string', 'max:50'],
             'is_ppn' => ['nullable', 'boolean'],

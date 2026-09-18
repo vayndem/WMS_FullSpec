@@ -16,7 +16,6 @@ class StoreJurnalRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'no_jurnal'        => ['required', 'string', 'max:30', 'regex:/^\d{2}-\d{2}-[A-Z]{2}-(?:I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)-\d{3}$/', 'unique:wms_jurnal,no_jurnal'],
             'tanggal'          => 'required|date',
             'keterangan'       => 'nullable|string',
             'sumber_transaksi' => 'nullable|string|max:100',

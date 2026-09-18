@@ -16,7 +16,7 @@
                 <div class="mb-4 grid grid-cols-1 gap-3 md:grid-cols-4">
                     <div class="form-control">
                         <label class="label"><span class="label-text font-semibold">Nomor</span></label>
-                        <input name="nomor_transfer" class="input input-bordered bg-base-200" readonly value="{{ old('nomor_transfer', $transfer->nomor_transfer) }}">
+                        <input class="input input-bordered bg-base-200" readonly disabled value="{{ $transfer->nomor_transfer }}">
                     </div>
                     <div class="form-control">
                         <label class="label"><span class="label-text font-semibold">Tanggal</span></label>

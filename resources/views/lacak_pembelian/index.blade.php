@@ -56,6 +56,10 @@
                         <div class="text-xs uppercase text-base-content/60">Jadi Beban (NPK)</div>
                         <div class="text-xl font-bold text-warning">{{ $rupiah($data['total_beban_npk']) }}</div>
                     </div>
+                    <div class="rounded-lg border border-info/40 bg-info/5 p-4">
+                        <div class="text-xs uppercase text-base-content/60">Terjual</div>
+                        <div class="text-xl font-bold text-info">{{ $rupiah($data['total_terjual']) }}</div>
+                    </div>
                     <div class="rounded-lg border border-error/40 bg-error/5 p-4">
                         <div class="text-xs uppercase text-base-content/60">Selisih Opname</div>
                         <div class="text-xl font-bold text-error">{{ $rupiah($data['total_selisih_opname']) }}</div>
@@ -71,6 +75,7 @@
                                 <th class="text-end">Total Masuk</th>
                                 <th class="text-end">Masih Stok</th>
                                 <th class="text-end">Jadi Beban</th>
+                                <th class="text-end">Terjual</th>
                                 <th class="text-end">Selisih Opname</th>
                                 <th class="text-end">Retur</th>
                                 <th class="text-end">Belum Terlacak</th>
@@ -92,12 +97,13 @@
                                     <td class="text-end">{{ $rupiah($row['nilai_masuk']) }}</td>
                                     <td class="text-end text-success">{{ $rupiah($row['sisa_stok']) }}</td>
                                     <td class="text-end text-warning">{{ $rupiah($row['beban_npk']) }}</td>
+                                    <td class="text-end text-info">{{ $rupiah($row['terjual']) }}</td>
                                     <td class="text-end {{ $row['selisih_opname'] != 0 ? 'text-error' : '' }}">{{ $rupiah($row['selisih_opname']) }}</td>
                                     <td class="text-end">{{ $rupiah($row['retur']) }}</td>
                                     <td class="text-end {{ abs($row['tidak_terlacak']) >= 0.01 ? 'text-error font-semibold' : 'text-base-content/40' }}">{{ $rupiah($row['tidak_terlacak']) }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="8" class="py-3 text-center text-base-content/50">Penerimaan ini tidak memiliki baris barang.</td></tr>
+                                <tr><td colspan="9" class="py-3 text-center text-base-content/50">Penerimaan ini tidak memiliki baris barang.</td></tr>
                             @endforelse
                         </tbody>
                         <tfoot>
@@ -106,6 +112,7 @@
                                 <td class="text-end">{{ $rupiah($data['total_nilai_masuk']) }}</td>
                                 <td class="text-end">{{ $rupiah($data['total_sisa_stok']) }}</td>
                                 <td class="text-end">{{ $rupiah($data['total_beban_npk']) }}</td>
+                                <td class="text-end">{{ $rupiah($data['total_terjual']) }}</td>
                                 <td class="text-end">{{ $rupiah($data['total_selisih_opname']) }}</td>
                                 <td class="text-end">{{ $rupiah($data['total_retur']) }}</td>
                                 <td class="text-end">{{ $rupiah($data['total_tidak_terlacak']) }}</td>

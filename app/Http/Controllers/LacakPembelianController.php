@@ -88,6 +88,7 @@ class LacakPembelianController extends Controller
             ['key' => 'sisa_stok', 'label' => 'Masih Stok', 'align' => 'right'],
             ['key' => 'beban_npk', 'label' => 'Jadi Beban', 'align' => 'right'],
             ['key' => 'selisih_opname', 'label' => 'Selisih Opname', 'align' => 'right'],
+            ['key' => 'terjual', 'label' => 'Terjual', 'align' => 'right'],
             ['key' => 'retur', 'label' => 'Retur', 'align' => 'right'],
             ['key' => 'tidak_terlacak', 'label' => 'Belum Terlacak', 'align' => 'right'],
         ];
@@ -111,6 +112,7 @@ class LacakPembelianController extends Controller
             'sisa_stok' => $uang($row['sisa_stok']),
             'beban_npk' => $uang($row['beban_npk']),
             'selisih_opname' => $uang($row['selisih_opname']),
+            'terjual' => $uang($row['terjual']),
             'retur' => $uang($row['retur']),
             'tidak_terlacak' => $uang($row['tidak_terlacak']),
         ]);
@@ -124,6 +126,7 @@ class LacakPembelianController extends Controller
             'sisa_stok' => $uang($data['total_sisa_stok']),
             'beban_npk' => $uang($data['total_beban_npk']),
             'selisih_opname' => $uang($data['total_selisih_opname']),
+            'terjual' => $uang($data['total_terjual']),
             'retur' => $uang($data['total_retur']),
             'tidak_terlacak' => $uang($data['total_tidak_terlacak']),
         ])->values();

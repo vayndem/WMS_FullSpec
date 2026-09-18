@@ -6,6 +6,7 @@
             <h3 class="text-2xl font-bold">Pesanan Penjualan {{ $pesanan->nomor }}</h3>
             <p class="text-base-content/60">
                 {{ $pesanan->pelanggan?->nama }} &middot; {{ $pesanan->tanggal?->format('d-m-Y') }} &middot; Gudang {{ $pesanan->gudang?->nama }}
+                &middot; Sales {{ $pesanan->sales?->name ?? 'belum ditandai' }}
                 <span class="badge {{ $pesanan->status === 'OPEN' ? 'badge-warning' : 'badge-success' }}">{{ $pesanan->status }}</span>
             </p>
         </div>

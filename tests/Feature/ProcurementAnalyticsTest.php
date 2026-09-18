@@ -42,6 +42,7 @@ class ProcurementAnalyticsTest extends TestCase
             $terlacak = $data['total_sisa_stok']
                 + $data['total_beban_npk']
                 + $data['total_selisih_opname']
+                + $data['total_terjual']
                 + $data['total_retur']
                 + $data['total_tidak_terlacak'];
 

@@ -88,7 +88,7 @@ class AsetController extends Controller
     {
         $this->authorize('create', Aset::class);
         return view('aset.form', $this->formData() + [
-            'documentNumber' => $this->numbers->financial('AS'),
+            'documentNumber' => $this->numbers->preview(DocumentNumberService::FINANCIAL, 'AS'),
         ]);
     }
     public function store(StoreAsetRequest $request)
@@ -97,6 +97,7 @@ class AsetController extends Controller
         $asset = DB::transaction(function () use ($data) {
             $cost = (float)$data['acquisition_cost'];
             $opening = (float)($data['opening_accumulated_depreciation'] ?? 0);
+            $data['nomor_aset'] = $this->numbers->financial('AS');
             $asset = Aset::create($data + [
                 'accumulated_depreciation' => $opening,
                 'book_value' => $cost - $opening,

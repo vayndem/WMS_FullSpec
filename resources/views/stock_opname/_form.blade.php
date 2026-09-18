@@ -30,7 +30,7 @@
         <div class="mb-4 grid grid-cols-1 gap-3 md:grid-cols-4">
             <div class="form-control">
                 <label class="label"><span class="label-text font-semibold">Nomor Opname</span></label>
-                <input class="input input-bordered bg-base-200" name="number"
+                <input class="input input-bordered bg-base-200" disabled
                     value="{{ $editing ? $opname->number : $documentNumber }}" readonly>
             </div>
             <div class="form-control">

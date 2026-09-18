@@ -21,14 +21,14 @@ class WarehouseExecutionService
 {
     public function __construct(private StokGudangService $stock, private DocumentNumberService $numbers) {}
 
-    public function reserve(int $warehouseId, int $materialId, float $quantity, ?string $referenceType = null, ?int $referenceId = null): ReservasiPersediaan
+    public function reserve(int $warehouseId, int $materialId, float $quantity, ?string $referenceType = null, ?int $referenceId = null, ?int $userId = null): ReservasiPersediaan
     {
-        return DB::transaction(function () use ($warehouseId, $materialId, $quantity, $referenceType, $referenceId) {
+        return DB::transaction(function () use ($warehouseId, $materialId, $quantity, $referenceType, $referenceId, $userId) {
             if ($quantity <= 0) throw new RuntimeException('Jumlah reservasi harus lebih besar dari nol.');
             $balance = $this->stock->saldo($warehouseId, $materialId);
             if ((float) $balance->stok_dapat_dipakai + .000001 < $quantity) throw new RuntimeException('Stok available, tidak expired, dan tidak diblokir tidak mencukupi untuk reservasi.');
             $balance->increment('stok_direservasi', $quantity);
-            return ReservasiPersediaan::create(['number' => $this->numbers->internal('RSV', 'STK'), 'gudang_id' => $warehouseId, 'bahan_id' => $materialId, 'quantity' => $quantity, 'reference_type' => $referenceType, 'reference_id' => $referenceId, 'created_by' => Auth::id()]);
+            return ReservasiPersediaan::create(['number' => $this->numbers->internal('RSV', 'STK'), 'gudang_id' => $warehouseId, 'bahan_id' => $materialId, 'quantity' => $quantity, 'reference_type' => $referenceType, 'reference_id' => $referenceId, 'created_by' => $userId ?? Auth::id()]);
         });
     }
 

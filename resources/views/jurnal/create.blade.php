@@ -10,7 +10,7 @@
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div class="form-control">
                         <label class="label"><span class="label-text font-semibold">No. Jurnal</span></label>
-                        <input type="text" class="input input-bordered" name="no_jurnal" value="{{ $documentNumber }}" readonly>
+                        <input type="text" class="input input-bordered bg-base-200" value="{{ $documentNumber }}" readonly disabled>
                         <span class="label-text-alt mt-1 text-base-content/50">Kode finansial internal dengan penanda JR.</span>
                     </div>
                     <div class="form-control">

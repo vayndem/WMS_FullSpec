@@ -1,9 +1,13 @@
 <?php
 
+use App\Http\Controllers\BomController;
 use App\Http\Controllers\DataPesananController;
 use App\Http\Controllers\FakturPenjualanController;
+use App\Http\Controllers\KinerjaSalesController;
 use App\Http\Controllers\PelangganController;
 use App\Http\Controllers\PesananPenjualanController;
+use App\Http\Controllers\PiutangAgingController;
+use App\Http\Controllers\VariansPemakaianController;
 use App\Http\Controllers\SuratJalanController;
 use Illuminate\Support\Facades\Route;
 
@@ -35,4 +39,21 @@ Route::middleware('auth')->group(function () {
     Route::post('faktur-penjualan/{faktur}/post', [FakturPenjualanController::class, 'post'])->name('faktur-penjualan.post');
     Route::post('faktur-penjualan/{faktur}/bayar', [FakturPenjualanController::class, 'bayar'])->name('faktur-penjualan.bayar');
     Route::delete('faktur-penjualan/{faktur}', [FakturPenjualanController::class, 'destroy'])->name('faktur-penjualan.destroy');
+
+    Route::get('piutang-aging', [PiutangAgingController::class, 'index'])->name('piutang-aging.index');
+    Route::get('piutang-aging/pdf', [PiutangAgingController::class, 'pdf'])->name('piutang-aging.pdf');
+    Route::get('piutang-aging/excel', [PiutangAgingController::class, 'excel'])->name('piutang-aging.excel');
+
+    Route::get('bom', [BomController::class, 'index'])->name('bom.index');
+    Route::post('bom', [BomController::class, 'store'])->name('bom.store');
+    Route::post('bom/{bom}/status', [BomController::class, 'status'])->name('bom.status');
+    Route::delete('bom/{bom}', [BomController::class, 'destroy'])->name('bom.destroy');
+
+    Route::get('varians-pemakaian', [VariansPemakaianController::class, 'index'])->name('varians-pemakaian.index');
+    Route::get('varians-pemakaian/pdf', [VariansPemakaianController::class, 'pdf'])->name('varians-pemakaian.pdf');
+    Route::get('varians-pemakaian/excel', [VariansPemakaianController::class, 'excel'])->name('varians-pemakaian.excel');
+
+    Route::get('kinerja-sales', [KinerjaSalesController::class, 'index'])->name('kinerja-sales.index');
+    Route::get('kinerja-sales/pdf', [KinerjaSalesController::class, 'pdf'])->name('kinerja-sales.pdf');
+    Route::get('kinerja-sales/excel', [KinerjaSalesController::class, 'excel'])->name('kinerja-sales.excel');
 });

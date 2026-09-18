@@ -57,7 +57,7 @@ class StockOpnameController extends Controller
     {
         $this->authorize('create', StockOpname::class);
         return view('stock_opname.create', $this->formData() + [
-            'documentNumber' => $this->numbers->internal('OPN', 'INV'),
+            'documentNumber' => $this->numbers->preview(DocumentNumberService::INTERNAL, 'OPN', 'INV'),
         ]);
     }
 
@@ -69,7 +69,7 @@ class StockOpnameController extends Controller
             abort_unless($request->user()->canAccessGudang((int) $data['warehouse_id'], 'opname'), 403);
             $this->ensureNoOpenOpname((int) $data['warehouse_id']);
             $opname = StockOpname::create([
-                'number' => $data['number'],
+                'number' => $this->numbers->internal('OPN', 'INV'),
                 'warehouse_id' => $data['warehouse_id'],
                 'cutoff_at' => $data['cutoff_at'],
                 'status' => StockOpname::DRAFT,

@@ -18,7 +18,7 @@ class PesananPenjualan extends Model
     protected $table = 'wms_pesanan_penjualan';
 
     protected $fillable = [
-        'nomor', 'tanggal', 'pelanggan_id', 'gudang_id', 'nomor_po_pelanggan',
+        'nomor', 'tanggal', 'pelanggan_id', 'sales_user_id', 'gudang_id', 'nomor_po_pelanggan',
         'is_ppn', 'tarif_ppn', 'total_dpp', 'total_ppn', 'grand_total',
         'status', 'keterangan', 'dibuat_oleh',
     ];
@@ -40,6 +40,11 @@ class PesananPenjualan extends Model
     public function gudang(): BelongsTo
     {
         return $this->belongsTo(Gudang::class, 'gudang_id');
+    }
+
+    public function sales(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'sales_user_id');
     }
 
     public function details(): HasMany

@@ -19,19 +19,24 @@ Five things carry the value; the rest is record. **Condensed 2026-09-16** from 8
 | pick up work | **Open-items index** — the single authoritative list of what is unbuilt, and **Dropped from the plan** for what is deliberately never coming back |
 | touch a feature | its entry under **Feature notes** — several decisions there look wrong if you only read the code |
 | trace a historical name | **History** at the bottom |
+| add tests, or wonder what is already guarded | **Measured debt and coverage** — which net catches which class of defect, and where the blind spots are |
 
 **When a note here conflicts with the code, the code wins and the note should be corrected.** `feed.MD` section 15 gives the precedence order: migration > policy > controller+form request > service > model > tests.
 
-**Keep this file lean.** New work belongs in Feature notes as a few lines of *why*, not a build log — no test names, no route lists, no "full suite N passing" (stale the moment it is written). Completed items move out of the Open-items index rather than accumulating struck-through history.
+**Detail is wanted, but only durable detail** (owner's call, 2026-09-18 — this replaces an earlier "keep it lean" instruction). Write down anything a future reader cannot re-derive cheaply: *why* a decision was made, what invariant protects it, what breaks if it is undone, and **measurements with the date they were taken**. Do not write down what the next `grep` answers better — no build logs, no per-commit narration, no "full suite N passing" as a standing claim (put the number in a dated measurement instead, where it reads as a snapshot rather than a promise). Completed items move out of the Open-items index rather than accumulating struck-through history.
+
+Measurements age. Every figure in **Measured debt and coverage** carries the date it was taken; re-measure before trusting one, and update it in place rather than adding a second number beside it.
 
 ## Commands
+
+**PHP 8.2+ is required since 2026-09-18** (Laravel 12). On a box whose `php` on PATH is older, call the newer binary explicitly — `artisan` refuses to boot otherwise, because `vendor/composer/platform_check.php` enforces it. The same applies to `composer`: run it with the 8.2+ binary, or a plain `composer dump-autoload` will rebuild the autoloader against the wrong platform.
 
 ```bash
 composer install
 npm install
 php artisan key:generate
 php artisan migrate --seed     # dev/test only — full seeder mixes master + demo data
-npm run build
+npm run build                  # REQUIRED before php artisan test — see Traps #10
 php artisan serve
 npm run dev                    # Vite dev server for frontend
 php artisan queue:work         # REQUIRED since 2026-09-12 — notifications are queued
@@ -67,6 +72,49 @@ These are hard constraints, not style suggestions — the architecture test fail
 - **Class suffixes stay English** — `Controller`, `Policy`, `Request`, `Service`, `Factory`, `Seeder` are generator conventions, not business jargon. Only the domain noun in the middle is Indonesian (`AsetController`, not `AsetPengendali`).
 - **Column names are generally not translated.** Rename a column only when it embeds a renamed entity's old abbreviation. Generic English columns (`name`, `status`, `amount`, `book_value`) stay — translating every column costs an order of magnitude more reach (every Eloquent access, Blade echo, Yajra key, seeder key, JS `row.xxx`) for little gain. **And never rename a column a Yajra endpoint exposes to JS** — see the Traps section.
 - When a resource's URL segment changes, keep the internal binding name with `->parameters(['new-segment' => 'oldName'])` so controller bodies do not all have to change.
+
+## Application skeleton (Laravel 12, since 2026-09-18)
+
+The app was converted from Laravel 10 to **Laravel 12.69.0 on PHP 8.3** and now uses the Laravel 11/12 skeleton. If you are looking for a file that used to exist, it is gone on purpose:
+
+- **`app/Http/Kernel.php`, `app/Console/Kernel.php`, `app/Exceptions/Handler.php`, `app/Providers/RouteServiceProvider.php` and every stub in `app/Http/Middleware/` were deleted.** Middleware groups/aliases, the guest/auth redirects, trusted proxies, string trimming, exception `dontFlash`, the schedule and route loading all live in **`bootstrap/app.php`**.
+- **Providers are listed in `bootstrap/providers.php`**, not `config/app.php` (whose `providers` key is now just `ServiceProvider::defaultProviders()`). Yajra registers itself through package discovery.
+- **The `login`/`api` rate limiters moved to `AppServiceProvider::boot()`** — the two-tier login throttle described under Platform hardening is unchanged, only relocated.
+- **`->withEvents(discover: false)` is deliberate and load-bearing.** Laravel 12 registers its own `EventServiceProvider`, which auto-discovers listeners in `app/Listeners`. Left on, every listener in `App\Listeners\CatatAktivitasAutentikasi` is bound **twice** — each failed login then writes two audit rows and the throttle test trips at half the attempts. The app keeps its explicit `$listen` map in `App\Providers\EventServiceProvider`, so discovery must stay off.
+- **Broadcasting stays dormant.** `routes/channels.php` is deliberately *not* passed to `withRouting()`, matching the old commented-out `BroadcastServiceProvider` (now deleted). Wiring it is a decision, not a cleanup.
+- `public/index.php` uses the slim `$app->handleRequest(...)` form.
+- **The `config/` directory was deliberately left in its fuller Laravel 10 shape** rather than trimmed to Laravel 12 defaults — the files carry real settings (including `konstanta_ppn`) and trimming them buys nothing but risk.
+
+Where things live now, so you do not go looking for a Kernel:
+
+| To do this | Edit |
+|---|---|
+| add or alias a middleware | `bootstrap/app.php` → `withMiddleware()` (`$middleware->alias([...])`, `->web(append: …)`, `->api(prepend: …)`) |
+| register a service provider | `bootstrap/providers.php` |
+| add a scheduled command | `bootstrap/app.php` → `withSchedule()` |
+| change exception handling | `bootstrap/app.php` → `withExceptions()` |
+| add a rate limiter | `AppServiceProvider::boot()` |
+| add a route file | create it, require it from `routes/web.php`, **and** add it to `ArchitectureConventionTest`'s required-file list |
+| add an artisan command | drop it in `app/Console/Commands` — it is auto-discovered, there is no `commands()` to update |
+
+Two upgrade notes that are easy to trip over: `php artisan` **will not boot** on PHP below 8.2 because `vendor/composer/platform_check.php` enforces it, and running `composer` with an older PHP rebuilds the autoloader against the wrong platform. Also, the numbers in **Measured debt and coverage** were taken on this stack — a framework upgrade invalidates them.
+
+## Document numbering — allocate at save, never at render (corrected 2026-09-18)
+
+`DocumentNumberService` has two modes and they are not interchangeable:
+
+- **`external()` / `financial()` / `internal()` allocate** — they increment `document_sequences.last_number` and persist it. Call them **only at the moment a document is actually written**, inside the same transaction.
+- **`preview(DocumentNumberService::EXTERNAL|FINANCIAL|INTERNAL, …)` reads** — it returns what the next number *would* be and writes nothing. That is what a create form or a "next number" JSON field shows.
+
+Until 2026-09-18 thirteen display sites called the allocating methods, so **merely opening a create form and walking away burned a document number permanently**, leaving gaps in a sequence that exists to be auditable, and eating into the hard 999-per-period ceiling. The same forms then submitted that number back as a readonly input and the controllers trusted it — the audit backbone of every document was **client-supplied and trivially editable**.
+
+Both halves are fixed and must stay fixed:
+
+- Every `store()` now allocates its own number server-side and ignores anything the client sent. The number rules (`required` + `regex` + `unique`) were removed from the `Store*Request` classes, because they only existed to police client input that no longer reaches the model.
+- The number inputs on those forms are `disabled` display fields, not form data.
+- **A test that posts to one of these store routes cannot choose the number** — it must read it back from the response (`->json('data.no_po')`, `->json('data.id_lpb')`). Six tests were doing exactly that and had to be rewritten.
+
+This is also why **`HalamanTanpaEfekSampingTest`** exists: it fires every parameterless GET page and fails if any of them issues an `insert`/`update`/`delete`. That test is what found this, after a green 245-test suite had hidden it for as long as the feature existed. It also caught `CrossDockService::saran()` calling `StokGudangService::saldo()`, which looks like a read but does `insertOrIgnore` plus `lockForUpdate()` — **`saldo()` is a write helper for write paths; read paths must query `StokGudang` directly.**
 
 ## Traps this codebase has already sprung
 
@@ -115,6 +163,10 @@ A `\bPembelian\b` replace over `.php` files corrupted three COA seed labels and 
 `@php($x = ...)` is matched by a balanced-parenthesis regex. Feed it a long enough expression and the match **fails silently**: Blade emits a bare `<?php` with no closing tag, so everything after it stays in PHP mode and the page dies with a parse error pointing at some unrelated `@endforeach` far below. The reconciliation page was broken this way from commit `a6f8694` and no test caught it, because no test opened the page.
 
 **Use the block form `@php ... @endphp` for anything beyond a trivial assignment.** And note the failure mode: a Blade parse error naming a directive you did not touch usually means an *earlier* directive failed to compile. This bit twice in one session — the second time on a freshly written `@php($presisi = abs($value - round($value)) > 0.000001 ? 6 : 0)`, minutes after the trap was documented. `KualitasTampilanTest::test_every_blade_view_compiles_to_valid_php` now compiles every view and lints the output, so it cannot reach a browser again.
+
+### 10. A missing Vite manifest fails ~170 tests with no code defect in sight
+
+Without `public/build/manifest.json`, every page that renders the layout throws `ViteManifestNotFoundException` and returns **500**, so the feature suite collapses into a wall of "Expected 200, got 500" plus a `SmokeSemuaHalamanTest` listing most of the application. Nothing is wrong with the code. **Run `npm install && npm run build` before `php artisan test`** — the assets are not committed, so a fresh clone or a cleaned `public/build` reproduces it every time. Seen on 2026-09-18: 174 failed, 53 passed before the build; 226 passed, 1 failed after, and that last one was a genuine half-finished edit.
 
 ### 8. Tests that stop at the service boundary miss most defects
 
@@ -200,6 +252,26 @@ These are product and accounting calls, not engineering ones. Each was asked and
 ## Feature notes — the decisions that look wrong if you only read the code
 
 Grouped by area, newest first within each. These are deliberately terse: they carry *why*, not *what*. The what is in the code, the routes, and the tests.
+
+### Receivables ageing, salesperson, cross-dock and BOM (2026-09-18)
+
+Four of the remaining backlog rows, built in one pass. Each one leans on a mechanism that already existed rather than adding a parallel one.
+
+- **Umur piutang reconstructs a past date instead of reading `sisa_tagihan`.** A sales return **mutates `grand_total` in place** (`ReturPenjualanService::kurangiFaktur()`), so an as-of-date report that trusted today's `grand_total` would understate every period before the return. The service adds back returns dated *after* the as-of date and subtracts only payments dated on or before it. **VOID invoices are excluded outright**, matching `apAgingBuckets()` — an invoice voided after the as-of date will therefore be missing from a backdated run; that is a known boundary, not an oversight.
+- **The ageing report ties out to the GL and says so on screen**, like the PSAK 1 statements. The tie-out is **suppressed when a single customer is selected**, because `wms_jurnal_detail` carries no customer dimension and a partial subledger against a full GL balance would render a meaningless "Selisih".
+- **The salesperson is snapshotted onto the invoice, not joined through four hops.** `wms_faktur_penjualan.sales_user_id` is copied from the order when the invoice is created, so reassigning an order later cannot move revenue that has already been billed. It **defaults to the document's creator**, and **no eighth role was invented** — any active user can be named; adding a role is the user's call.
+- **A cross-dock is a promise, not a movement.** It reuses `ReservasiPersediaan` instead of a new stock state or layer status, so "warehouse balance = sum of layers" is untouched. The consequence drives the design: `StokGudangService::keluar()` enforces *available − reserved ≥ qty*, so a mark would block the very shipment it exists for. `postingSuratJalan()` therefore **releases the marks for its order lines before consuming stock**. A **partial** shipment splits the mark — the shipped part becomes DIKIRIM and the remainder is re-reserved as a new row — rather than releasing the whole promise on the first truck.
+- **Cross-dock is warehouse-scoped on both sides.** `CrossDockPolicy` guards viewing and cancelling per warehouse, and `tandai()` refuses a warehouse the user cannot receive into. An earlier version checked the warehouse only on cancel, so an unassigned operator could create a mark it could not then release.
+- **`WarehouseExecutionService::reserve()` gained an optional explicit `$userId`.** `wms_reservasi_persediaan.created_by` is NOT NULL and the method read `Auth::id()`, which is null in a seeder, a queue worker, or any service-level call. Pass the user when you have one.
+- **BOM variance is reporting only — it posts no journal.** Production costs on *actual* consumption and material already hit WIP at NPK issue; journalising a variance on top would double-count. One BOM may be active per `bahan_hasil`, enforced in the service. Materials consumed that the BOM never listed are shown as **DI LUAR BOM** instead of being dropped, so the report cannot quietly hide unplanned usage. Variance is valued at the **actual average unit cost**, falling back to the newest layer cost for a component never consumed, and **null when neither exists** — never zero, which would read as "no variance".
+- **Seeder ordering matters**: `PenjualanDanProduksiDemoSeeder` runs *after* `syncMultiWarehouseDemoData()`, because `StokGudang` is only filled there and the sales flow needs saleable balances. Its backdated trading sale is dated from **an actual layer's `transaction_date`**, since `ambilLayer()` refuses layers newer than the document date. Each scenario is wrapped so a thin demo dataset warns and continues instead of breaking `migrate:fresh --seed`. The cross-dock scenario must run as a **warehouse** user, not the purchasing user that drives the sales scenarios — `tandai()` enforces warehouse access and will refuse otherwise.
+
+**Mechanics worth knowing before editing these four:**
+
+- **Ageing buckets** are `Belum Jatuh Tempo`, `1-30`, `31-60`, `61-90`, `> 90` Hari, and they are deliberately identical to `ExecutiveDashboardService::apAgingBuckets()` so payables and receivables read on the same scale. An invoice with **no due date** falls into `Belum Jatuh Tempo`, matching the payables side. Outstanding as of a date = `grand_total` + returns dated after that date − payments dated on or before it; a row whose result is ≤ 0.005 is dropped rather than shown as zero.
+- **Cross-dock lifecycle** is `DIRESERVASI → DIKIRIM` or `DIRESERVASI → DIBATALKAN`. Only `DIRESERVASI` holds a reservation, and `reservasi_id` is nulled on both exits so a released reservation can never be released twice. A suggestion is bounded by three numbers at once — remaining order quantity (minus marks already active on that line), remaining quantity on the receipt line, and free stock — and the smallest wins. The suggestion window is `CrossDockService::HARI_TERAKHIR` (14 days).
+- **Variance row statuses** are `SESUAI`, `BOROS`, `HEMAT`, `BELUM DIPAKAI`, and `DI LUAR BOM`. The basis is `jumlah_selesai` once the work order is complete, `jumlah_rencana` before that, so the standard tracks what was actually produced rather than what was planned. Standard quantity is `BOM line qty × basis ÷ bom.jumlah_hasil` — `jumlah_hasil` exists so a BOM can describe a set (e.g. components per 10 units) instead of forcing per-unit fractions.
+- **Sales performance excludes cancelled orders** (`DIBATALKAN`) and draft/void invoices, counts revenue as **DPP** rather than grand total so PPN never inflates a salesperson's figure, and attributes returns through the invoice's own `sales_user_id`. A null salesperson is reported as `Tanpa sales` rather than hidden, so unattributed revenue stays visible.
 
 ### Sales, receivables and output VAT (2026-09-16)
 
@@ -310,6 +382,7 @@ Verified against the regulations on 2026-09-11; this does not change when the co
 A code review found 11 defects that all survived a green suite, because every one lived in a layer the tests never entered — controller guards, Blade forms, policies, and cross-document arithmetic. Two standing tests now cover that blind spot:
 
 - **`SmokeSemuaHalamanTest`** fires every named GET route as Super Admin and fails on any 5xx. On its first run it found three more breaks nobody had reported: the reconciliation page's Blade parse error (trap 9), a `request.show`/`edit` route pointing at controller methods that do not exist, and three report PDFs whose columns omit `align`, which the shared `table-pdf` view dereferenced unguarded. It also asserts a **ceiling on how many routes get skipped** for unresolvable parameters, so coverage cannot quietly rot.
+- **`HalamanTanpaEfekSampingTest`** (added 2026-09-18) fires every parameterless GET page and fails if it issues an `insert`, `update` or `delete`. On its first run it found that twelve create forms were burning real document numbers and that the cross-dock page was creating `stok_gudangs` rows — see **Document numbering** above. A green suite had hidden both for as long as those features had existed, because every test only asserted the status code.
 - **`KualitasTampilanTest`** renders every parameterless page and checks the HTML itself, not just the status: every view must compile to valid PHP, no raw Blade directive or uncompiled `{{ $x }}` may reach the browser, no listing may be silently empty without saying so, and every table must have a scroll wrapper. It also caught a Blade break within minutes of that break being introduced.
 - **`AksesPerRoleTest`** is an explicit contract of which pages each role must be able to open and which must be refused. Super Admin smoke-testing cannot catch this class at all — `Gate::before` opens everything — and two of the eleven defects were exactly this shape: the sales menu buried inside the Accounting-only sidebar section, and Accounting Manager getting 403 on the journal list it is supposed to approve.
 
@@ -331,7 +404,7 @@ Things that were once on the backlog and are **no longer wanted**. They are reco
 
 - **External API/EDI integration** (to suppliers, marketplaces, or other ERPs), beyond the bare Sanctum auth base that already exists. **Dropped by the user on 2026-09-16.** The absence of an integration layer is therefore a deliberate product decision, not an unfinished item — if a future survey of the code notices there is no public API, that is the expected state. Sanctum stays where it is; nothing needs removing.
 
-## Open-items index (current as of 2026-09-16)
+## Open-items index (current as of 2026-09-18)
 
 **The single authoritative list of what is unbuilt.** Do not assemble a backlog by reading the code or the Feature notes — things that look missing are often deliberate, and the deliberate ones are in **Dropped from the plan** or noted as boundaries in their Feature note. When an item here is built, delete the line; its reasoning belongs in Feature notes, not here.
 
@@ -340,27 +413,59 @@ Things that were once on the backlog and are **no longer wanted**. They are reco
 - **"Persediaan Dalam Perjalanan" COA** — only if in-transit stock should stop being attributed to the source warehouse. The transfer journal forms at receipt, so today's behaviour is consistent, not a bug.
 - **Write-off account for a cancelled work order** — a work order can only be cancelled while its cost is zero. If a customer cancels mid-production the WIP needs writing off, and no loss account was invented for it.
 - **Customer credit limit** — `pelanggans.plafon_kredit` is recorded and displayed but **not enforced**. Blocking an order on credit is a policy call.
-- **Service categories vs the mapping rules** — `UpdateAccountingMappingRequest` validates every `KategoriBahan` with goods rules, which two seeded service categories cannot satisfy. Either exempt service categories or give them conforming accounts.
+- **Service categories vs the mapping rules** — `UpdateAccountingMappingRequest` validates every `KategoriBahan` with goods rules, which the seeded "Jasa Operasional" category cannot satisfy (its `coa_persediaan_id` is `5202`, a BEBAN account, where the rule demands ASET/DEBIT). "Jasa Produksi" stopped failing on 2026-09-16 when its mapping moved to `1302`. Either exempt service categories or give the last one a conforming account.
+- **Customer advances** — over-payment is still refused rather than parked. Building this needs a "Uang Muka Pelanggan" COA and reverses a deliberate 2026-09-16 decision, so it is a policy call, not a refactor.
+- **Labour and overhead absorption into WIP** — BOM now gives a material standard, but labour needs hourly rates, time capture, and an allocation basis. All three are policy inputs nobody has supplied.
 
 **Externally specified — verify the spec first**
 
-- **DJP outputs**: e-Faktur CSV, SPT Masa PPN 1111, e-Bupot. The data is complete since the sales side landed (NSFP + PPN Keluaran on real invoices), so only the format work remains. **Verify the current DJP spec before building; never infer the layout.**
+- **DJP outputs**: e-Faktur CSV, SPT Masa PPN 1111, e-Bupot, and the trade-in's outgoing leg. The data is complete (NSFP + PPN Keluaran on real invoices), so only the format work remains. **Verify the current DJP spec before building; never infer the layout** — this is why the 2026-09-18 pass left it alone rather than guessing a layout that would look finished and be wrong.
 
 **Ordinary unbuilt work**
 
-- **BOM as a standard** — production costing is on actual consumption, so there is no material-usage variance yet. The natural next stage.
-- **Labour and overhead absorption into WIP** — needs hourly rates, time capture, and an allocation basis; none exist.
-- **Cross-docking** — no longer blocked now that an outbound side exists.
-- **e-Faktur for the trade-in's outgoing leg** — same format work as the DJP row.
-- **Multi-currency revaluation** and realized/unrealized FX per PSAK 10 — reopening this means FX-denominated FIFO layers.
+- **Multi-currency revaluation** and realized/unrealized FX per PSAK 10 — reopening this means FX-denominated FIFO layers, and it needs a period-end rate source plus FX gain/loss accounts.
 - **Sending inventory (not assets) out for subcontract** — deliberately excluded: a custody document must not touch FIFO layers. Interim path is a Transfer Gudang to a dedicated warehouse.
-- **AR aging report**, customer advances, salesperson tracking — none exist on the sales side.
+- **Routing and work centres** — BOM covers materials only; there is no operation sequence.
 
 **Deferred by the user**
 
 - **Barcode / QR** for putaway and picking. Design note to keep: **per bundling/kit, not per item**.
 
-**Nothing open**: platform (all eight production-readiness items built 2026-09-12/13), PSAK 1 statements (all five), maker-checker in the three areas chosen, per-warehouse inventory valuation, and the sales, production and services domains as scoped.
+**Nothing open**: platform (all eight production-readiness items built 2026-09-12/13), PSAK 1 statements (all five), maker-checker in the three areas chosen, per-warehouse inventory valuation, the sales, production and services domains as scoped, and the receivables/salesperson/cross-dock/BOM cluster built 2026-09-18.
+
+## Measured debt and coverage
+
+Numbers here are **snapshots taken 2026-09-18** on Laravel 12.69 / PHP 8.3. Re-measure before relying on one; the commands that produced them are given so you can.
+
+### What each safety net actually catches
+
+The suite is not uniform — each net covers a different failure class, and knowing which is which saves you from writing a test that duplicates one and leaves the real gap open.
+
+| Net | Enters through | Catches | Cannot catch |
+|---|---|---|---|
+| `ArchitectureConventionTest` | static analysis + `git ls-files` | class/file casing, inline validation in controllers, route file split and `route:cache`-ability, lowercase status codes, floating point in migrations, legacy table names | anything about runtime behaviour |
+| `SmokeSemuaHalamanTest` | HTTP GET, as Super Admin | any 5xx on a named GET route; also caps how many routes may be skipped for unresolvable parameters, so coverage cannot rot quietly | non-GET routes; anything that returns 200 while being wrong; per-role access, because `Gate::before` opens everything for Super Admin |
+| `KualitasTampilanTest` | HTTP GET + raw HTML | views that do not compile, raw Blade directives or uncompiled `{{ $x }}` reaching the browser, a silently empty listing, a wide table with no scroll wrapper | correctness of the numbers on the page |
+| `AksesPerRoleTest` | HTTP GET, per role | pages a role must reach and pages it must be refused — the one class Super Admin smoke-testing is blind to | mutating routes |
+| `HalamanTanpaEfekSampingTest` | HTTP GET + query log | a GET page that issues `insert`/`update`/`delete`. Added 2026-09-18; on its first run it found twelve create forms burning document numbers and the cross-dock page creating `stok_gudangs` rows | writes on non-GET routes, which are legitimate |
+| domain feature tests | service layer, and HTTP where it matters | business rules, ledger invariants, FIFO, WIP, tax | see the route coverage gap below |
+
+### Route coverage gap
+
+Measured with `php artisan route:list --json` against the named routes in `tests/`:
+
+- **148** named GET routes take no parameter — covered by the four GET nets above.
+- **53** named GET routes take parameters — covered only where `SmokeSemuaHalamanTest::nilaiParameter()` can resolve a value; the rest are counted as skipped and the skip count is asserted.
+- **178** named routes mutate (`POST`/`PUT`/`PATCH`/`DELETE`). No GET net touches any of them, and **129 of the 178 are not named by a single test**.
+
+That last figure is the honest state of coverage, and it is why **trap 8** matters: a feature spanning HTTP → service → ledger needs at least one test that enters through the route. Reproduce the figure by extracting route names from `route:list --json` and grepping `tests/` for each one.
+
+### Debt that is systemic, not an outlier
+
+Do not "fix" either of these by touching one file — they are the shape of the older half of the codebase, and a partial migration is worse than a consistent one.
+
+- **18 controllers contain `DB::transaction`, and 7 of those write more than one kind of model** inside it (`JurnalController`, `MaterialRequestController`, `PemeriksaanConsiderController`, `PesananPembelianController`, `ReturPembelianController`, `StockOpnameController`, `TransferGudangController`). The layering rule says cross-model processes live in `app/Services`, and the newer domains obey it (sales, production, cross-dock, BOM, kitting, landed cost). Extracting the older ones is a deliberate project, not a drive-by.
+- **Models are split 53 `$guarded` to 40 `$fillable`** out of 94. This split is the root of **trap 1**, which has bitten four times. Check which one a model uses before adding a column.
 
 ## Known repo quirks
 
@@ -372,7 +477,7 @@ Things that were once on the backlog and are **no longer wanted**. They are reco
 
 Kept short on purpose. None of this is work to resume.
 
-**The original 4-phase modernization plan (approved 2026-09-01) is fully done.** Framework upgrade to Laravel 12 with Tailwind/daisyUI/Alpine replacing Bootstrap/jQuery/DataTables (phase 1); Indonesian `snake_case` DB naming (phase 2); file/class naming matching `make:model -a` (phase 3). Phase 4 — thin controllers, validation in Form Requests, authorization in Policies, reusable logic in Services — was never a discrete task; it is the standing convention now written into **Architecture rules** above.
+**The original 4-phase modernization plan (approved 2026-09-01) is fully done.** Phase 1 was Tailwind/daisyUI/Alpine replacing Bootstrap/jQuery/DataTables (2026-09-01); `composer.json` declared Laravel 12 then, but the installed `vendor/` stayed on Laravel 10 until the framework was actually upgraded and the skeleton converted on **2026-09-18** — see **Application skeleton** above. Indonesian `snake_case` DB naming (phase 2); file/class naming matching `make:model -a` (phase 3). Phase 4 — thin controllers, validation in Form Requests, authorization in Policies, reusable logic in Services — was never a discrete task; it is the standing convention now written into **Architecture rules** above.
 
 **Phases 2 and 3 were done together in 11 clusters on branch `refactor/rename-baku-indonesia`** (finished 2026-09-04), going further than planned: jargon (LPB, BAP, NPK, PO) became full *baku* Indonesian and every domain table got the `wms_` prefix. The conventions it produced are in **Architecture rules**; the technical traps it exposed are in **Traps**. The branch was never merged or pushed — the user asked to keep it local. **If someone asks to "continue the rename", confirm what they mean: the sweep as scoped is finished.**
 

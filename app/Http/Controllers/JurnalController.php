@@ -165,7 +165,7 @@ class JurnalController extends Controller
         $this->authorize('create', Jurnal::class);
 
         $coas = BaganAkun::where('is_active', true)->where('is_postable', true)->orderBy('kode_akun')->get();
-        $documentNumber = $this->numbers->financial('JR');
+        $documentNumber = $this->numbers->preview(DocumentNumberService::FINANCIAL, 'JR');
 
         return view('jurnal.create', compact('coas', 'documentNumber'));
     }
@@ -177,7 +177,7 @@ class JurnalController extends Controller
 
         $jurnal = DB::transaction(function () use ($validated) {
             $jurnal = Jurnal::create([
-                'no_jurnal'        => $validated['no_jurnal'],
+                'no_jurnal'        => $this->numbers->financial('JR'),
                 'tanggal'          => $validated['tanggal'],
                 'keterangan'       => $validated['keterangan'] ?? null,
                 'sumber_transaksi' => 'MANUAL',

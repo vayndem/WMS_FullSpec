@@ -14,7 +14,7 @@
                     @method('PUT')
                 @endif
                 <div class="mb-3 grid grid-cols-1 gap-2 md:grid-cols-5">
-                    <input name="nomor_pemeriksaan" class="input input-bordered bg-base-200" readonly value="{{ old('nomor_pemeriksaan', $pemeriksaan->nomor_pemeriksaan) }}">
+                    <input class="input input-bordered bg-base-200" readonly disabled value="{{ $pemeriksaan->nomor_pemeriksaan }}">
                     <input type="date" name="tanggal" class="input input-bordered" value="{{ old('tanggal', optional($pemeriksaan->tanggal)->format('Y-m-d')) }}" required>
                     <select name="gudang_consider_id" class="select select-bordered" required>
                         @foreach ($consider as $g)

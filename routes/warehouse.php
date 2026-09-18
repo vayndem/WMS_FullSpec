@@ -101,6 +101,10 @@ Route::middleware('auth')->group(function () {
     Route::post('kit/{kit}/rakit', [App\Http\Controllers\KitController::class, 'rakit'])->name('kit.rakit');
     Route::delete('kit/{kit}', [App\Http\Controllers\KitController::class, 'destroy'])->name('kit.destroy');
 
+    Route::get('cross-dock', [App\Http\Controllers\CrossDockController::class, 'index'])->name('cross-dock.index');
+    Route::post('cross-dock', [App\Http\Controllers\CrossDockController::class, 'store'])->name('cross-dock.store');
+    Route::post('cross-dock/{crossDock}/batalkan', [App\Http\Controllers\CrossDockController::class, 'batalkan'])->name('cross-dock.batalkan');
+
     Route::get('stock-opname-siklus', [App\Http\Controllers\StockOpnameController::class, 'cycleBoard'])->name('stock-opname.siklus');
     Route::post('stock-opname-siklus', [App\Http\Controllers\StockOpnameController::class, 'startCycle'])->name('stock-opname.siklus.store');
 });

@@ -38,7 +38,7 @@
             <div class="overflow-x-auto p-4">
                 <table class="table table-sm">
                     <thead>
-                        <tr><th>Nomor</th><th>Tanggal</th><th>Pelanggan</th><th>Gudang</th><th class="text-end">DPP</th><th class="text-end">PPN</th><th class="text-end">Total</th><th>Status</th></tr>
+                        <tr><th>Nomor</th><th>Tanggal</th><th>Pelanggan</th><th>Sales</th><th>Gudang</th><th class="text-end">DPP</th><th class="text-end">PPN</th><th class="text-end">Total</th><th>Status</th></tr>
                     </thead>
                     <tbody>
                         @forelse ($pesanan as $baris)
@@ -46,6 +46,7 @@
                                 <td><a href="{{ route('pesanan-penjualan.show', $baris) }}" class="link link-primary font-mono text-xs">{{ $baris->nomor }}</a></td>
                                 <td>{{ $baris->tanggal?->format('d-m-Y') }}</td>
                                 <td>{{ $baris->pelanggan?->nama }}</td>
+                                <td>{{ $baris->sales?->name ?? '-' }}</td>
                                 <td>{{ $baris->gudang?->nama }}</td>
                                 <td class="text-end">Rp {{ number_format($baris->total_dpp, 0, ',', '.') }}</td>
                                 <td class="text-end">Rp {{ number_format($baris->total_ppn, 0, ',', '.') }}</td>
@@ -53,7 +54,7 @@
                                 <td><span class="badge {{ $baris->status === 'OPEN' ? 'badge-warning' : 'badge-success' }}">{{ $baris->status }}</span></td>
                             </tr>
                         @empty
-                            <tr><td colspan="8" class="py-6 text-center text-base-content/50">Belum ada pesanan penjualan.</td></tr>
+                            <tr><td colspan="9" class="py-6 text-center text-base-content/50">Belum ada pesanan penjualan.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

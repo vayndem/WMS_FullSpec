@@ -23,7 +23,7 @@ class PemeriksaanConsiderController extends Controller
     public function create()
     {
         $this->authorize('create', PemeriksaanConsider::class);
-        return view('pemeriksaan_considers.form', $this->formData() + ['pemeriksaan' => new PemeriksaanConsider(['nomor_pemeriksaan' => $this->numbers->internal('CNS', 'QC'), 'tanggal' => today()])]);
+        return view('pemeriksaan_considers.form', $this->formData() + ['pemeriksaan' => new PemeriksaanConsider(['nomor_pemeriksaan' => $this->numbers->preview(DocumentNumberService::INTERNAL, 'CNS', 'QC'), 'tanggal' => today()])]);
     }
     public function store(StorePemeriksaanConsiderRequest $r)
     {
@@ -31,6 +31,7 @@ class PemeriksaanConsiderController extends Controller
             $d = $r->validated();
             $details = $d['details'];
             unset($d['details']);
+            $d['nomor_pemeriksaan'] = $this->numbers->internal('CNS', 'QC');
             $d += ['status' => PemeriksaanConsider::DRAFT, 'dibuat_oleh' => Auth::id()];
             $m = PemeriksaanConsider::create($d);
             $m->details()->createMany($details);
