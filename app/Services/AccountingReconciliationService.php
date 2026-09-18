@@ -105,6 +105,23 @@ class AccountingReconciliationService
             ->selectRaw('COALESCE(SUM(remaining_quantity * unit_cost),0) nilai')
             ->value('nilai'), 2);
 
+        $transitSelisih = round((float) DB::table('detail_transfer_gudangs as d')
+            ->joinSub(
+                DB::table('alokasi_transfer_gudangs')->select('detail_transfer_gudang_id')
+                    ->selectRaw('SUM(total_nilai) nilai_kirim')
+                    ->groupBy('detail_transfer_gudang_id'),
+                'a',
+                'a.detail_transfer_gudang_id',
+                '=',
+                'd.id'
+            )
+            ->where('d.jumlah_selisih', '>', 0)
+            ->where('d.jumlah_dikirim', '>', 0)
+            ->selectRaw('COALESCE(SUM(a.nilai_kirim / d.jumlah_dikirim * d.jumlah_selisih),0) nilai')
+            ->value('nilai'), 2);
+
+        $transitDiharapkan = round($transitLayer + $transitSelisih, 2);
+
         $wipPerintah = round(
             DataPesanan::berjalan()->get()->sum(fn (DataPesanan $pesanan) => $pesanan->saldoWip()),
             2
@@ -163,9 +180,9 @@ class AccountingReconciliationService
                 'key' => 'transit',
                 'label' => 'Persediaan dalam perjalanan vs layer in-transit',
                 'total' => 1,
-                'invalid' => $transitLedger !== null && abs($transitLayer - $transitLedger) <= .01 ? 0 : 1,
+                'invalid' => $transitLedger !== null && abs($transitDiharapkan - $transitLedger) <= .01 ? 0 : 1,
                 'amount' => $transitLedger,
-                'expected' => $transitLayer,
+                'expected' => $transitDiharapkan,
             ],
             [
                 'key' => 'wip',

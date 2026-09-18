@@ -31,7 +31,7 @@ class RekonsiliasiGudangService
 
         $ledger = DB::table('wms_jurnal_detail as jd')
             ->join('wms_jurnal as j', 'j.id', '=', 'jd.jurnal_id')
-            ->where('j.status', 'POSTED')
+            ->whereIn('j.status', ['POSTED', 'REVERSED'])
             ->whereIn('jd.coa_id', $akunIds)
             ->groupBy('jd.gudang_id')
             ->select('jd.gudang_id', DB::raw('SUM(jd.debit - jd.kredit) as nilai'))
@@ -73,8 +73,8 @@ class RekonsiliasiGudangService
         $warehouseQuantity = (float) DB::table('stok_gudangs')->sum('stok_tersedia');
         $masterQuantity = (float) DB::table('bahans')->sum('stok_onhand');
         $transitQuantity = (float) DB::table('wms_layer_persediaan')->where('stock_status', 'IN_TRANSIT')->sum('remaining_quantity');
-        $layerValue = (float) DB::table('wms_layer_persediaan')->whereNotIn('stock_status', ['REVERSED', 'TRANSFER_SHORTAGE'])->sum(DB::raw('remaining_quantity * unit_cost'));
-        $inventoryGl = (float) DB::table('wms_jurnal_detail as jd')->join('wms_jurnal as j', 'j.id', '=', 'jd.jurnal_id')->join('wms_bagan_akun as coa', 'coa.id', '=', 'jd.coa_id')->where('j.status', 'POSTED')->where('coa.kategori_akun', 'ASET')->where(function ($query) {
+        $layerValue = (float) DB::table('wms_layer_persediaan')->whereNotIn('stock_status', ['REVERSED', 'TRANSFER_SHORTAGE', 'IN_TRANSIT'])->sum(DB::raw('remaining_quantity * unit_cost'));
+        $inventoryGl = (float) DB::table('wms_jurnal_detail as jd')->join('wms_jurnal as j', 'j.id', '=', 'jd.jurnal_id')->join('wms_bagan_akun as coa', 'coa.id', '=', 'jd.coa_id')->whereIn('j.status', ['POSTED', 'REVERSED'])->where('coa.kategori_akun', 'ASET')->where(function ($query) {
             $stockAccountIds = DB::table('kategori_bahans as k')->join('bahans as b', 'b.tipe_barang', '=', 'k.id')->whereNotNull('k.coa_persediaan_id')->distinct()->pluck('k.coa_persediaan_id');
             $query->whereIn('coa.id', $stockAccountIds);
         })->sum(DB::raw('jd.debit - jd.kredit'));

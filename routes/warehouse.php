@@ -54,6 +54,7 @@ Route::middleware('auth')->group(function () {
     Route::get('stock-opname-export/excel', [StockOpnameController::class, 'exportInventory'])->name('stock-opname.export.excel');
     Route::get('stock-opname/{stock_opname}/detail-data', [StockOpnameController::class, 'detailData'])->name('stock-opname.detail-data');
     Route::get('stock-opname/{stock_opname}/pdf', [StockOpnameController::class, 'reportPdf'])->name('stock-opname.pdf');
+    Route::get('stock-opname/{stock_opname}/excel', [StockOpnameController::class, 'reportExcel'])->name('stock-opname.excel');
     Route::post('stock-opname/{stock_opname}/submit', [StockOpnameController::class, 'submit'])->name('stock-opname.submit');
     Route::post('stock-opname/{stock_opname}/approve', [StockOpnameController::class, 'approve'])->name('stock-opname.approve');
     Route::post('stock-opname/{stock_opname}/reject', [StockOpnameController::class, 'reject'])->name('stock-opname.reject');

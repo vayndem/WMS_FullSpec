@@ -214,7 +214,11 @@ class FinancialStatementTest extends TestCase
             'gambaran_umum' => 'Percobaan.',
         ])->assertForbidden();
 
-        $this->assertSame(0, \App\Models\CatatanLaporanKeuangan::count());
+        $this->assertSame(
+            0,
+            \App\Models\CatatanLaporanKeuangan::whereDate('periode_dari', today()->startOfYear())->count(),
+            'Peran non-akuntansi ditolak, jadi tidak boleh ada catatan tersimpan untuk periode yang dicoba.'
+        );
     }
 
     public function test_fiscal_reconciliation_adds_back_permanent_differences_and_defers_timing_ones(): void

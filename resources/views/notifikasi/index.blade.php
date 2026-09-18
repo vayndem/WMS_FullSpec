@@ -69,9 +69,13 @@
                                             @foreach ($data['rincian'] as $rincian)
                                                 <li class="flex flex-wrap items-center justify-between gap-2">
                                                     <span class="min-w-0 truncate">{{ $rincian['label'] }}</span>
-                                                    <span class="badge badge-sm {{ $rincian['hari'] < 0 ? 'badge-error' : 'badge-ghost' }}">
-                                                        {{ $rincian['hari'] < 0 ? 'Lewat ' . abs($rincian['hari']) . ' hari' : $rincian['hari'] . ' hari lagi' }}
-                                                    </span>
+                                                    @isset($rincian['hari'])
+                                                        <span class="badge badge-sm {{ $rincian['hari'] < 0 ? 'badge-error' : 'badge-ghost' }}">
+                                                            {{ $rincian['hari'] < 0 ? 'Lewat ' . abs($rincian['hari']) . ' hari' : $rincian['hari'] . ' hari lagi' }}
+                                                        </span>
+                                                    @else
+                                                        <span class="badge badge-sm badge-ghost">{{ $rincian['catatan'] ?? '-' }}</span>
+                                                    @endisset
                                                 </li>
                                             @endforeach
                                         </ul>

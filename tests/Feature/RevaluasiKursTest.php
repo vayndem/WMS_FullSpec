@@ -55,9 +55,22 @@ class RevaluasiKursTest extends TestCase
 
     private function selisihDiharapkan(FakturPembelian $faktur, float $kursBaru): float
     {
-        $valas = round((float) $faktur->sisa_tagihan / (float) $faktur->kurs, 2);
+        $periode = $this->periode();
 
-        return round($valas * $kursBaru - (float) $faktur->sisa_tagihan, 2);
+        return round(FakturPembelian::whereNotNull('mata_uang_asing')
+            ->whereNotNull('kurs')
+            ->where('kurs', '>', 0)
+            ->where('sisa_tagihan', '>', 0)
+            ->whereNotIn('status', [FakturPembelian::VOID, FakturPembelian::PENDING_APPROVAL])
+            ->get()
+            ->sum(function (FakturPembelian $terbuka) use ($kursBaru, $periode) {
+                $akumulasi = (float) RevaluasiKurs::where('faktur_pembelian_id', $terbuka->id)
+                    ->where('periode', '<', $periode)->sum('selisih');
+                $valas = round((float) $terbuka->sisa_tagihan / (float) $terbuka->kurs, 2);
+                $nilaiLama = round((float) $terbuka->sisa_tagihan + $akumulasi, 2);
+
+                return round(round($valas * $kursBaru, 2) - $nilaiLama, 2);
+            }), 2);
     }
 
     public function test_a_weaker_rupiah_turns_an_open_foreign_payable_into_an_exchange_loss(): void
@@ -184,7 +197,12 @@ class RevaluasiKursTest extends TestCase
         $service->simpanKurs(['mata_uang' => 'USD', 'periode' => $periode, 'kurs' => 16000], $user);
         $service->posting($periode, $user);
 
-        $this->assertSame(1, RevaluasiKurs::where('periode', $periode)->count());
+        $this->assertSame(
+            FakturPembelian::whereNotNull('mata_uang_asing')->where('sisa_tagihan', '>', 0)
+                ->whereNotIn('status', [FakturPembelian::VOID, FakturPembelian::PENDING_APPROVAL])->count(),
+            RevaluasiKurs::where('periode', $periode)->count(),
+            'Satu posting periode harus menghasilkan tepat satu baris rincian per tagihan valas yang masih terbuka.'
+        );
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('sudah pernah diposting');

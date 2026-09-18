@@ -117,8 +117,10 @@ class DashboardService
                 ['label' => 'Masalah Rekonsiliasi', 'count' => $masalahRekonsiliasi, 'url' => route('reconciliation.index'), 'icon' => 'fa-scale-unbalanced', 'tone' => $masalahRekonsiliasi > 0 ? 'error' : 'success'],
             ]),
             'reminders' => $this->pengingatan->invoiceJatuhTempo()
+                ->merge($this->pengingatan->piutangJatuhTempo())
                 ->merge($this->pengingatan->lotSegeraKedaluwarsa())
                 ->merge($this->pengingatan->transferMenggantung())
+                ->merge($this->pengingatan->crossDockBasi())
                 ->sortBy('hari')->values(),
             'progress' => [
                 $this->progres('Realisasi Baris PO Terbuka', (float) ($poLines->selesai ?? 0), (float) ($poLines->total ?? 0), 'Baris PO yang sudah diterima penuh'),
@@ -233,7 +235,9 @@ class DashboardService
                 ->orderBy('tgl_deadline_pembayaran')->limit(8)->get(),
             'recentPayments' => PembayaranFaktur::with(['invoice.supplier', 'coaKasBank'])
                 ->where('status', PembayaranFaktur::POSTED)->latest('tanggal_pembayaran')->latest('id')->limit(8)->get(),
-            'reminders' => $this->pengingatan->invoiceJatuhTempo(8),
+            'reminders' => $this->pengingatan->invoiceJatuhTempo(8)
+                ->merge($this->pengingatan->piutangJatuhTempo(8))
+                ->sortBy('hari')->values(),
             'progress' => [
                 $this->progres('Hutang Belum Jatuh Tempo', max($metrics['outstanding_value'] - $jatuhTempoNilai, 0), max($metrics['outstanding_value'], 0.0001), 'Makin penuh makin sehat: porsi hutang yang belum lewat tanggal'),
                 $this->progres('Invoice Terbayar Bulan Ini', (float) $metrics['payments_this_month'], (float) ($metrics['payments_this_month'] + $metrics['unpaid_count']), 'Pembayaran bulan ini dibanding sisa tagihan terbuka'),
@@ -278,7 +282,10 @@ class DashboardService
                 ['label' => 'Transfer Gudang Berjalan', 'count' => $transfersInProgress, 'url' => route('transfer-gudangs.index'), 'icon' => 'fa-truck-fast', 'tone' => 'info'],
                 ['label' => 'Request Saya Menunggu Approval', 'count' => $myPendingRequests, 'url' => route('request.index'), 'icon' => 'fa-file-circle-question', 'tone' => 'neutral'],
             ]),
-            'reminders' => $this->pengingatan->lotSegeraKedaluwarsa()->merge($this->pengingatan->transferMenggantung())->sortBy('hari')->values(),
+            'reminders' => $this->pengingatan->lotSegeraKedaluwarsa()
+                ->merge($this->pengingatan->transferMenggantung())
+                ->merge($this->pengingatan->crossDockBasi())
+                ->sortBy('hari')->values(),
             'progress' => [
                 $this->progres('Penerimaan Sudah Putaway', (float) max($totalPenerimaan - $putawayTertunda, 0), (float) $totalPenerimaan, 'Dokumen penerimaan barang yang sudah ditempatkan ke bin'),
                 $this->progres('Stock Opname Selesai', (float) $opnameSelesai, (float) ($opnameSelesai + $openOpnames), 'Opname berstatus POSTED dibanding yang masih berjalan'),
@@ -319,7 +326,11 @@ class DashboardService
                 ['label' => 'Stock Opname Terbuka', 'count' => $openOpnames, 'url' => route('stock-opname.index'), 'icon' => 'fa-clipboard-list', 'tone' => 'warning'],
                 ['label' => 'Request Saya Menunggu Approval', 'count' => $myPendingRequests, 'url' => route('request.index'), 'icon' => 'fa-file-circle-question', 'tone' => 'neutral'],
             ]),
-            'reminders' => $this->pengingatan->lotSegeraKedaluwarsa($warehouseIds)->merge($this->pengingatan->transferMenggantung($warehouseIds))->sortBy('hari')->values(),
+            'reminders' => $this->pengingatan->lotSegeraKedaluwarsa($warehouseIds)
+                ->merge($this->pengingatan->transferMenggantung($warehouseIds))
+                ->merge($this->pengingatan->crossDockBasi($warehouseIds))
+                ->merge($this->pengingatan->perintahKerjaMandek())
+                ->sortBy('hari')->values(),
             'progress' => [
                 $this->progres('Stock Opname Selesai', (float) $opnameSelesai, (float) ($opnameSelesai + $openOpnames), 'Opname gudang yang di-assign ke Anda'),
             ],

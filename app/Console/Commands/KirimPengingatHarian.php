@@ -40,6 +40,22 @@ class KirimPengingatHarian extends Command
                 [User::ROLE_PURCHASING, User::ROLE_ACCOUNTING],
                 $this->pengingat->requestMenungguPersetujuan(),
             ],
+            'Piutang jatuh tempo' => [
+                [User::ROLE_FINANCE, User::ROLE_ACCOUNTING],
+                $this->pengingat->piutangJatuhTempo(20),
+            ],
+            'Barang keluar belum kembali' => [
+                [User::ROLE_WAREHOUSE, User::ROLE_PURCHASING],
+                $this->pengingat->barangKeluarBelumKembali(),
+            ],
+            'Cross dock menahan stok' => [
+                [User::ROLE_WAREHOUSE],
+                $this->pengingat->crossDockBasi(null, 20),
+            ],
+            'Perintah kerja mandek' => [
+                [User::ROLE_PRODUCTION, User::ROLE_PURCHASING],
+                $this->pengingat->perintahKerjaMandek(),
+            ],
         ];
 
         $total = 0;

@@ -411,7 +411,8 @@ Suite saat ini mencakup:
 **Dua proses wajib berjalan, bukan opsional (sejak 2026-09-12):**
 
 - ⚙️ **`php artisan queue:work`** — notifikasi persetujuan dan pengingat dikirim lewat antrean. Tanpa worker, notifikasinya mengendap di tabel `jobs` dan tidak pernah sampai. `QUEUE_CONNECTION` harus driver nyata (`database`), bukan `sync`.
-- ⏰ **`php artisan schedule:work`** (atau satu entri cron) — replenishment harian, pengingat tenggat, klasifikasi ABC mingguan, dan penyusutan bulanan semuanya terjadwal. Tanpa ini sistem kembali "baru sadar kalau ada yang klik".
+- ⏰ **`php artisan schedule:work`** (atau satu entri cron) — replenishment harian, pengingat tenggat, pemeriksaan invarian rekonsiliasi, klasifikasi ABC mingguan, dan penyusutan bulanan semuanya terjadwal. Tanpa ini sistem kembali "baru sadar kalau ada yang klik".
+- 🚨 **`php artisan wms:periksa-invarian`** bisa dipanggil sendiri sebagai health check: keluar dengan kode bukan nol kalau salah satu dari delapan invarian rekonsiliasi menyimpang, dan memberi tahu Akuntansi.
 - 💾 Lampiran dokumen disimpan di disk privat `storage/app/lampiran` dan hanya keluar lewat route berotorisasi. Untuk pindah ke S3 cukup set `LAMPIRAN_DISK=s3`.
 
 <br>

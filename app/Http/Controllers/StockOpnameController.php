@@ -210,6 +210,42 @@ class StockOpnameController extends Controller
             ->stream("stock-opname-{$stockOpname->number}.pdf");
     }
 
+    public function reportExcel(StockOpname $stockOpname)
+    {
+        $this->authorize('view', $stockOpname);
+        $financial = request()->user()->can('viewFinancials', StockOpname::class);
+        $stockOpname->load('warehouse', 'details.bahan');
+
+        $columns = [
+            ['key' => 'barang', 'label' => 'Barang'],
+            ['key' => 'sistem', 'label' => 'Sistem'],
+            ['key' => 'fisik', 'label' => 'Fisik'],
+            ['key' => 'selisih', 'label' => 'Selisih'],
+        ];
+
+        if ($financial) {
+            $columns[] = ['key' => 'harga', 'label' => 'Harga'];
+            $columns[] = ['key' => 'nilai', 'label' => 'Nilai'];
+        }
+
+        $columns[] = ['key' => 'alasan', 'label' => 'Alasan'];
+
+        $rows = $stockOpname->details->map(fn ($detail) => [
+            'barang' => $detail->bahan->nama ?? '-',
+            'sistem' => (float) $detail->system_quantity,
+            'fisik' => (float) $detail->physical_quantity,
+            'selisih' => (float) $detail->difference_quantity,
+            'harga' => (float) $detail->unit_cost,
+            'nilai' => (float) $detail->difference_value,
+            'alasan' => $detail->reason ?: '-',
+        ]);
+
+        return Excel::download(
+            new GenericTableExport($columns, $rows),
+            "stock-opname-{$stockOpname->number}.xlsx"
+        );
+    }
+
     public function exportInventory(Request $request)
     {
         $this->authorize('viewAny', StockOpname::class);

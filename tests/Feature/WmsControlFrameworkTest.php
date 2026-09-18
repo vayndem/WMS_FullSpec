@@ -179,10 +179,11 @@ class WmsControlFrameworkTest extends TestCase
         $gudang = Gudang::where('nama', 'Gudang Utama')->firstOrFail();
         $bahan = Bahan::whereNotNull('kategori')->firstOrFail();
 
-        $suggestion = \App\Models\SaranPengisianUlang::create([
+        $suggestion = \App\Models\SaranPengisianUlang::updateOrCreate([
             'gudang_id' => $gudang->id,
             'bahan_id' => $bahan->id,
             'calculated_at' => today(),
+        ], [
             'average_daily_usage' => 2,
             'lead_time_days' => 5,
             'available_quantity' => 3,

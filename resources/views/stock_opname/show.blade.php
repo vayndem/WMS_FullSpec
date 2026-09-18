@@ -11,6 +11,9 @@
                 <a target="_blank" class="btn btn-error" href="{{ route('stock-opname.pdf', $opname) }}">
                     <i class="fa-solid fa-file-pdf"></i> PDF
                 </a>
+                <a class="btn btn-success" href="{{ route('stock-opname.excel', $opname) }}">
+                    <i class="fa-solid fa-file-excel"></i> Excel
+                </a>
             </div>
         </div>
 

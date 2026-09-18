@@ -312,6 +312,9 @@ class DatabaseSeeder extends Seeder
         $this->syncMultiWarehouseDemoData();
 
         $this->call(PenjualanDanProduksiDemoSeeder::class);
+        $this->call(OperasiGudangDemoSeeder::class);
+        $this->call(EksekusiGudangDemoSeeder::class);
+        $this->call(KontrolMutuDanPajakDemoSeeder::class);
     }
 
     private function syncMultiWarehouseDemoData(): void

@@ -60,6 +60,11 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping()
             ->onOneServer();
 
+        $schedule->command('wms:periksa-invarian')
+            ->dailyAt('06:30')
+            ->withoutOverlapping()
+            ->onOneServer();
+
         $schedule->command('wms:penyusutan-bulanan')
             ->monthlyOn(1, '02:00')
             ->withoutOverlapping()

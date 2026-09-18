@@ -40,7 +40,7 @@ npm run build                  # REQUIRED before php artisan test — see Traps 
 php artisan serve
 npm run dev                    # Vite dev server for frontend
 php artisan queue:work         # REQUIRED since 2026-09-12 — notifications are queued
-php artisan schedule:work      # REQUIRED since 2026-09-12 — reminders/replenishment/depreciation
+php artisan schedule:work      # REQUIRED since 2026-09-12 — reminders/replenishment/depreciation/invariant watchdog
 ```
 
 Testing:
@@ -189,6 +189,20 @@ Two lessons worth generalising: **`down()` re-adding something `up()` removed is
 `pembelian.update-so-term` and `pembelian.update-financials` named `PesananPembelianController::updateSoTerm()` and `::updateFinancials()`, neither of which has ever existed in this repo's history. Both were `PATCH`, so `SmokeSemuaHalamanTest` (GET only) could not reach them, and no Blade form, JS call or test referenced the names — they were routes to nowhere that would have thrown on resolution. They were deleted rather than implemented, on the same reasoning that retired the `debits`/`kredits` stubs.
 
 `ArchitectureConventionTest::test_every_route_points_at_a_controller_method_that_exists` now walks the route table and resolves every `Controller@method` action. Re-adding one of the dead routes makes it fail, which is how the check was verified as non-vacuous.
+
+### 14. Thin demo data hides whole classes of defect, and every one of them is in a code path no seeder ever ran
+
+Measured 2026-09-18: **47 domain tables were empty** after `migrate:fresh --seed`, including transfers, kitting, QC, picking waves, returns, period locks and approvals. Enriching the seeders to fill them surfaced **five defects in a single pass**, none of which any test had ever reached:
+
+1. **A transfer shortage never left `bahans.stok_onhand`.** `keluar()`/`masuk()` pass `affectGlobal = false` for transfers, which is right for goods that arrive — but on an under-receipt the missing units are genuinely gone and nothing decremented the master. `terima()` now decrements by `jumlah_selisih`.
+2. **The `transit` invariant contradicted its own feature note.** It compared `1304` strictly against `IN_TRANSIT` layers, while **Goods in transit** documents that a shortage deliberately leaves its value parked in 1304. Any under-receipt therefore turned the invariant permanently red. Expected is now in-transit layers **plus** the unresolved shortage value, derived from `alokasi_transfer_gudangs` because a `TRANSFER_SHORTAGE` layer is zeroed and no longer carries it.
+3. **`RekonsiliasiGudangService::summary()` still counted in-transit layers in its value total** while the GL had moved that value to 1304 — a leftover from before the two-phase transfer. `perGudang()` already excluded them; `summary()` did not.
+4. **Disassembling a kit with more than one component always threw.** `hasilkanKomponen()` wrote one layer per component, all keyed `('PERAKITAN_KIT', perakitan_id)`, against a unique index on that pair. Single-component kits worked, so nothing noticed. Component layers now key on the `wms_perakitan_kit_detail` row (`PERAKITAN_KIT_DETAIL`), following the `TRANSFER_ALLOCATION` precedent.
+5. **A controlled reversal permanently skewed per-warehouse inventory value.** `RekonsiliasiGudangService` filtered `status = 'POSTED'`, so the original journal (now `REVERSED`) dropped out while the reversing entry stayed in — the report overstated by the reversed amount forever. `AccountingReconciliationService` had always used `whereIn(['POSTED','REVERSED'])`; both now do.
+
+The lesson generalises past this list: **an empty table is a code path with no test, and the defects hide in exactly the branches a thin dataset never reaches** — the shortage branch, the multi-component branch, the reversed-journal branch. `KekayaanDataDemoTest` now asserts that 24 named tables are non-empty and that the enriched dataset keeps all eight invariants valid, so the dataset cannot quietly thin out again.
+
+It also broke six tests whose premises were accidents of thin data, and each fix made the test stronger rather than looser: the FX tests assumed exactly one foreign-currency invoice and are now data-driven across every open one; the CALK tests assumed no narrative existed anywhere (the seeder now writes **last** year's, leaving the current period showing its template badge); the supplier scorecard asserted "reject ratio is null" when what it meant was "null only without inspection data"; and the traceability test asserted zero untraced value when the documented design says kit assembly records no link back. That last one is now an **if-and-only-if**: untraced value may exist exactly when kitting or a transfer shortage is present, which is strictly stronger than the zero it replaced.
 
 ### 8. Tests that stop at the service boundary miss most defects
 
@@ -432,6 +446,39 @@ Verified against the regulations on 2026-09-11; this does not change when the co
 - **Sewa** — withholding splits by object: **selain** tanah/bangunan → PPh 23 2%; tanah dan/atau bangunan → **PPh 4(2) Final**.
 - **Tukar tambah** — **not a service.** Penyerahan barang via tukar-menukar; per UU PPN Pasal 1A barter is a PPN object and the DPP is **nilai wajar**, not book value. Classifying it as jasa gets both the DPP and the tax type wrong.
 
+### Demo dataset: what each seeder is for, and the order that matters (2026-09-18)
+
+`DatabaseSeeder` runs seven demo seeders in a fixed order, because each leans on what the previous one left behind. The last three were added when the dataset was enriched from 47 empty domain tables down to 20.
+
+| Seeder | Adds | Depends on |
+|---|---|---|
+| `WmsDemoSeeder` → `FinancialStatementDemoSeeder` | purchases, receipts, invoices, payments, assets, services, multi-month ledger | master data |
+| `PenjualanDanProduksiDemoSeeder` | sales, deliveries, work orders, BOM, cross-dock | `syncMultiWarehouseDemoData()` having filled `StokGudang` |
+| `OperasiGudangDemoSeeder` | transfers (received / short / still in transit), gate passes, consignment, work centres and routing, FX closing rate and revaluation | warehouse stock, an active BOM, an open supplier invoice |
+| `EksekusiGudangDemoSeeder` | kit definition and assembly/disassembly, reservations and picks, sales return, locked period, CALK, approval requests | posted deliveries, free stock |
+| `KontrolMutuDanPajakDemoSeeder` | QC inspection, serials, picking wave, controlled reversal, PPh Badan, replenishment run | an LPB whose layers are untouched, a posted NPK without a work order |
+
+Things that will bite whoever edits these:
+
+- **Every scenario is wrapped so it warns and continues.** A scenario that cannot run must never break `migrate:fresh --seed`, because the dataset it needs may legitimately be absent. The wrapper's message says which scenario was skipped and why.
+- **QC needs an LPB whose layers are still whole.** `inspect()` refuses a receipt whose stock has been consumed, so the seeder picks a receipt where every layer still has `remaining_quantity = initial_quantity` rather than simply the first one.
+- **The reversal scenario deliberately picks an NPK with no work order**, because `reverseNpk()` refuses one whose work order is sealed.
+- **CALK is written for last year, not the current period.** Writing the current period would make the "defaults to template" behaviour untestable and would hide the template badge that the UI is supposed to show until a narrative is saved.
+- **Landed cost is deliberately absent, and it is a decision, not an oversight.** `LandedCostService` requires its credit account to be `LIABILITAS/KREDIT` or `ASET/KREDIT`, so freight cannot be credited to Kas (`ASET/DEBIT`), and the only fitting liability is `2101 Hutang Usaha` — which the `ap` invariant compares against supplier invoices, so crediting it without an invoice would turn that invariant red. There is no accrued-expense account in the COA. See the Open-items index.
+- **The demo data is small on purpose** — three stocked materials — so a scenario that consumes several units can starve a later one. Add new scenarios at the end and keep quantities low.
+
+### Reminders and the invariant watchdog (2026-09-18)
+
+Both exist for the same reason, stated in **Platform hardening**: without something scheduled, the system is back to only noticing when a human clicks. Two halves of that were still open.
+
+- **`PengingatService` was blind to everything built after 2026-09-16.** It imported exactly three models — `FakturPembelian`, `LayerPersediaan`, `MaterialRequest` — so the entire sell side, production and custody had no reminder at all. This is the same asymmetry the `ar` invariant closed on the ledger side: the buy side had watchdogs and the sell side had none. Four reminders now cover it — `piutangJatuhTempo()` (the deliberate mirror of `invoiceJatuhTempo()`, so payables and receivables are chased on one scale), `barangKeluarBelumKembali()`, `crossDockBasi()` and `perintahKerjaMandek()`.
+- **`barangKeluarBelumKembali()` reuses `PengeluaranBarangService::terlambat()` rather than re-querying**, which is why `PengingatService` now takes a constructor dependency. The overdue gate-pass figure already existed and was already correct — it simply never left the page that computed it. Extracting rather than duplicating is the rule that produced this service in the first place; do not inline a second copy of that query.
+- **A cross-dock mark had no expiry of any kind.** `CrossDockService::HARI_TERAKHIR` (14) bounds only the *suggestion* query; a `DIRESERVASI` mark holds its reservation forever until somebody ships or cancels it, and reserved stock blocks other shipments. `AMBANG_CROSS_DOCK_BASI_HARI` is **7** — half the suggestion window, because a cross-dock is a promise of an *imminent* shipment, so a week unshipped is already past its own premise. It is a nudge, not enforcement: nothing is released automatically, because releasing someone's promise without asking is worse than leaving it stale.
+- **"Mandek" is measured from the last cost row, not from `updated_at`.** `AMBANG_PERINTAH_KERJA_MANDEK_HARI` is 14, and the basis is `MAX(wms_data_pesanan_biaya.tanggal)` falling back to the work order's own date, pulled in **one grouped query** rather than per work order. `updated_at` moves for reasons that are not progress; a cost row is evidence that something actually happened. Only `DRAFT` and `DIRILIS` count — a `SELESAI` work order waiting on shipment is a different problem with a different owner.
+- **New reminders must be added to the dashboard panel too, not only the digest.** `DashboardService` and `KirimPengingatHarian` both consume `PengingatService`, and wiring only the command leaves the panel blind while the email is correct — a split that is invisible until somebody compares them. A test asserts the finance panel sees receivables.
+- **`wms:periksa-invarian` turns the eight invariants from a report into an alarm.** It runs at **06:30, deliberately before the 07:00 digest**, so a broken ledger is the first thing accounting hears about rather than the last. It **returns a non-zero exit code** when an invariant is red, which is what makes it usable as a health check in CI or a monitor; the schedule does not care either way.
+- **`InvarianMenyimpang` is a third notification class rather than a reuse of `PengingatTenggat`.** A breached invariant has no deadline, and the shared `rincian` renderer hardcoded "Lewat N hari"/"N hari lagi" against a `hari` key. That renderer now falls back to a `catatan` string when `hari` is absent, so the component serves both event kinds instead of forcing a fake date onto one of them.
+
 ### Safety nets added after the 2026-09-16 review
 
 A code review found 11 defects that all survived a green suite, because every one lived in a layer the tests never entered — controller guards, Blade forms, policies, and cross-document arithmetic. Two standing tests now cover that blind spot:
@@ -467,6 +514,7 @@ Things that were once on the backlog and are **no longer wanted**. They are reco
 
 **Needs a decision from the user before it is code**
 
+- **A counter-account for landed cost** — `LandedCostService` demands `LIABILITAS/KREDIT` or `ASET/KREDIT`, so freight cannot be credited to Kas, and the only fitting liability (`2101 Hutang Usaha`) is what the `ap` invariant measures against supplier invoices. Either add an accrued-expense COA ("Biaya Masih Harus Dibayar"), or widen the rule to accept a cash credit. Until then landed cost cannot be seeded or realistically used, which is why the demo dataset has none.
 - **Customer credit limit** — `pelanggans.plafon_kredit` is recorded and displayed but **not enforced**. Blocking an order on credit is a policy call.
 - **Service categories vs the mapping rules** — `UpdateAccountingMappingRequest` validates every `KategoriBahan` with goods rules, which the seeded "Jasa Operasional" category cannot satisfy (its `coa_persediaan_id` is `5202`, a BEBAN account, where the rule demands ASET/DEBIT). "Jasa Produksi" stopped failing on 2026-09-16 when its mapping moved to `1302`. Either exempt service categories or give the last one a conforming account.
 - **Customer advances** — over-payment is still refused rather than parked. Building this needs a "Uang Muka Pelanggan" COA and reverses a deliberate 2026-09-16 decision, so it is a policy call, not a refactor.
@@ -478,6 +526,7 @@ Things that were once on the backlog and are **no longer wanted**. They are reco
 
 **Ordinary unbuilt work**
 
+- **Lacak Pembelian has no bucket for goods lost in transit.** A transfer shortage now shows up as untraced value rather than as a named disposition, alongside kit assembly. Both are real residuals the report is honest about, but a "hilang dalam perjalanan" bucket would make the shortage one explainable on screen.
 - **Sending inventory (not assets) out for subcontract** — deliberately excluded: a custody document must not touch FIFO layers. Interim path is a Transfer Gudang to a dedicated warehouse.
 
 **Deferred by the user**
@@ -502,6 +551,8 @@ The suite is not uniform — each net covers a different failure class, and know
 | `KonsistensiTemaTest` (3) | Blade/JS/CSS sources + `tailwind.config.js` | **hardcoded colour anywhere in source**, including files no test ever renders — numbered Tailwind palette classes, `white`/`black`, arbitrary `[#hex]`, `theme('colors.*')`, inline styles, raw colours in CSS; a chart that stops reading theme tokens or stops re-applying them on `inventory:theme-changed`; both themes' elevation ramp and WCAG contrast | a layout that is ugly while using the right tokens |
 | `HalamanTanpaEfekSampingTest` (1) | HTTP GET + query log | a GET page that issues `insert`/`update`/`delete` | writes on mutating routes, which are legitimate |
 | `AksesPerRoleTest` | HTTP GET, per role | pages a role must reach and pages it must be refused — the one class Super Admin smoke-testing is blind to | mutating routes |
+| `PengingatDanWatchdogTest` (11) | service layer, artisan commands, HTTP | a reminder that stops firing or fires when it should not, on both sides of its threshold; the daily digest losing a section; the dashboard panel drifting apart from the digest; the invariant watchdog failing to fail on a broken ledger; a notification that renders a breach as a deadline; the stock opname Excel export | whether a notification is actually delivered, which needs a queue worker |
+| `KekayaanDataDemoTest` (26) | the seeded database | a demo dataset that stops exercising a document type, the enriched dataset breaking an invariant, and the two-phase transfer losing any of its three states | whether the seeded values are business-sensible |
 | `CrudMasterDataTest` (3) | full HTTP round trip | create → update → delete on master data, per-role policy enforcement on each verb, duplicate and required-field validation | every other domain, which has no CRUD test of its own yet |
 | `AturanJenisGudangTest` (5) | service layer + policy | Gudang Rusak being terminal in both directions, Consider stock landing on hold, warehouse flags agreeing with their type's meaning, and issuing from quarantine or damage being closed | warehouse rules that are only in a controller |
 | `RevisiPesananPembelianTest` (2) | full HTTP round trip | a printed PO's revision being archived into the real history tables, and an unprinted one not being archived | other document revision paths |
@@ -512,7 +563,7 @@ The suite is not uniform — each net covers a different failure class, and know
 Measured with `php artisan route:list --json` against the named routes in `tests/`:
 
 - **148** named GET routes take no parameter — covered by the four GET nets above.
-- **51** named GET routes take parameters — covered only where `SmokeSemuaHalamanTest::nilaiParameter()` can resolve a value; the rest are counted as skipped and the skip count is asserted.
+- **52** named GET routes take parameters — covered only where `SmokeSemuaHalamanTest::nilaiParameter()` can resolve a value; the rest are counted as skipped and the skip count is asserted.
 - **175** named routes mutate (`POST`/`PUT`/`PATCH`/`DELETE`). Since 2026-09-18 every one of them is exercised as a **guest** and must refuse, and since the same date every one of them is proven to resolve to a real controller method; but only **59** are named by any test as an authorised user, leaving **116** whose behaviour is unverified.
 
 That last figure is the honest state of coverage, and it is why **trap 8** matters: a feature spanning HTTP → service → ledger needs at least one test that enters through the route. Reproduce the figure by extracting route names from `route:list --json` and grepping `tests/` for each one.

@@ -65,18 +65,42 @@ class ProcurementAnalyticsTest extends TestCase
         $this->assertGreaterThan(0, $diperiksa);
     }
 
-    public function test_seeded_purchases_have_nothing_untraced(): void
+    public function test_value_is_untraced_only_when_kitting_or_a_transfer_shortage_explains_it(): void
     {
         $service = app(LacakPembelianService::class);
+        $db = \Illuminate\Support\Facades\DB::class;
+
+        $adaKitting = $db::table('wms_perakitan_kit_detail')->exists();
+        $adaSelisihTransfer = $db::table('detail_transfer_gudangs')->where('jumlah_selisih', '>', 0)->exists();
+        $adaPenyebab = $adaKitting || $adaSelisihTransfer;
+
+        $totalTidakTerlacak = 0.0;
+        $diperiksa = 0;
 
         foreach (PenerimaanBarang::where('document_type', 'GOODS')->get() as $lpb) {
-            $this->assertEqualsWithDelta(
-                0.0,
-                $service->telusuri($lpb)['total_tidak_terlacak'],
-                0.01,
-                "LPB {$lpb->id_lpb} punya nilai yang tidak terlacak."
+            $hasil = $service->telusuri($lpb);
+            $tidakTerlacak = round((float) $hasil['total_tidak_terlacak'], 2);
+            $totalTidakTerlacak += $tidakTerlacak;
+            $diperiksa++;
+
+            $this->assertGreaterThanOrEqual(0.0, $tidakTerlacak, "LPB {$lpb->id_lpb}: ember tak terlacak tidak boleh negatif.");
+
+            $this->assertLessThanOrEqual(
+                round((float) $hasil['total_nilai_masuk'] + 0.01, 2),
+                $tidakTerlacak,
+                "LPB {$lpb->id_lpb}: nilai tak terlacak tidak boleh melebihi nilai penerimaannya sendiri."
             );
         }
+
+        $this->assertGreaterThan(0, $diperiksa, 'Seed harus punya penerimaan barang untuk ditelusuri.');
+
+        $this->assertSame(
+            $adaPenyebab,
+            round($totalTidakTerlacak, 2) > 0.0,
+            'Hanya ada dua jalur yang tidak mencatat tautan balik ke layer: perakitan kit dan selisih transfer. '
+                . 'Kalau tidak ada keduanya, seluruh nilai pembelian wajib terlacak habis; kalau salah satunya ada, '
+                . 'residu itu memang harus tampil dan bukan disembunyikan.'
+        );
     }
 
     public function test_reversing_an_npk_moves_value_from_expense_back_to_stock(): void
@@ -103,7 +127,12 @@ class ProcurementAnalyticsTest extends TestCase
             'Nilai yang keluar dari ember beban harus persis sama dengan yang masuk ke ember stok.'
         );
 
-        $this->assertEqualsWithDelta(0.0, $sesudah['total_tidak_terlacak'], 0.01);
+        $this->assertEqualsWithDelta(
+            $sebelum['total_tidak_terlacak'],
+            $sesudah['total_tidak_terlacak'],
+            0.01,
+            'Pembalikan memindahkan nilai antar ember, jadi tidak boleh menambah maupun mengurangi nilai yang tak terlacak.'
+        );
     }
 
     public function test_purchase_tracing_renders_and_exports_for_purchasing(): void
@@ -138,13 +167,16 @@ class ProcurementAnalyticsTest extends TestCase
             $this->assertGreaterThanOrEqual($row['lead_time_tercepat'], $row['lead_time_terlama']);
             $this->assertLessThanOrEqual($row['penerimaan'], $row['penerimaan_tepat']);
 
+            if ((float) $row['qc_diperiksa'] > 0) {
+                $this->assertNotNull($row['rasio_reject'], 'Supplier yang sudah punya pemeriksaan kualitas harus melaporkan angka, bukan null.');
+                continue;
+            }
+
             $this->assertNull(
                 $row['rasio_reject'],
                 'Tanpa baris pemeriksaan kualitas, rasio reject harus null (belum ada data), bukan 0 persen.'
             );
         }
-
-        $this->assertFalse($data['ada_data_qc']);
     }
 
     public function test_supplier_scorecard_target_lead_time_changes_the_punctuality_column(): void

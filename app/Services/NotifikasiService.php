@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Notifications\InvarianMenyimpang;
 use App\Notifications\PengingatTenggat;
 use App\Notifications\PersetujuanMenunggu;
 use Illuminate\Support\Collection;
@@ -41,6 +42,23 @@ class NotifikasiService
         }
 
         Notification::send($penerima, new PengingatTenggat($pengingat->values()->all()));
+
+        return $penerima->count();
+    }
+
+    public function kirimInvarianMenyimpang(array $roles, array $menyimpang): int
+    {
+        if ($menyimpang === []) {
+            return 0;
+        }
+
+        $penerima = $this->penerimaBerdasarkanPeran($roles);
+
+        if ($penerima->isEmpty()) {
+            return 0;
+        }
+
+        Notification::send($penerima, new InvarianMenyimpang($menyimpang));
 
         return $penerima->count();
     }

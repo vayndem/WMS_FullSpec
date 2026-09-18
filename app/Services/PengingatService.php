@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\CrossDock;
+use App\Models\DataPesanan;
 use App\Models\FakturPembelian;
+use App\Models\FakturPenjualan;
 use App\Models\LayerPersediaan;
 use App\Models\MaterialRequest;
 use Illuminate\Support\Carbon;
@@ -14,6 +17,10 @@ class PengingatService
     public const AMBANG_KEDALUWARSA_HARI = 30;
     public const AMBANG_JATUH_TEMPO_HARI = 14;
     public const AMBANG_TRANSFER_MENGGANTUNG_HARI = 3;
+    public const AMBANG_CROSS_DOCK_BASI_HARI = 7;
+    public const AMBANG_PERINTAH_KERJA_MANDEK_HARI = 14;
+
+    public function __construct(private PengeluaranBarangService $pengeluaran) {}
 
     public function susun(string $konteks, string $label, mixed $tanggal, string $url, ?float $nilai = null): ?array
     {
@@ -138,6 +145,94 @@ class PengingatService
             'Request ' . ($req->no_request ?? $req->id),
             $req->created_at,
             route('request.index'),
+        ))->all());
+    }
+
+    public function piutangJatuhTempo(int $limit = 6): Collection
+    {
+        $rows = FakturPenjualan::with('pelanggan')
+            ->whereIn('status', [FakturPenjualan::POSTED, FakturPenjualan::PARTIALLY_PAID])
+            ->where('sisa_tagihan', '>', 0)
+            ->whereNotNull('jatuh_tempo')
+            ->whereDate('jatuh_tempo', '<=', today()->addDays(self::AMBANG_JATUH_TEMPO_HARI))
+            ->orderBy('jatuh_tempo')
+            ->limit($limit)->get();
+
+        return $this->urutkan($rows->map(fn ($faktur) => $this->susun(
+            'Piutang jatuh tempo',
+            $faktur->nomor . ' · ' . ($faktur->pelanggan->nama ?? '-'),
+            $faktur->jatuh_tempo,
+            route('faktur-penjualan.index'),
+            (float) $faktur->sisa_tagihan,
+        ))->all());
+    }
+
+    public function barangKeluarBelumKembali(int $limit = 20): Collection
+    {
+        $terlambat = $this->pengeluaran->terlambat();
+
+        $keluar = $terlambat['keluar']->map(fn ($row) => $this->susun(
+            'Barang keluar belum kembali',
+            $row->nomor . ' · ' . ($row->supplier->nama ?? '-'),
+            $row->estimasi_kembali,
+            route('pengeluaran-barang.index'),
+        ));
+
+        $titipan = $terlambat['titipan']->map(fn ($row) => $this->susun(
+            'Barang titipan belum kembali',
+            $row->nomor . ' · ' . ($row->supplier->nama ?? '-'),
+            $row->estimasi_kembali,
+            route('pengeluaran-barang.index'),
+            (float) $row->nilai_taksiran,
+        ));
+
+        return $this->urutkan($keluar->merge($titipan)->all())->take($limit)->values();
+    }
+
+    public function crossDockBasi(?array $warehouseIds = null, int $limit = 20): Collection
+    {
+        $rows = CrossDock::with(['bahan', 'gudang'])
+            ->where('status', CrossDock::DIRESERVASI)
+            ->when($warehouseIds !== null, fn ($query) => $query->whereIn('gudang_id', $warehouseIds))
+            ->whereDate('tanggal', '<=', today()->subDays(self::AMBANG_CROSS_DOCK_BASI_HARI))
+            ->orderBy('tanggal')
+            ->limit($limit)->get();
+
+        return $this->urutkan($rows->map(fn ($tanda) => $this->susun(
+            'Cross dock menahan stok',
+            $tanda->nomor . ' · ' . ($tanda->bahan->nama ?? '-') . ' · ' . ($tanda->gudang->nama ?? '-'),
+            $tanda->tanggal,
+            route('cross-dock.index'),
+            (float) $tanda->jumlah,
+        ))->all());
+    }
+
+    public function perintahKerjaMandek(int $limit = 20): Collection
+    {
+        $batas = today()->subDays(self::AMBANG_PERINTAH_KERJA_MANDEK_HARI);
+
+        $biayaTerakhir = DB::table('wms_data_pesanan_biaya')
+            ->selectRaw('data_pesanan_id, MAX(tanggal) as tanggal_terakhir')
+            ->groupBy('data_pesanan_id')
+            ->pluck('tanggal_terakhir', 'data_pesanan_id');
+
+        $rows = DataPesanan::with(['bahanHasil', 'gudang'])
+            ->whereIn('status', [DataPesanan::DRAFT, DataPesanan::DIRILIS])
+            ->get()
+            ->map(fn (DataPesanan $pesanan) => [
+                'pesanan' => $pesanan,
+                'sejak' => $biayaTerakhir[$pesanan->id] ?? $pesanan->tanggal,
+            ])
+            ->filter(fn ($row) => $row['sejak'] && Carbon::parse($row['sejak'])->lte($batas))
+            ->sortBy('sejak')
+            ->take($limit);
+
+        return $this->urutkan($rows->map(fn ($row) => $this->susun(
+            'Perintah kerja mandek',
+            $row['pesanan']->nomor . ' · ' . ($row['pesanan']->bahanHasil->nama ?? '-') . ' · ' . ($row['pesanan']->gudang->nama ?? '-'),
+            $row['sejak'],
+            route('data-pesanan.index'),
+            (float) $row['pesanan']->jumlah_rencana,
         ))->all());
     }
 }

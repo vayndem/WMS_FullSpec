@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AlokasiTransferGudang;
+use App\Models\Bahan;
 use App\Models\Gudang;
 use App\Models\LayerPersediaan;
 use App\Models\LokasiGudang;
@@ -94,7 +95,9 @@ class TransferGudangService
                     $remaining -= $release;
                 }
                 if ($quantity > 0) $this->stok->masuk($tujuan->id, $detail->bahan_id, $quantity, $average, $tujuan->jenis === Gudang::CONSIDER ? 'CONSIDER_MASUK' : 'TRANSFER_MASUK', 'TRANSFER_GUDANG', $transfer->id, $transfer->nomor_transfer, false);
-                $detail->update(['jumlah_diterima' => $quantity, 'jumlah_selisih' => (float) $detail->jumlah_dikirim - $quantity]);
+                $selisih = round((float) $detail->jumlah_dikirim - $quantity, 6);
+                if ($selisih > 0) Bahan::whereKey($detail->bahan_id)->decrement('stok_onhand', $selisih);
+                $detail->update(['jumlah_diterima' => $quantity, 'jumlah_selisih' => $selisih]);
             }
             $transfer->update(['status' => TransferGudang::DITERIMA, 'diterima_oleh' => Auth::id(), 'diterima_pada' => now(), 'catatan_penerimaan' => $notes, 'dikonfirmasi_oleh' => Auth::id(), 'dikonfirmasi_pada' => now()]);
             $this->akuntansi->postPenerimaanTransfer($transfer);

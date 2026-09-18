@@ -180,11 +180,17 @@ class KittingService
             $porsi = $totalUnit > 0 ? $nilaiTotal * ($baris['jumlah'] / $totalUnit) : 0;
             $hargaSatuan = $baris['jumlah'] > 0 ? round($porsi / $baris['jumlah'], 4) : 0;
 
+            $detail = $perakitan->details()->create([
+                'bahan_id' => $baris['bahan_id'],
+                'jumlah' => $baris['jumlah'],
+                'nilai' => round($porsi, 2),
+            ]);
+
             LayerPersediaan::create([
                 'bahan_id' => $baris['bahan_id'],
                 'gudang_id' => $gudangId,
-                'source_type' => 'PERAKITAN_KIT',
-                'source_id' => $perakitan->id,
+                'source_type' => 'PERAKITAN_KIT_DETAIL',
+                'source_id' => $detail->id,
                 'transaction_date' => $tanggal,
                 'initial_quantity' => $baris['jumlah'],
                 'remaining_quantity' => $baris['jumlah'],
@@ -193,12 +199,6 @@ class KittingService
 
             $this->stok->masuk($gudangId, $baris['bahan_id'], $baris['jumlah'], $hargaSatuan,
                 'PERAKITAN_KIT_MASUK', 'PERAKITAN_KIT', $perakitan->id, "Hasil urai {$perakitan->nomor}");
-
-            $perakitan->details()->create([
-                'bahan_id' => $baris['bahan_id'],
-                'jumlah' => $baris['jumlah'],
-                'nilai' => round($porsi, 2),
-            ]);
         }
     }
 }
