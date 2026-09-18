@@ -92,12 +92,14 @@ class DatabaseSeeder extends Seeder
             ['kode_akun' => '1601', 'nama_akun' => 'Aset Pajak Tangguhan', 'kategori_akun' => 'ASET', 'posisi_normal' => 'DEBIT'],
             ['kode_akun' => '2108', 'nama_akun' => 'Liabilitas Pajak Tangguhan', 'kategori_akun' => 'LIABILITAS', 'posisi_normal' => 'KREDIT'],
             ['kode_akun' => '5307', 'nama_akun' => 'Beban Pajak Tangguhan', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT', 'klasifikasi_fiskal' => BaganAkun::FISKAL_BEDA_TETAP],
+            ['kode_akun' => '5308', 'nama_akun' => 'Kerugian Pembatalan Produksi', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT'],
             ['kode_akun' => '2109', 'nama_akun' => 'Hutang PPN Keluaran', 'kategori_akun' => 'LIABILITAS', 'posisi_normal' => 'KREDIT'],
             ['kode_akun' => '1201', 'nama_akun' => 'Piutang Usaha', 'kategori_akun' => 'ASET', 'posisi_normal' => 'DEBIT'],
             ['kode_akun' => '4101', 'nama_akun' => 'Penjualan', 'kategori_akun' => 'PENDAPATAN', 'posisi_normal' => 'KREDIT'],
             ['kode_akun' => '4102', 'nama_akun' => 'Retur Penjualan', 'kategori_akun' => 'PENDAPATAN', 'posisi_normal' => 'DEBIT'],
             ['kode_akun' => '5401', 'nama_akun' => 'Beban Pokok Penjualan', 'kategori_akun' => 'BEBAN', 'posisi_normal' => 'DEBIT'],
             ['kode_akun' => '1303', 'nama_akun' => 'Barang Dalam Proses Produksi', 'kategori_akun' => 'ASET', 'posisi_normal' => 'DEBIT'],
+            ['kode_akun' => '1304', 'nama_akun' => 'Persediaan Dalam Perjalanan', 'kategori_akun' => 'ASET', 'posisi_normal' => 'DEBIT'],
         ];
 
         foreach ($coas as $coa) {
@@ -133,6 +135,10 @@ class DatabaseSeeder extends Seeder
             AccountingSetting::RETUR_PENJUALAN => '4102',
             AccountingSetting::BEBAN_POKOK_PENJUALAN => '5401',
             AccountingSetting::BARANG_DALAM_PROSES => '1303',
+            AccountingSetting::PERSEDIAAN_DALAM_PERJALANAN => '1304',
+            AccountingSetting::RUGI_PEMBATALAN_PRODUKSI => '5308',
+            AccountingSetting::LABA_SELISIH_KURS => '4204',
+            AccountingSetting::RUGI_SELISIH_KURS => '5303',
         ];
         foreach ($accountMappings as $key => $code) {
             AccountingSetting::updateOrCreate(

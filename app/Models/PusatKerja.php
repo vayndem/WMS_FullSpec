@@ -7,36 +7,29 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Bom extends Model
+class PusatKerja extends Model
 {
     use Auditable;
 
     public const AKTIF = 'AKTIF';
     public const NONAKTIF = 'NONAKTIF';
 
-    protected $table = 'wms_bom';
+    protected $table = 'wms_pusat_kerja';
 
     protected $fillable = [
-        'kode', 'nama', 'bahan_id', 'versi', 'jumlah_hasil', 'status', 'catatan', 'dibuat_oleh',
+        'kode', 'nama', 'gudang_id', 'kapasitas_menit_per_hari', 'status', 'keterangan', 'dibuat_oleh',
     ];
 
-    protected $casts = [
-        'jumlah_hasil' => 'decimal:6',
-    ];
+    protected $casts = ['kapasitas_menit_per_hari' => 'decimal:2'];
 
-    public function bahan(): BelongsTo
+    public function gudang(): BelongsTo
     {
-        return $this->belongsTo(Bahan::class, 'bahan_id');
-    }
-
-    public function details(): HasMany
-    {
-        return $this->hasMany(BomDetail::class, 'bom_id');
+        return $this->belongsTo(Gudang::class, 'gudang_id');
     }
 
     public function operasi(): HasMany
     {
-        return $this->hasMany(OperasiBom::class, 'bom_id');
+        return $this->hasMany(OperasiBom::class, 'pusat_kerja_id');
     }
 
     public function isAktif(): bool

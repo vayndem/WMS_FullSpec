@@ -180,7 +180,7 @@ class PajakPenghasilanService
     private function bedaWaktuKumulatif(): float
     {
         return round(
-            Aset::whereNotNull('kelompok_fiskal')->where('status', 'ACTIVE')->get()
+            Aset::whereNotNull('kelompok_fiskal')->where('status', Aset::ACTIVE)->get()
                 ->sum(fn (Aset $aset) => (float) $aset->book_value - $aset->nilaiBukuFiskal()),
             2
         );

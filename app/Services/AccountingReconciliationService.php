@@ -74,6 +74,8 @@ class AccountingReconciliationService
             $wipLedger = null;
         }
 
+        $akumulasiRevaluasi = round((float) DB::table('wms_revaluasi_kurs')->sum('selisih'), 2);
+
         $arLedger = null;
         try {
             $arId = AccountingSetting::accountId(AccountingSetting::PIUTANG_USAHA);
@@ -87,6 +89,21 @@ class AccountingReconciliationService
         $arSubledger = round((float) DB::table('wms_faktur_penjualan')
             ->whereIn('status', [FakturPenjualan::POSTED, FakturPenjualan::PARTIALLY_PAID])
             ->sum('sisa_tagihan'), 2);
+
+        $transitLedger = null;
+        try {
+            $transitId = AccountingSetting::accountId(AccountingSetting::PERSEDIAAN_DALAM_PERJALANAN);
+            $transitLedger = (float) DB::table('wms_jurnal_detail')->join('wms_jurnal', 'wms_jurnal.id', '=', 'wms_jurnal_detail.jurnal_id')
+                ->whereIn('wms_jurnal.status', ['POSTED', 'REVERSED'])->where('wms_jurnal_detail.coa_id', $transitId)
+                ->selectRaw('COALESCE(SUM(debit-kredit),0) balance')->value('balance');
+        } catch (\RuntimeException) {
+            $transitLedger = null;
+        }
+
+        $transitLayer = round((float) DB::table('wms_layer_persediaan')
+            ->where('stock_status', 'IN_TRANSIT')
+            ->selectRaw('COALESCE(SUM(remaining_quantity * unit_cost),0) nilai')
+            ->value('nilai'), 2);
 
         $wipPerintah = round(
             DataPesanan::berjalan()->get()->sum(fn (DataPesanan $pesanan) => $pesanan->saldoWip()),
@@ -128,11 +145,11 @@ class AccountingReconciliationService
             ],
             [
                 'key' => 'ap',
-                'label' => 'Invoice belum lunas vs hutang supplier',
+                'label' => 'Invoice belum lunas + revaluasi kurs vs hutang supplier',
                 'total' => 1,
-                'invalid' => $apLedger !== null && abs((float) $invoice->outstanding - $apLedger) <= .01 ? 0 : 1,
+                'invalid' => $apLedger !== null && abs(((float) $invoice->outstanding + $akumulasiRevaluasi) - $apLedger) <= .01 ? 0 : 1,
                 'amount' => $apLedger,
-                'expected' => (float) $invoice->outstanding,
+                'expected' => round((float) $invoice->outstanding + $akumulasiRevaluasi, 2),
             ],
             [
                 'key' => 'ar',
@@ -141,6 +158,14 @@ class AccountingReconciliationService
                 'invalid' => $arLedger !== null && abs($arSubledger - $arLedger) <= .01 ? 0 : 1,
                 'amount' => $arLedger,
                 'expected' => $arSubledger,
+            ],
+            [
+                'key' => 'transit',
+                'label' => 'Persediaan dalam perjalanan vs layer in-transit',
+                'total' => 1,
+                'invalid' => $transitLedger !== null && abs($transitLayer - $transitLedger) <= .01 ? 0 : 1,
+                'amount' => $transitLedger,
+                'expected' => $transitLayer,
             ],
             [
                 'key' => 'wip',

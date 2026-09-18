@@ -59,7 +59,7 @@ class StorePesananJasaRequest extends FormRequest
                     continue;
                 }
 
-                if ($aset->status !== 'ACTIVE') {
+                if ($aset->status !== Aset::ACTIVE) {
                     $validator->errors()->add("items.$index.aset_id",
                         "Aset {$aset->nomor_aset} tidak aktif, jasanya tidak dapat dikapitalisasi ke sana.");
                 }

@@ -309,6 +309,132 @@ class ArchitectureConventionTest extends TestCase
         );
     }
 
+    public function test_every_has_many_relation_names_its_foreign_key(): void
+    {
+        $pelanggar = [];
+        $diperiksa = 0;
+
+        foreach (glob(app_path('Models/*.php')) as $file) {
+            $isi = file_get_contents($file);
+            $model = basename($file, '.php');
+            $pola = '/function\s+(\w+)\s*\([^)]*\)[^{]*\{\s*return\s+\$this->(hasMany|hasOne|hasManyThrough|belongsToMany)\(([^;]+)\);/s';
+
+            if (!preg_match_all($pola, $isi, $cocok, PREG_SET_ORDER)) {
+                continue;
+            }
+
+            foreach ($cocok as $relasi) {
+                $diperiksa++;
+                $argumen = preg_replace('/\[[^\]]*\]/', '', $relasi[3]);
+
+                if (substr_count($argumen, ',') < 1) {
+                    $pelanggar[] = "{$model}::{$relasi[1]}() -> {$relasi[2]}() tanpa foreign key eksplisit";
+                }
+            }
+        }
+
+        $this->assertGreaterThan(50, $diperiksa, 'Pemindaian relasi tidak menjangkau cukup model.');
+
+        $this->assertSame(
+            [],
+            $pelanggar,
+            "Eloquent menebak foreign key hasMany/hasOne dari NAMA CLASS PEMILIK, bukan dari kolom yang benar-benar ada. "
+                . "Begitu class di-rename, relasi diam-diam menunjuk kolom lain tanpa error. Sebutkan foreign key-nya:\n"
+                . implode("\n", $pelanggar)
+        );
+    }
+
+    public function test_every_table_name_written_as_a_string_actually_exists(): void
+    {
+        $pola = [
+            'DB::table' => '/DB::table\(\s*[\'"]([a-z0-9_]+)(?:\s+as\s+\w+)?[\'"]/i',
+            'join' => '/->(?:join|leftJoin|rightJoin|joinSub|crossJoin)\(\s*[\'"]([a-z0-9_]+)(?:\s+as\s+\w+)?[\'"]/i',
+            'from' => '/->from\(\s*[\'"]([a-z0-9_]+)(?:\s+as\s+\w+)?[\'"]/i',
+            'protected $table' => '/protected\s+\$table\s*=\s*[\'"]([a-z0-9_]+)[\'"]/i',
+            'aturan exists' => '/[\'"]exists:([a-z0-9_]+),/i',
+            'aturan unique' => '/[\'"]unique:([a-z0-9_]+),/i',
+        ];
+
+        $hilang = [];
+        $diperiksa = 0;
+        $diketahui = [];
+
+        foreach ([[app_path(), '.php'], [database_path('seeders'), '.php'], [resource_path('views'), '.blade.php']] as [$akar, $ext]) {
+            foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($akar)) as $berkas) {
+                if (!$berkas->isFile() || !str_ends_with($berkas->getFilename(), $ext)) {
+                    continue;
+                }
+
+                $rel = str_replace(base_path() . DIRECTORY_SEPARATOR, '', $berkas->getPathname());
+
+                foreach (file($berkas->getPathname()) as $nomor => $baris) {
+                    foreach ($pola as $label => $p) {
+                        if (!preg_match_all($p, $baris, $cocok)) {
+                            continue;
+                        }
+
+                        foreach ($cocok[1] as $tabel) {
+                            $diperiksa++;
+
+                            if (!array_key_exists($tabel, $diketahui)) {
+                                $diketahui[$tabel] = \Illuminate\Support\Facades\Schema::hasTable($tabel);
+                            }
+
+                            if (!$diketahui[$tabel]) {
+                                $hilang[] = "{$rel}:" . ($nomor + 1) . " [{$label}] tabel '{$tabel}' tidak ada di database";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        $this->assertGreaterThan(150, $diperiksa, 'Pemindaian nama tabel tidak menjangkau cukup rujukan.');
+
+        $this->assertSame(
+            [],
+            array_values(array_unique($hilang)),
+            "Nama tabel yang ditulis sebagai string tidak ikut terbawa saat rename, dan tidak ada yang meneriakkannya "
+                . "sampai baris kode itu benar-benar dijalankan:\n" . implode("\n", array_unique($hilang))
+        );
+    }
+
+
+    public function test_every_route_points_at_a_controller_method_that_exists(): void
+    {
+        $rusak = [];
+        $diperiksa = 0;
+
+        foreach (\Illuminate\Support\Facades\Route::getRoutes() as $rute) {
+            $aksi = $rute->getAction('uses');
+
+            if (!is_string($aksi) || !str_contains($aksi, '@')) {
+                continue;
+            }
+
+            [$kelas, $metode] = explode('@', $aksi, 2);
+            $diperiksa++;
+            $label = ($rute->getName() ?: $rute->uri()) . ' [' . implode('|', $rute->methods()) . ']';
+
+            if (!class_exists($kelas)) {
+                $rusak[] = "{$label} -> controller {$kelas} tidak ada";
+                continue;
+            }
+
+            if (!method_exists($kelas, $metode)) {
+                $rusak[] = "{$label} -> {$kelas}::{$metode}() tidak ada";
+            }
+        }
+
+        $this->assertGreaterThan(200, $diperiksa, 'Pemindaian aksi route tidak menjangkau cukup route.');
+
+        $this->assertSame(
+            [],
+            $rusak,
+            "Route yang menunjuk method controller yang tidak ada hanya meledak saat URL-nya benar-benar dipanggil, "
+                . "dan smoke test GET tidak menjangkau route mutasi:\n" . implode("\n", $rusak)
+        );
+    }
     private function rutePerNama(): array
     {
         $peta = [];

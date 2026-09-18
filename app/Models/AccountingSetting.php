@@ -31,6 +31,10 @@ class AccountingSetting extends Model
     public const RETUR_PENJUALAN = 'RETUR_PENJUALAN';
     public const BEBAN_POKOK_PENJUALAN = 'BEBAN_POKOK_PENJUALAN';
     public const BARANG_DALAM_PROSES = 'BARANG_DALAM_PROSES';
+    public const PERSEDIAAN_DALAM_PERJALANAN = 'PERSEDIAAN_DALAM_PERJALANAN';
+    public const RUGI_PEMBATALAN_PRODUKSI = 'RUGI_PEMBATALAN_PRODUKSI';
+    public const LABA_SELISIH_KURS = 'LABA_SELISIH_KURS';
+    public const RUGI_SELISIH_KURS = 'RUGI_SELISIH_KURS';
 
     public const PPH_LIABILITY_KEY = [
         'PPH23' => self::HUTANG_PPH23,
@@ -72,6 +76,10 @@ class AccountingSetting extends Model
             self::RETUR_PENJUALAN => [['PENDAPATAN', 'DEBIT']],
             self::BEBAN_POKOK_PENJUALAN => [['BEBAN', 'DEBIT']],
             self::BARANG_DALAM_PROSES => [['ASET', 'DEBIT']],
+            self::PERSEDIAAN_DALAM_PERJALANAN => [['ASET', 'DEBIT']],
+            self::RUGI_PEMBATALAN_PRODUKSI => [['BEBAN', 'DEBIT']],
+            self::LABA_SELISIH_KURS => [['PENDAPATAN', 'KREDIT']],
+            self::RUGI_SELISIH_KURS => [['BEBAN', 'DEBIT']],
         ];
         if (
             !$setting

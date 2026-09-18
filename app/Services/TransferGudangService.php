@@ -59,6 +59,7 @@ class TransferGudangService
                 $detail->update(['jumlah_dikirim' => $detail->jumlah]);
             }
             $transfer->update(['status' => TransferGudang::DIKIRIM, 'dikirim_oleh' => Auth::id(), 'dikirim_pada' => now()]);
+            $this->akuntansi->postPengirimanTransfer($transfer->fresh('details.bahan.tipeBarang'));
             return $transfer->fresh('details');
         });
     }
@@ -96,7 +97,7 @@ class TransferGudangService
                 $detail->update(['jumlah_diterima' => $quantity, 'jumlah_selisih' => (float) $detail->jumlah_dikirim - $quantity]);
             }
             $transfer->update(['status' => TransferGudang::DITERIMA, 'diterima_oleh' => Auth::id(), 'diterima_pada' => now(), 'catatan_penerimaan' => $notes, 'dikonfirmasi_oleh' => Auth::id(), 'dikonfirmasi_pada' => now()]);
-            $this->akuntansi->postTransferGudang($transfer);
+            $this->akuntansi->postPenerimaanTransfer($transfer);
             return $transfer->fresh('details');
         });
     }

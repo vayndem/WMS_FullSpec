@@ -23,9 +23,9 @@ class Gudang extends Model
         'boleh_opname' => 'boolean',
     ];
 
-    public function stok() { return $this->hasMany(StokGudang::class); }
-    public function pembagian() { return $this->hasMany(PembagianGudang::class); }
-    public function pengaturanBahan() { return $this->hasMany(PengaturanBahanGudang::class); }
-    public function pembelians() { return $this->hasMany(PesananPembelian::class); }
-    public function lpbs() { return $this->hasMany(PenerimaanBarang::class); }
+    public function stok() { return $this->hasMany(StokGudang::class, 'gudang_id'); }
+    public function pembagian() { return $this->hasMany(PembagianGudang::class, 'gudang_id'); }
+    public function pengaturanBahan() { return $this->hasMany(PengaturanBahanGudang::class, 'gudang_id'); }
+    public function pembelians() { return $this->hasMany(PesananPembelian::class, 'gudang_id'); }
+    public function lpbs() { return $this->hasMany(PenerimaanBarang::class, 'gudang_id'); }
 }

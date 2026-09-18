@@ -44,7 +44,7 @@ class AsetPolicy
 
     public function update(User $user, Aset $asset): bool
     {
-        return $this->canManageAssets($user) && $asset->status === 'ACTIVE';
+        return $this->canManageAssets($user) && $asset->status === Aset::ACTIVE;
     }
 
     public function depreciate(User $user, Aset $asset): bool

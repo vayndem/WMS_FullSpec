@@ -12,6 +12,8 @@ use RuntimeException;
 
 class DataPesananService
 {
+    public const SUMBER_PEMBATALAN = 'PEMBATALAN';
+
     public function __construct(private DocumentNumberService $numbers) {}
 
     public function buat(PesananPenjualanDetail $detailPesanan, array $data, User $user): DataPesanan
@@ -164,21 +166,38 @@ class DataPesananService
         ]);
     }
 
-    public function batalkan(DataPesanan $pesanan): DataPesanan
+    public function batalkan(DataPesanan $pesanan, ?WmsAccountingService $akuntansi = null): DataPesanan
     {
-        if ($pesanan->totalBiaya() > 0.005) {
-            throw new RuntimeException(
-                "Perintah kerja {$pesanan->nomor} sudah menyerap biaya dan tidak dapat dibatalkan. Selesaikan dan kirim, atau hapusbukukan biayanya lebih dulu."
-            );
-        }
+        return DB::transaction(function () use ($pesanan, $akuntansi) {
+            $pesanan = DataPesanan::lockForUpdate()->findOrFail($pesanan->id);
 
-        if ($pesanan->sudahSelesai()) {
-            throw new RuntimeException('Perintah kerja yang sudah selesai tidak dapat dibatalkan.');
-        }
+            if ($pesanan->status === DataPesanan::DIBATALKAN) {
+                throw new RuntimeException('Perintah kerja ini sudah dibatalkan.');
+            }
 
-        $pesanan->update(['status' => DataPesanan::DIBATALKAN]);
+            if ($pesanan->sudahSelesai()) {
+                throw new RuntimeException('Perintah kerja yang sudah selesai tidak dapat dibatalkan.');
+            }
 
-        return $pesanan->fresh();
+            $wip = $pesanan->totalBiaya();
+
+            if ($wip > 0.005) {
+                ($akuntansi ?? app(WmsAccountingService::class))->postPembatalanPerintahKerja($pesanan, $wip);
+
+                DataPesananBiaya::create([
+                    'data_pesanan_id' => $pesanan->id,
+                    'sumber' => self::SUMBER_PEMBATALAN,
+                    'referensi_id' => $pesanan->id,
+                    'tanggal' => now()->toDateString(),
+                    'nilai' => -$wip,
+                    'keterangan' => 'Hapus buku barang dalam proses karena perintah kerja dibatalkan.',
+                ]);
+            }
+
+            $pesanan->update(['status' => DataPesanan::DIBATALKAN]);
+
+            return $pesanan->fresh();
+        });
     }
 
     public function dariPemakaian(PemakaianBarang $npk): ?DataPesanan

@@ -26,7 +26,7 @@ class AsetController extends Controller
     {
         $this->authorize('viewAny', Aset::class);
         $financial = $request->user()->can('viewFinancials', Aset::class);
-        $statusFilter = (string) $request->input('status', 'ACTIVE');
+        $statusFilter = (string) $request->input('status', Aset::ACTIVE);
         $query = Aset::with('category')->when($request->filled('q'), fn($q) => $q->where(fn($x) => $x->where('nomor_aset', 'like', '%' . $request->q . '%')->orWhere('name', 'like', '%' . $request->q . '%')->orWhere('location', 'like', '%' . $request->q . '%')))
             ->when($statusFilter !== '', fn($q) => $q->where('status', $statusFilter))->latest();
         $perPage = $this->perPage($request, $query->count());
@@ -102,7 +102,7 @@ class AsetController extends Controller
                 'accumulated_depreciation' => $opening,
                 'book_value' => $cost - $opening,
                 'created_by' => Auth::id(),
-                'status' => 'ACTIVE',
+                'status' => Aset::ACTIVE,
             ]);
             $this->accounting->postAcquisition($asset);
             return $asset;

@@ -48,7 +48,7 @@ class StockOpname extends Model
 
     public function details()
     {
-        return $this->hasMany(StockOpnameDetail::class);
+        return $this->hasMany(StockOpnameDetail::class, 'stock_opname_id');
     }
 
     public function warehouse()

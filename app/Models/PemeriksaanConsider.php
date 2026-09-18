@@ -24,6 +24,6 @@ class PemeriksaanConsider extends Model
     }
     public function details()
     {
-        return $this->hasMany(DetailPemeriksaanConsider::class);
+        return $this->hasMany(DetailPemeriksaanConsider::class, 'pemeriksaan_consider_id');
     }
 }

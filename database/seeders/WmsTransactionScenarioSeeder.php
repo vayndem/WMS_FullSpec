@@ -245,7 +245,7 @@ class WmsTransactionScenarioSeeder extends Seeder
                 'kelebihan_pembayaran' => 0,
                 'total_transaksi_pengurang_hutang' => 50000,
                 'keterangan' => 'Pembayaran parsial demo',
-                'finance_user_id' => 13,
+                'finance_user_id' => User::where('type', User::ROLE_FINANCE)->orderBy('id')->value('id'),
             ]);
             $accounting->postPayment($payment);
 

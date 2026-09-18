@@ -616,4 +616,18 @@ class PaymentAndInvoiceTest extends TestCase
         $this->assertSame($layerBefore, (float) $layer->fresh()->remaining_quantity);
         $this->assertDatabaseHas('wms_pembalikan_dokumen', ['document_type' => 'RETUR_PEMBELIAN', 'document_id' => $retur->id]);
     }
+
+    public function test_every_payment_names_a_finance_user_that_actually_exists(): void
+    {
+        $total = PembayaranFaktur::count();
+
+        $this->assertGreaterThan(0, $total, 'Data demo harus punya pembayaran untuk diperiksa.');
+
+        $this->assertSame(
+            0,
+            PembayaranFaktur::whereDoesntHave('userFinance')->count(),
+            'Empat seeder pernah menulis finance_user_id 13 padahal user itu tidak pernah ada, sehingga "diproses oleh" '
+                . 'kosong di setiap pembayaran demo; constraint foreign key pada kolom itu kini menjaganya.'
+        );
+    }
 }

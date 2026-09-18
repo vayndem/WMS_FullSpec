@@ -239,7 +239,7 @@ class FinancialStatementDemoSeeder extends Seeder
             'uang_muka_dipakai' => 0,
             'total_transaksi_pengurang_hutang' => $calc['ap_reduction'],
             'keterangan' => 'Pembayaran demo laporan keuangan',
-            'finance_user_id' => 13,
+            'finance_user_id' => User::where('type', User::ROLE_FINANCE)->orderBy('id')->value('id'),
         ]);
 
         $totalPembayaran = $invoice->payments()->sum('total_transaksi_pengurang_hutang');

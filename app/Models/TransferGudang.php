@@ -25,7 +25,7 @@ class TransferGudang extends Model
     }
     public function details()
     {
-        return $this->hasMany(DetailTransferGudang::class);
+        return $this->hasMany(DetailTransferGudang::class, 'transfer_gudang_id');
     }
     public function pembuat()
     {

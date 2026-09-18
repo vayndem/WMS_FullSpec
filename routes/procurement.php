@@ -45,8 +45,6 @@ Route::middleware('auth')->group(function () {
     Route::get('pembelian/{no_po}', [PesananPembelianController::class, 'show'])->name('pembelian.show');
     Route::put('pembelian/{no_po}', [PesananPembelianController::class, 'update'])->name('pembelian.update');
     Route::delete('pembelian/{no_po}', [PesananPembelianController::class, 'destroy'])->name('pembelian.destroy');
-    Route::patch('pembelian/{no_po}/so-term', [PesananPembelianController::class, 'updateSoTerm'])->name('pembelian.update-so-term');
-    Route::patch('pembelian/{no_po}/financials', [PesananPembelianController::class, 'updateFinancials'])->name('pembelian.update-financials');
     Route::patch('pembelian/{no_po}/close', [PesananPembelianController::class, 'close'])->name('pembelian.close');
     Route::post('pembelian/{no_po}/cetak', [PesananPembelianController::class, 'cetak'])->name('pembelian.cetak');
 

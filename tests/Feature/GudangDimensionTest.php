@@ -117,13 +117,24 @@ class GudangDimensionTest extends TestCase
         app(TransferGudangService::class)->konfirmasi($transfer);
         app(TransferGudangService::class)->terima($transfer->fresh());
 
+        $jurnalKirim = Jurnal::where('sumber_transaksi', 'TRANSFER_GUDANG_KIRIM')->where('reff_id', $transfer->id)->first();
         $jurnal = Jurnal::where('sumber_transaksi', 'TRANSFER_GUDANG')->where('reff_id', $transfer->id)->first();
-        $this->assertNotNull($jurnal, 'Transfer internal sekarang harus membentuk jurnal berdimensi gudang.');
+
+        $this->assertNotNull($jurnalKirim, 'Pengiriman transfer harus membentuk jurnalnya sendiri.');
+        $this->assertNotNull($jurnal, 'Penerimaan transfer harus membentuk jurnal berdimensi gudang.');
         $this->assertEqualsWithDelta((float) $jurnal->total_debit, (float) $jurnal->total_kredit, 0.01);
 
+        $barisKirim = JurnalDetail::where('jurnal_id', $jurnalKirim->id)->get();
         $baris = JurnalDetail::where('jurnal_id', $jurnal->id)->get();
-        $this->assertTrue($baris->contains(fn ($d) => (int) $d->gudang_id === (int) $target->id && (float) $d->debit > 0));
-        $this->assertTrue($baris->contains(fn ($d) => (int) $d->gudang_id === (int) $source->gudang_id && (float) $d->kredit > 0));
+
+        $this->assertTrue(
+            $barisKirim->contains(fn ($d) => (int) $d->gudang_id === (int) $source->gudang_id && (float) $d->kredit > 0),
+            'Nilai harus keluar dari gudang asal saat barang dikirim, bukan saat diterima.'
+        );
+        $this->assertTrue(
+            $baris->contains(fn ($d) => (int) $d->gudang_id === (int) $target->id && (float) $d->debit > 0),
+            'Gudang tujuan mengakui persediaan saat barang diterima.'
+        );
 
         $sesudah = $nilaiAwal();
         $totalSesudah = round($service->nilaiPerGudang()->sum('nilai_buku_besar'), 2);

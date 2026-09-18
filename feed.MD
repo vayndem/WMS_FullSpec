@@ -374,9 +374,28 @@ Empat hal yang sebelumnya tidak bisa dicatat sistem:
 - **Grafik harus membaca token sendiri** karena canvas tidak mewarisi kelas CSS. `task-chart.js` mengambil variabel HSL daisyUI lewat `getComputedStyle` dan memasang ulang saat `inventory:theme-changed`. Tanpa itu sumbu grafik memakai abu-abu bawaan Chart.js yang tak terlihat di latar gelap.
 - **SweetAlert2 menyuntik CSS terangnya sendiri.** Override-nya ada di akhir `app.css` dan sengaja **di luar `@layer components`** — Tailwind memangkas kelas kustom di dalam layer bila tidak ditemukan di konten yang dipindai, dan `swal2-*` hanya muncul di bundel JS vendor. Tandanya bila salah: ukuran `app.css` hasil build tidak bertambah.
 
+### 6.15b Persediaan dalam perjalanan dan pembatalan perintah kerja (2026-09-18)
+
+- **`1304 Persediaan Dalam Perjalanan`** membuat jurnal transfer jadi **dua tahap**. Pengiriman: debit 1304 / kredit persediaan gudang asal. Penerimaan: debit persediaan gudang tujuan / kredit 1304. Sebelumnya hanya ada satu jurnal saat penerimaan, sehingga gudang yang sudah mengirim barang masih memikul nilainya di buku besar.
+- Kedua baris 1304 **ditandai gudang tujuan** di kedua tahap. Menandai tahap pengiriman dengan gudang asal justru berarti "gudang A masih memegang nilai ini" — hal yang sedang diperbaiki. Dengan gudang tujuan, saldonya menjawab pertanyaan berguna: *apa yang sedang menuju gudang B*, dan menjadi nol saat diterima.
+- **Penerimaan kurang menyisakan selisihnya di 1304**, disengaja: barang yang berangkat tapi tak sampai tetap harus terlihat, bukan lenyap di antara dua gudang.
+- `RekonsiliasiGudangService` **berhenti mengatribusikan nilai in-transit kembali ke gudang asal**. Kompensasi itu dulu ada justru karena buku besar menahannya di sana; setelah buku besar benar, membiarkannya akan membuat setiap transfer berjalan tampak merah.
+- Invarian baru **`transit`**: saldo 1304 harus sama dengan nilai seluruh layer `IN_TRANSIT`.
+- **`5308 Kerugian Pembatalan Produksi`** memungkinkan perintah kerja dibatalkan setelah menyerap biaya: debit 5308 / kredit `1303`, disertai baris biaya **negatif** di `wms_data_pesanan_biaya` agar subledger ikut nol. Akun terpisah dipilih agar kerugian pembatalan tampak sebagai barisnya sendiri di Laba Rugi, bukan tercampur harga pokok penjualan.
+- Perintah kerja yang dibatalkan keluar dari `DataPesanan::berjalan()`, sehingga invarian `wip` tetap berlaku tanpa penyesuaian tambahan.
+
+### 6.15c Revaluasi kurs dan routing produksi (2026-09-18)
+
+- **PSAK 10 hanya merevaluasi pos moneter.** Persediaan adalah pos **non-moneter** dan tetap pada kurs historis — catatan lama yang bilang ini berarti "layer FIFO berdenominasi valas" keliru. Hanya hutang, piutang, dan kas yang disajikan ulang; tidak ada layer, HPP, atau dasar biaya yang tersentuh.
+- `4204 Laba Selisih Kurs` dan `5303 Rugi Selisih Kurs` **sudah ada sejak lama**, hanya belum dipetakan. Periksa akun yang sudah ada sebelum membuat yang baru.
+- Kurs penutup **diketik per mata uang per periode** di `wms_kurs_penutup`; tidak ada umpan kurs otomatis. Periode tidak bisa diposting selama masih ada faktur valas terbuka tanpa kurs, dan hanya bisa diposting **sekali**.
+- Revaluasi **tidak mengubah `sisa_tagihan`**; pergerakannya dicatat di `wms_revaluasi_kurs`. Karena itu **invarian `ap` diperlebar** dengan akumulasi revaluasi — tanpa itu ia langsung merah begitu revaluasi pertama diposting.
+- **Routing bersifat deskriptif, bukan biaya.** `wms_pusat_kerja` + `wms_bom_operasi` memberi BOM urutan operasi dengan waktu standar, dan tampilan perintah kerja mengalikannya dengan basis yang sama seperti varians material. **Sengaja tidak ada kolom tarif di mana pun** — penyerapan tenaga kerja dan overhead ke WIP masih terbuka dan menunggu tarif dari pemilik produk; ada tes yang memastikan kolom `tarif`/`biaya`/`rate`/`cost` tidak muncul.
+- Satu pusat kerja tidak boleh mengaku kapasitas lebih dari **1.440 menit per hari**, dan yang masih dipakai routing tidak bisa dinonaktifkan.
+
 ### 6.16 Invarian rekonsiliasi (sisi jual ikut diawasi, 2026-09-18)
 
-`AccountingReconciliationService::checks()` mengembalikan **tujuh** invarian: `stock`, `journal`, `invoice`, `grni`, `ap`, **`ar`**, `wip`.
+`AccountingReconciliationService::checks()` mengembalikan **delapan** invarian: `stock`, `journal`, `invoice`, `grni`, `ap`, **`ar`**, **`transit`**, `wip`.
 
 - `ar` membandingkan jumlah `sisa_tagihan` faktur penjualan berstatus POSTED/PARTIALLY_PAID dengan saldo buku besar `PIUTANG_USAHA`.
 - Ditambahkan karena himpunannya **timpang**: sisi beli punya dua penjaga (`grni` dan `ap`), sisi jual nol. Angkanya sudah cocok saat diukur manual, jadi ini tidak memperbaiki data — ia menutup lubang di mana penyimpangan **di masa depan** akan lewat tanpa laporan, padahal penyimpangan serupa di hutang langsung berbunyi.
@@ -530,7 +549,7 @@ Setiap jaring menutup kelas kegagalan yang berbeda. Tahu mana menangkap apa menc
 
 | Jaring | Masuk lewat | Menangkap | Tidak bisa menangkap |
 |---|---|---|---|
-| `ArchitectureConventionTest` (11 tes) | analisis statis + `git ls-files` + tabel route | casing class/berkas, validasi inline di controller, pemisahan route per domain dan `route:cache`, status huruf kecil, floating point di migration, nama tabel legacy, **alokasi nomor dokumen di jalur tampilan**, **form Blade yang salah route/verb/tanpa `@csrf`**, **`route()`/`view()` menggantung**, **Form Request yang tidak diotorisasi di mana pun**, **aksi destruktif yang bisa dipicu GET** | perilaku saat berjalan |
+| `ArchitectureConventionTest` (14 tes) | analisis statis + `git ls-files` + tabel route | casing class/berkas, validasi inline di controller, pemisahan route per domain dan `route:cache`, status huruf kecil, floating point di migration, nama tabel legacy, **alokasi nomor dokumen di jalur tampilan**, **form Blade yang salah route/verb/tanpa `@csrf`**, **`route()`/`view()` menggantung**, **Form Request yang tidak diotorisasi di mana pun**, **aksi destruktif yang bisa dipicu GET**, **relasi `hasMany`/`hasOne` tanpa foreign key eksplisit**, **nama tabel string yang sudah tidak ada**, **route yang menunjuk method controller yang tidak ada** | perilaku saat berjalan |
 | `SmokeSemuaHalamanTest` (2 tes) | HTTP GET sebagai Super Admin, dan HTTP mutasi sebagai tamu | 5xx pada route GET bernama; plafon jumlah route yang boleh dilewati karena parameternya tak teresolusi; **route mutasi yang tembus tanpa login atau meledak** | halaman yang balas 200 tapi isinya salah; akses per role, karena `Gate::before` membuka segalanya untuk Super Admin |
 | `KualitasTampilanTest` (6 tes) | HTTP GET + HTML mentah | view yang tidak terkompilasi, directive Blade mentah atau `{{ $x }}` bocor ke browser, listing kosong tanpa pesan, tabel lebar tanpa pembungkus scroll, **kelas warna mati pada halaman yang dirender** | kebenaran angka di halaman |
 | `KonsistensiTemaTest` (3 tes) | berkas sumber Blade/JS/CSS + `tailwind.config.js` | **warna mati di seluruh sumber** termasuk berkas yang tidak dirender tes mana pun, `theme('colors.*')`, nilai arbitrer `[#hex]`, gaya inline, warna mentah di CSS; grafik yang tidak membaca token atau tidak memasang ulang saat tema berganti; tangga elevasi dan kontras WCAG kedua tema | tampilan yang jelek tapi memakai token yang benar |
@@ -566,20 +585,32 @@ Itulah alasan **trap 8** di `CLAUDE.md`: fitur yang membentang dari HTTP sampai 
 - stock opname, retur pembelian pasca-invoice
 - Material Request lintas role + auto-`FULFILLED`, dashboard per role, Dashboard Eksekutif, export Excel
 
+### 11.4 Hasil audit A–Z 18 September 2026
+
+Dijalankan terhadap database ter-seed. Dicatat supaya pertanyaan yang sama tidak diulang.
+
+**Bersih (arsitektur):** 784 entri `$fillable`/`$casts` semuanya menunjuk kolom nyata; tidak ada model dengan tabel hilang; tidak ada `create($request->all())`; nol baris yatim pada sepuluh relasi induk-anak yang diperiksa.
+
+**Diperbaiki:** 11 relasi `hasMany`/`hasOne` tanpa foreign key eksplisit (semuanya kebetulan benar hari ini — itu justru yang membuat jebakan #3 berbahaya); **dua tabel hantu** `pembelian_histories` dan `pembelian_detail_histories` yang membuat setiap revisi PO tercetak gagal sejak rename 2026-09-04; status aset yang ditulis sebagai string ajaib di sembilan tempat.
+
+**Diukur, sengaja tidak diubah:** `$guarded = []` pada 11 model (dicoba diperketat lalu dikembalikan — Eloquent jadi membaca skema tiap `fill()` dan memecah tes unit murni, sementara tidak ada kode yang mengisi `id`); 16 service membaca `Auth::` langsung; **21 tabel domain tanpa awalan `wms_`** — klaim lama bahwa "semua tabel domain" mendapat awalan itu **keliru**; status `ReservasiPersediaan`, `quality_status` lot, dan pesanan pengambilan masih literal.
+
+**Aturan bisnis terverifikasi:** 48 akun COA, digit pertama cocok kategori semuanya; tiga akun berposisi normal terbalik dan ketiganya **akun kontra yang benar**; tidak ada jurnal ke akun non-postable; seluruh mapping menunjuk kategori akun yang tepat; debit = kredit dan aset = liabilitas + ekuitas + laba, keduanya selisih nol; tarif PPN 11%, PPh 23 2%, PPh 22 1,5%, PPh 4(2) 10% sesuai ketentuan; **nol pelanggaran urutan FIFO**; aturan jenis gudang ditegakkan di service dan kini dijaga `AturanJenisGudangTest` — sebelumnya tidak ada satu pun tes yang menyebut `RUSAK` atau `CONSIDER`.
+
 ## 12. Technical debt
 
-Daftar yang masih relevan per 2026-09-16:
+Daftar yang masih relevan per 2026-09-18:
 
 1. `DatabaseSeeder` masih mencampur master dan demo — jangan dijalankan penuh ke produksi
 2. belum ada token management UI/API untuk Sanctum — catatan: **layer integrasi API/EDI sendiri sudah dicoret dari perencanaan**, jadi ini hanya soal mengelola token internal
 3. beberapa file lama masih punya encoding teks yang jelek
 4. daftar modul penjualan memakai tabel Blade berpaginasi, bukan Yajra + `wmsDataTable()` seperti modul lain — penyimpangan yang disengaja dan dicatat; konversinya mekanis
-5. `UpdateAccountingMappingRequest` memvalidasi semua `KategoriBahan` dengan aturan kategori barang, padahal dua kategori jasa bawaan seeder tidak memenuhinya — form mapping tidak bisa disimpan untuk daftar kategori lengkap
-6. stok dalam perjalanan masih menempel ke gudang asal sampai diterima, karena jurnal transfer baru terbentuk saat penerimaan — memperbaikinya butuh akun "Persediaan Dalam Perjalanan", sebuah keputusan akuntansi
-7. perintah kerja yang dibatalkan setelah menyerap biaya belum punya jalur hapus buku — butuh keputusan akun kerugian
-8. `plafon_kredit` pelanggan dicatat dan ditampilkan tapi belum ditegakkan — memblokir pesanan karena plafon adalah keputusan kebijakan
-9. `request.show`/`request.edit`/`request.update`/`request.destroy` sempat terdaftar sebagai route padahal metodenya tidak ada di controller; resource-nya sekarang dibatasi ke `index`/`create`/`store` — kalau memang perlu halaman detail request, metodenya harus ditulis dulu
-10. suite tes berjalan dekat plafon memori PHP; `phpunit.xml` menyetel `memory_limit=512M` agar deterministik. Kalau export terus bertambah besar, alihkan tes export ke koleksi `Excel::fake()` daripada mengunduh sungguhan
+5. `UpdateAccountingMappingRequest` memvalidasi semua `KategoriBahan` dengan aturan kategori barang, padahal kategori jasa bawaan seeder tidak memenuhinya — form mapping tidak bisa disimpan untuk daftar kategori lengkap
+6. `plafon_kredit` pelanggan dicatat dan ditampilkan tapi belum ditegakkan — memblokir pesanan karena plafon adalah keputusan kebijakan
+7. suite tes berjalan dekat plafon memori PHP; `phpunit.xml` menyetel `memory_limit=512M` agar deterministik. Kalau export terus bertambah besar, alihkan tes export ke koleksi `Excel::fake()` daripada mengunduh sungguhan
+8. 16 kolom `*_id` di tabel `wms_` tidak punya constraint foreign key (diukur 2026-09-18). Sebagian besar memang benar demikian — kolom polimorfik (`reff_id`, `sumber_id`, `document_id`, `auditable_id`, `source_id`, `referensi_id`, `reference_id`, `lampiran_id`) tidak bisa dibatasi ke satu tabel, dan dua tabel riwayat pesanan pembelian sengaja bebas FK supaya snapshot tetap hidup ketika sumbernya dihapus. Yang perlu diingat: pemeriksaan baris yatim hanya menjangkau kolom yang **punya** constraint, jadi kolom di daftar ini tidak dijaga siapa pun
+
+**Sudah ditutup sejak daftar sebelumnya**: stok dalam perjalanan kini punya akun sendiri (`1304`, jurnal transfer dua tahap plus invariant `transit`); perintah kerja yang dibatalkan setelah menyerap biaya punya jalur hapus buku (`5308`); dan route yang menunjuk method controller tidak ada — dulu `request.*`, terakhir `pembelian.update-so-term` dan `pembelian.update-financials` — kini dijaga `ArchitectureConventionTest::test_every_route_points_at_a_controller_method_that_exists` alih-alih ditemukan satu per satu.
 
 **Bukan lagi utang teknis** (dipertahankan sebagai catatan historis): UI manajemen user + reset password + audit login, `.env.example`, NSFP pada faktur pembelian, lima laporan PSAK 1 lengkap termasuk Arus Kas, Perubahan Ekuitas dan CALK, PPh 22/4(2) Final, depresiasi otomatis garis lurus & saldo menurun, rekonsiliasi fiskal + PPh Badan + pajak tangguhan + kompensasi kerugian, field multi-currency ringan + PPN Impor, retur pembelian pasca-invoice, rename sweep baku Indonesia, migrasi Tailwind/daisyUI/Alpine, Material Request lintas role, dashboard task grid + chart + pengingat + progres, Dashboard Eksekutif, export Excel di seluruh laporan, scheduler + notifikasi terantre, lampiran dokumen, antrean kerja operator, cycle count ABC, wave picking, kitting, seluruh celah jasa (kapitalisasi, gate pass, barang titipan, tukar tambah), Lacak Pembelian, Kartu Skor Supplier, **maker-checker yang kini mencakup jurnal manual/pembalikan dokumen/perubahan COA**, **penilaian persediaan per gudang lewat dimensi gudang pada baris jurnal**, **sisi AR/penjualan lengkap**, dan **perintah kerja produksi dengan barang dalam proses**.
 

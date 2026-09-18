@@ -171,7 +171,7 @@ class AssetAndServiceDemoSeeder extends Seeder
                     'kelebihan_pembayaran' => 0,
                     'total_transaksi_pengurang_hutang' => 3000000,
                     'keterangan' => 'Pembayaran parsial invoice jasa demo',
-                    'finance_user_id' => 13,
+                    'finance_user_id' => User::where('type', User::ROLE_FINANCE)->orderBy('id')->value('id'),
                 ]);
                 $accounting->postPayment($partialPayment);
 
@@ -260,7 +260,7 @@ class AssetAndServiceDemoSeeder extends Seeder
                     'kelebihan_pembayaran' => 0,
                     'total_transaksi_pengurang_hutang' => 1500000,
                     'keterangan' => 'Pelunasan invoice jasa demo',
-                    'finance_user_id' => 13,
+                    'finance_user_id' => User::where('type', User::ROLE_FINANCE)->orderBy('id')->value('id'),
                 ]);
                 $accounting->postPayment($fullPayment);
             }

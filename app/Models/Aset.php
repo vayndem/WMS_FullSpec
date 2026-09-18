@@ -9,6 +9,11 @@ class Aset extends Model
 {
     use HasLampiran;
 
+    public const ACTIVE = 'ACTIVE';
+    public const SOLD = 'SOLD';
+    public const TRADED_IN = 'TRADED_IN';
+    public const DISPOSED = 'DISPOSED';
+
     public const STRAIGHT_LINE = 'STRAIGHT_LINE';
     public const DECLINING_BALANCE = 'DECLINING_BALANCE';
 

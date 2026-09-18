@@ -90,7 +90,7 @@ class User extends Authenticatable
 
     public function pembagianGudangs(): HasMany
     {
-        return $this->hasMany(PembagianGudang::class);
+        return $this->hasMany(PembagianGudang::class, 'user_id');
     }
 
     public function isSuperAdmin(): bool

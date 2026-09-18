@@ -53,7 +53,7 @@ class ReturPembelian extends Model
 
     public function details()
     {
-        return $this->hasMany(ReturPembelianDetail::class);
+        return $this->hasMany(ReturPembelianDetail::class, 'retur_pembelian_id');
     }
 
     public function creator()

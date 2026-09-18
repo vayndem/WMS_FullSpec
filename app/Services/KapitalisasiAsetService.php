@@ -26,7 +26,7 @@ class KapitalisasiAsetService
 
     public function assertDapatDikapitalisasi(Aset $aset): void
     {
-        if ($aset->status !== 'ACTIVE') {
+        if ($aset->status !== Aset::ACTIVE) {
             throw new RuntimeException("Aset {$aset->nomor_aset} tidak aktif, jasa tidak dapat dikapitalisasi ke aset ini.");
         }
 

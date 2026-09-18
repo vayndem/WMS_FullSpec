@@ -65,7 +65,7 @@ class AsetAccountingService
         $this->periods->assertOpen($data['posting_date'], 'Penyusutan aset');
         return DB::transaction(function () use ($asset, $data) {
             $asset = Aset::with('category')->lockForUpdate()->findOrFail($asset->id);
-            if ($asset->status !== 'ACTIVE') throw new RuntimeException('Hanya aset aktif yang dapat disusutkan.');
+            if ($asset->status !== Aset::ACTIVE) throw new RuntimeException('Hanya aset aktif yang dapat disusutkan.');
             $this->assertCategoryMapping($asset);
             $amount = round((float) ($data['amount'] ?? $asset->suggestedMonthlyDepreciation()), 2);
             $maximum = round((float) $asset->book_value - (float) $asset->residual_value, 2);
@@ -114,7 +114,7 @@ class AsetAccountingService
         $posted = [];
         $skipped = [];
         $failed = [];
-        $assets = Aset::where('status', 'ACTIVE')
+        $assets = Aset::where('status', Aset::ACTIVE)
             ->whereIn('depreciation_method', [Aset::STRAIGHT_LINE, Aset::DECLINING_BALANCE])->get();
         foreach ($assets as $asset) {
             if ($asset->depreciations()->where('period_label', $periodLabel)->exists()) {
@@ -150,7 +150,7 @@ class AsetAccountingService
         $this->periods->assertOpen($data['disposal_date'], 'Pelepasan aset');
         return DB::transaction(function () use ($asset, $data) {
             $asset = Aset::with('category')->lockForUpdate()->findOrFail($asset->id);
-            if ($asset->status !== 'ACTIVE') throw new RuntimeException('Aset sudah tidak aktif.');
+            if ($asset->status !== Aset::ACTIVE) throw new RuntimeException('Aset sudah tidak aktif.');
             $this->assertCategoryMapping($asset);
             $tradeIn = $data['disposal_type'] === PelepasanAset::TRADE_IN;
             $proceeds = in_array($data['disposal_type'], ['SALE', PelepasanAset::TRADE_IN], true)
@@ -228,9 +228,9 @@ class AsetAccountingService
             }
 
             $asset->update(['status' => match ($data['disposal_type']) {
-                'SALE' => 'SOLD',
-                PelepasanAset::TRADE_IN => 'TRADED_IN',
-                default => 'DISPOSED',
+                'SALE' => Aset::SOLD,
+                PelepasanAset::TRADE_IN => Aset::TRADED_IN,
+                default => Aset::DISPOSED,
             }]);
 
             return $disposal->fresh('journal');

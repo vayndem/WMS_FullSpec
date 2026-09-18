@@ -119,7 +119,7 @@ class PesananJasaController extends Controller
         return [
             'suppliers' => Supplier::orderBy('nama')->get(),
             'categories' => KategoriJasa::where('is_active', true)->orderBy('display_code')->get(),
-            'asets' => Aset::where('status', 'ACTIVE')->orderBy('name')->limit(300)->get(),
+            'asets' => Aset::where('status', Aset::ACTIVE)->orderBy('name')->limit(300)->get(),
         ];
     }
 }

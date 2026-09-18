@@ -416,7 +416,7 @@ class PesananPembelianController extends Controller
 
         $noRevisi = $pembelian->no_po . '-' . $pembelian->counter_asli;
 
-        DB::table('pembelian_histories')->updateOrInsert(
+        DB::table('wms_riwayat_pesanan_pembelian')->updateOrInsert(
             ['no_revisi' => $noRevisi],
             [
                 'action'          => 'REVISION',
@@ -449,10 +449,10 @@ class PesananPembelianController extends Controller
             ]
         );
 
-        DB::table('pembelian_detail_histories')->where('no_revisi', $noRevisi)->delete();
+        DB::table('wms_riwayat_pesanan_pembelian_detail')->where('no_revisi', $noRevisi)->delete();
 
         foreach ($pembelian->details as $detail) {
-            DB::table('pembelian_detail_histories')->insert([
+            DB::table('wms_riwayat_pesanan_pembelian_detail')->insert([
                 'no_revisi'           => $noRevisi,
                 'pembelian_detail_id' => $detail->id,
                 'no_po'               => $detail->no_po,

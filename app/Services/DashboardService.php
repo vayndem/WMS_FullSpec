@@ -350,7 +350,7 @@ class DashboardService
         $activeReturs = ReturPembelian::where('status', ReturPembelian::POSTED)->count();
         $pendingRequests = MaterialRequest::where('status', MaterialRequest::PENDING)->count();
 
-        $asetAktif = Aset::where('status', 'ACTIVE')
+        $asetAktif = Aset::where('status', Aset::ACTIVE)
             ->whereIn('depreciation_method', [Aset::STRAIGHT_LINE, Aset::DECLINING_BALANCE]);
         $assetsDueDepreciation = (clone $asetAktif)->whereRaw('book_value > residual_value')->count();
         $asetBerkelompokFiskal = (clone $asetAktif)->whereNotNull('kelompok_fiskal')->count();

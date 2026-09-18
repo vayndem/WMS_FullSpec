@@ -8,6 +8,7 @@ use App\Http\Controllers\PelangganController;
 use App\Http\Controllers\PesananPenjualanController;
 use App\Http\Controllers\PiutangAgingController;
 use App\Http\Controllers\VariansPemakaianController;
+use App\Http\Controllers\RoutingProduksiController;
 use App\Http\Controllers\SuratJalanController;
 use Illuminate\Support\Facades\Route;
 
@@ -48,6 +49,11 @@ Route::middleware('auth')->group(function () {
     Route::post('bom', [BomController::class, 'store'])->name('bom.store');
     Route::post('bom/{bom}/status', [BomController::class, 'status'])->name('bom.status');
     Route::delete('bom/{bom}', [BomController::class, 'destroy'])->name('bom.destroy');
+
+    Route::get('routing-produksi', [RoutingProduksiController::class, 'index'])->name('routing-produksi.index');
+    Route::post('routing-produksi/pusat-kerja', [RoutingProduksiController::class, 'storePusatKerja'])->name('routing-produksi.pusat-kerja');
+    Route::post('routing-produksi/pusat-kerja/{pusatKerja}/status', [RoutingProduksiController::class, 'statusPusatKerja'])->name('routing-produksi.pusat-kerja.status');
+    Route::post('routing-produksi/bom/{bom}/operasi', [RoutingProduksiController::class, 'storeOperasi'])->name('routing-produksi.operasi');
 
     Route::get('varians-pemakaian', [VariansPemakaianController::class, 'index'])->name('varians-pemakaian.index');
     Route::get('varians-pemakaian/pdf', [VariansPemakaianController::class, 'pdf'])->name('varians-pemakaian.pdf');

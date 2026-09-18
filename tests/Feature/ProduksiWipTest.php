@@ -348,7 +348,7 @@ class ProduksiWipTest extends TestCase
         app(InventoryReversalService::class)->reverseNpk($npk, 'Koreksi setelah perintah kerja selesai.');
     }
 
-    public function test_a_work_order_that_already_absorbed_cost_cannot_be_cancelled(): void
+    public function test_cancelling_a_work_order_with_cost_writes_that_cost_off_instead_of_refusing(): void
     {
         $user = User::factory()->create(['type' => User::ROLE_SUPER_ADMIN]);
         Auth::login($user);
@@ -362,8 +362,15 @@ class ProduksiWipTest extends TestCase
         $wo2 = $this->workOrderDirilis($user, $stok);
         $this->npkKeWorkOrder($wo2, $stok, $user);
 
-        $this->expectException(RuntimeException::class);
-        app(DataPesananService::class)->batalkan($wo2->fresh());
+        $wipSebelum = $this->saldoWipGl();
+        $biaya = $wo2->fresh()->totalBiaya();
+        $this->assertGreaterThan(0, $biaya);
+
+        $dibatalkan = app(DataPesananService::class)->batalkan($wo2->fresh());
+
+        $this->assertSame(DataPesanan::DIBATALKAN, $dibatalkan->status);
+        $this->assertEqualsWithDelta($wipSebelum - $biaya, $this->saldoWipGl(), 0.01);
+        $this->assertEqualsWithDelta(0, $dibatalkan->totalBiaya(), 0.01);
     }
 
     public function test_the_ledger_and_the_work_orders_agree_on_how_much_is_in_process(): void

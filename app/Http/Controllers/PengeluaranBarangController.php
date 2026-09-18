@@ -32,7 +32,7 @@ class PengeluaranBarangController extends Controller
                 ->latest('id')->limit(30)->get(),
             'titipan' => BarangTitipan::with('supplier', 'pengeluaran')->latest('id')->limit(30)->get(),
             'suppliers' => Supplier::orderBy('nama')->get(),
-            'asets' => Aset::where('status', 'ACTIVE')->orderBy('name')->limit(300)->get(),
+            'asets' => Aset::where('status', Aset::ACTIVE)->orderBy('name')->limit(300)->get(),
             'keperluan' => PengeluaranBarang::KEPERLUAN,
             'terlambat' => $this->service->terlambat(),
         ]);

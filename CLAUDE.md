@@ -168,6 +168,28 @@ A `\bPembelian\b` replace over `.php` files corrupted three COA seed labels and 
 
 Without `public/build/manifest.json`, every page that renders the layout throws `ViteManifestNotFoundException` and returns **500**, so the feature suite collapses into a wall of "Expected 200, got 500" plus a `SmokeSemuaHalamanTest` listing most of the application. Nothing is wrong with the code. **Run `npm install && npm run build` before `php artisan test`** — the assets are not committed, so a fresh clone or a cleaned `public/build` reproduces it every time. Seen on 2026-09-18: 174 failed, 53 passed before the build; 226 passed, 1 failed after, and that last one was a genuine half-finished edit.
 
+### 11. A renamed table leaves raw name strings behind, and nothing says so until that line runs
+
+Found 2026-09-18, a year after the rename sweep: `PesananPembelianController::archiveHistoryIfNeeded()` still wrote to `pembelian_histories` and `pembelian_detail_histories`. Those tables became `wms_riwayat_pesanan_pembelian` and `wms_riwayat_pesanan_pembelian_detail` in 2026-09-04. **Every revision of an already-printed purchase order threw `SQLSTATE[42S02] Base table not found`** — for as long as the rename had existed.
+
+Three things let it survive: the string sits inside `DB::table('…')`, so no class, model or IDE rename touches it; the code path only fires when `cetak >= 1`, which no seeder or test produced; and `pembelian.update` was one of the mutating routes no test named. Trap 7 already warned that raw-string table references escape a naive grep — this is that warning coming true.
+
+`ArchitectureConventionTest::test_every_table_name_written_as_a_string_actually_exists` now resolves every table named in `DB::table()`, `join()`, `from()`, `$table`, and the `exists:`/`unique:` validation rules against the live schema, so a stale name fails the build instead of a user's save. `RevisiPesananPembelianTest` covers the revision path itself; reverting the fix makes it fail, which is how I checked the test is not vacuous.
+
+### 12. A foreign key dropped in a migration and never re-added lets bad ids accumulate for months
+
+Found 2026-09-18. `2026_07_29_000001_harden_wms_accounting_schema` drops `wms_pembayaran_faktur.finance_user_id`'s foreign key in `up()` and re-adds it only in `down()` — so a rollback restored a constraint the upgrade had silently removed for good. With nothing enforcing it, **three seeders wrote `finance_user_id => 13` at four call sites, a user id that has never existed** (the role seeder creates seven users), and every demo payment's "diproses oleh" resolved to null. No test read that relation, so the suite stayed green.
+
+The seeders now resolve the user by **role** (`User::where('type', User::ROLE_FINANCE)`), not by email — an email is an editable attribute and a seeder must not key on one. `2026_09_18_000006_restore_finance_user_foreign_key` repoints any surviving orphan and restores the constraint, and `PaymentAndInvoiceTest::test_every_payment_names_a_finance_user_that_actually_exists` fails if it is dropped again.
+
+Two lessons worth generalising: **`down()` re-adding something `up()` removed is a smell, not symmetry** — read it as a question about whether the removal was intended; and a hardcoded id in a seeder is a dangling reference waiting for the constraint that was supposed to catch it. Note that the orphan sweep in the audit only inspects columns that *have* a constraint, so a dropped one hides from it too — the `*_id`-without-a-foreign-key listing is the check that finds these.
+
+### 13. A route can point at a controller method that does not exist, and only 404-adjacent luck hides it
+
+`pembelian.update-so-term` and `pembelian.update-financials` named `PesananPembelianController::updateSoTerm()` and `::updateFinancials()`, neither of which has ever existed in this repo's history. Both were `PATCH`, so `SmokeSemuaHalamanTest` (GET only) could not reach them, and no Blade form, JS call or test referenced the names — they were routes to nowhere that would have thrown on resolution. They were deleted rather than implemented, on the same reasoning that retired the `debits`/`kredits` stubs.
+
+`ArchitectureConventionTest::test_every_route_points_at_a_controller_method_that_exists` now walks the route table and resolves every `Controller@method` action. Re-adding one of the dead routes makes it fail, which is how the check was verified as non-vacuous.
+
 ### 8. Tests that stop at the service boundary miss most defects
 
 Of 11 defects a review found in the jasa build, **ten lived outside the service layer** — controller guards, Blade forms, the void/reversal path, cross-line arithmetic inside one document — and every one of them survived a green test suite because the tests called services directly. **A feature spanning HTTP → service → ledger needs at least one test that enters through the route.**
@@ -263,6 +285,29 @@ These are product and accounting calls, not engineering ones. Each was asked and
 
 Grouped by area, newest first within each. These are deliberately terse: they carry *why*, not *what*. The what is in the code, the routes, and the tests.
 
+### FX revaluation and production routing (2026-09-18)
+
+- **PSAK 10 revaluation covers monetary items only, and that is the whole simplification.** An older note here claimed reopening multi-currency "means FX-denominated FIFO layers" — that is **wrong**: inventory is a *non-monetary* item and stays at the historical rate forever. Only payables, receivables and cash get restated, so no layer, no HPP and no cost basis is touched. A test asserts the inventory accounts do not move during a revaluation.
+- **`4204 Laba Selisih Kurs` and `5303 Rugi Selisih Kurs` already existed**, unused and unmapped, since long before this work. Only the `AccountingSetting` mapping was missing. Check for an existing account before inventing one — trap 4 cuts both ways.
+- **The closing rate is typed per currency per period** into `wms_kurs_penutup`; there is no rate feed. A period cannot be posted while any open foreign-currency invoice lacks its rate, and a period can only be posted **once**.
+- **Revaluation does not touch `sisa_tagihan`.** It records the movement in `wms_revaluasi_kurs` and posts the journal; the carrying amount of an invoice is therefore `sisa_tagihan` plus the sum of its prior revaluations. **The `ap` invariant was widened to add cumulative revaluation**, otherwise it would have gone red the moment the first revaluation posted. Restating `sisa_tagihan` instead would have disturbed payment allocation, which is why it was not done.
+- **Routing is descriptive, not costed.** `wms_pusat_kerja` plus `wms_bom_operasi` give a BOM an ordered operation list with a standard time, and the work-order view scales it by the same basis the material variance uses. There is deliberately **no rate column anywhere** — labour and overhead absorption into WIP is still open and still needs the user's rates; a test asserts no column named `tarif`/`biaya`/`rate`/`cost` exists, so nobody half-builds costing by adding one.
+- A work centre may not claim more than **1,440 minutes a day**, and one that is still referenced by a routing cannot be retired. Capacity load is reported as minutes and as equivalent days, and says "kapasitas belum diisi" rather than inventing a denominator.
+- **The FX journal's `reff_id` is a period key (`YYYYMM`), not a row id.** Every other `sumber_transaksi` in `wms_jurnal` references a real row, but a revaluation posts **one journal for the whole period** against many `wms_revaluasi_kurs` rows, so there is no single row to point at — and the rows are written *after* the journal, so there could not be one anyway. The choice is load-bearing rather than lazy: `jurnals_source_reference_unique` on `(sumber_transaksi, reff_id)` turns the period key into a database-level guarantee that a period can only carry one FX journal, backing up the service's own "sudah pernah diposting" refusal. `RevaluasiKursTest::test_the_exchange_journal_is_keyed_by_period_not_by_a_row_id` pins this, so nobody "corrects" it into a row id and quietly removes the guard.
+- **Saving a routing replaces the whole operation list, so an empty submission is refused** — in `RoutingProduksiService::simpanOperasi()`, not only in the Form Request, because the service is where this repo enforces rules that a policy or validator alone could be bypassed around. Before that guard an empty `operasi` array wiped an existing routing with no confirmation and no way back. Clearing a routing is not offered in the UI and nothing needs it; if it ever does, it wants its own explicit action, not a save that happens to be empty.
+
+### Goods in transit and cancelled work orders (2026-09-18)
+
+Two accounts the user had been asked for and finally chose, both built the same day.
+
+- **`1304 Persediaan Dalam Perjalanan` makes the transfer journal two-phase.** Shipment now posts debit 1304 / credit the source warehouse's inventory account; receipt posts debit the destination's inventory account / credit 1304. Before this there was **one journal at receipt**, so a warehouse that had already shipped goods still carried their value in the ledger — the limitation the reconciliation page used to apologise for. Per-warehouse inventory value is now correct from the moment the truck leaves.
+- **Both 1304 lines are tagged with the destination warehouse**, on both legs. Tagging the shipment leg with the source would read as "warehouse A still holds this", which is the very thing being fixed; tagging with the destination makes the balance answer a useful question — *what is inbound to warehouse B* — and nets to zero there on receipt.
+- **An under-receipt leaves the difference sitting in 1304.** That is deliberate: goods that left and never arrived are still somebody's problem, and parking them in a named account keeps them visible instead of letting them vanish between two warehouses. The `TRANSFER_SHORTAGE` layer marks the same event on the stock side.
+- **`RekonsiliasiGudangService` stopped adding in-transit value back onto the source warehouse.** That compensation existed *because* the ledger kept the value there; with the ledger fixed, leaving it in place would have made every in-flight transfer show a red variance. Removing it is part of the same change, not a separate cleanup.
+- **New invariant `transit`**: the GL balance of 1304 must equal the value of every `IN_TRANSIT` layer. Written at the same time as the feature, per the rule under **Reconciliation invariants**.
+- **`5308 Kerugian Pembatalan Produksi` lets a work order be cancelled after it has absorbed cost.** It posts debit 5308 / credit `1303 Barang Dalam Proses Produksi` and writes a **negative** `wms_data_pesanan_biaya` row so the subledger reaches zero alongside the ledger. A separate loss account was chosen over dumping it into Beban Pokok Penjualan so that a cancellation is visible in Laba Rugi as its own line and stays traceable per work order.
+- **A cancelled work order leaves `DataPesanan::berjalan()`**, which is why the `wip` invariant keeps holding without extra work. Completion and double cancellation are still refused; only the "has cost" refusal is gone, and the test that used to assert it now asserts the write-off instead.
+
 ### Receivables ageing, salesperson, cross-dock and BOM (2026-09-18)
 
 Four of the remaining backlog rows, built in one pass. Each one leans on a mechanism that already existed rather than adding a parallel one.
@@ -323,7 +368,7 @@ Job costing on **actual** consumption for make-to-order production. See the deci
 
 **Maker-checker**: manual journals use the status column (`DRAFT → PENDING_APPROVAL → POSTED`) — the safety property is free, since every report already filters `status='POSTED'`. Reversals and COA changes use `wms_permintaan_persetujuan` + `PersetujuanOperasiService`. **The payload is data, never code**: `jalankan()` dispatches on a `match` over five fixed constants; there is no serialized callable. **Self-approval is refused in the service, not only the policy** — `Gate::before` gives Super Admin every policy, so a policy-only check would defeat the point. **COA edits are gated only when the account is load-bearing** (mapped or carrying journal lines); a brand-new unused account still saves directly, keeping the friction where the risk is. `updateMapping()` always requires approval.
 
-**Warehouse dimension** (`wms_jurnal_detail.gudang_id`): every posting site that knows a warehouse tags **all** lines of that document, not just the inventory line. **Internal transfers now post a journal** — debit inventory at the destination, credit the *same account* at the source, net zero company-wide. It fires on **receipt, not shipment**, and values from the destination layers, so an under-receipt books only what arrived. **Known limitation, stated on the reconciliation page:** in-transit goods stay attributed to the source warehouse until received; fixing that needs a "Persediaan Dalam Perjalanan" COA, which is an accounting decision. Migration `2026_09_16_000004` **backfills** the dimension onto historical LPB/NPK/opname/kit/retur journals — without it the new report reads "Tanpa dimensi gudang" for everything and is useless on day one.
+**Warehouse dimension** (`wms_jurnal_detail.gudang_id`): every posting site that knows a warehouse tags **all** lines of that document, not just the inventory line. **Internal transfers now post a journal.** It was a single entry at receipt until 2026-09-18, when it became two-phase through `1304`; the receipt leg still values from the destination layers, so an under-receipt books only what arrived. That limitation — in-transit goods staying attributed to the source warehouse — **was fixed on 2026-09-18** when `1304 Persediaan Dalam Perjalanan` arrived and the transfer journal became two-phase; see **Goods in transit and cancelled work orders**. Migration `2026_09_16_000004` **backfills** the dimension onto historical LPB/NPK/opname/kit/retur journals — without it the new report reads "Tanpa dimensi gudang" for everything and is useless on day one.
 
 ### Services: capitalization, gate pass, loaner, trade-in (2026-09-14)
 
@@ -422,8 +467,6 @@ Things that were once on the backlog and are **no longer wanted**. They are reco
 
 **Needs a decision from the user before it is code**
 
-- **"Persediaan Dalam Perjalanan" COA** — only if in-transit stock should stop being attributed to the source warehouse. The transfer journal forms at receipt, so today's behaviour is consistent, not a bug.
-- **Write-off account for a cancelled work order** — a work order can only be cancelled while its cost is zero. If a customer cancels mid-production the WIP needs writing off, and no loss account was invented for it.
 - **Customer credit limit** — `pelanggans.plafon_kredit` is recorded and displayed but **not enforced**. Blocking an order on credit is a policy call.
 - **Service categories vs the mapping rules** — `UpdateAccountingMappingRequest` validates every `KategoriBahan` with goods rules, which the seeded "Jasa Operasional" category cannot satisfy (its `coa_persediaan_id` is `5202`, a BEBAN account, where the rule demands ASET/DEBIT). "Jasa Produksi" stopped failing on 2026-09-16 when its mapping moved to `1302`. Either exempt service categories or give the last one a conforming account.
 - **Customer advances** — over-payment is still refused rather than parked. Building this needs a "Uang Muka Pelanggan" COA and reverses a deliberate 2026-09-16 decision, so it is a policy call, not a refactor.
@@ -435,9 +478,7 @@ Things that were once on the backlog and are **no longer wanted**. They are reco
 
 **Ordinary unbuilt work**
 
-- **Multi-currency revaluation** and realized/unrealized FX per PSAK 10 — reopening this means FX-denominated FIFO layers, and it needs a period-end rate source plus FX gain/loss accounts.
 - **Sending inventory (not assets) out for subcontract** — deliberately excluded: a custody document must not touch FIFO layers. Interim path is a Transfer Gudang to a dedicated warehouse.
-- **Routing and work centres** — BOM covers materials only; there is no operation sequence.
 
 **Deferred by the user**
 
@@ -455,22 +496,24 @@ The suite is not uniform — each net covers a different failure class, and know
 
 | Net | Enters through | Catches | Cannot catch |
 |---|---|---|---|
-| `ArchitectureConventionTest` (11) | static analysis, `git ls-files`, and the route table | class/file casing; inline validation in controllers; route file split and `route:cache`-ability; lowercase status codes; floating point in migrations; legacy table names; **document numbers allocated on a display path**; **Blade forms pointing at a missing route, the wrong verb, or omitting `@csrf`**; **dangling `route()`/`view()` references**; **a Form Request neither it nor its controller authorizes**; **a destructive action reachable by GET** | anything about runtime behaviour |
+| `ArchitectureConventionTest` (14) | static analysis, `git ls-files`, and the route table | class/file casing; inline validation in controllers; route file split and `route:cache`-ability; lowercase status codes; floating point in migrations; legacy table names; **document numbers allocated on a display path**; **Blade forms pointing at a missing route, the wrong verb, or omitting `@csrf`**; **dangling `route()`/`view()` references**; **a Form Request neither it nor its controller authorizes**; **a destructive action reachable by GET**; **a `hasMany`/`hasOne` that does not name its foreign key**; **a table name written as a string that no longer exists**; **a route whose controller method does not exist** | anything about runtime behaviour |
 | `SmokeSemuaHalamanTest` (2) | HTTP GET as Super Admin; HTTP mutations as a guest | any 5xx on a named GET route; a ceiling on how many routes may be skipped for unresolvable parameters; **any mutating route a guest can reach, or that 5xx's instead of refusing** | a page that returns 200 while being wrong; per-role access, because `Gate::before` opens everything for Super Admin |
 | `KualitasTampilanTest` (6) | HTTP GET + raw HTML | views that do not compile; raw Blade directives or uncompiled expressions reaching the browser; a silently empty listing; a wide table with no scroll wrapper; **hardcoded colour classes on any rendered page** | correctness of the numbers on the page |
 | `KonsistensiTemaTest` (3) | Blade/JS/CSS sources + `tailwind.config.js` | **hardcoded colour anywhere in source**, including files no test ever renders — numbered Tailwind palette classes, `white`/`black`, arbitrary `[#hex]`, `theme('colors.*')`, inline styles, raw colours in CSS; a chart that stops reading theme tokens or stops re-applying them on `inventory:theme-changed`; both themes' elevation ramp and WCAG contrast | a layout that is ugly while using the right tokens |
 | `HalamanTanpaEfekSampingTest` (1) | HTTP GET + query log | a GET page that issues `insert`/`update`/`delete` | writes on mutating routes, which are legitimate |
 | `AksesPerRoleTest` | HTTP GET, per role | pages a role must reach and pages it must be refused — the one class Super Admin smoke-testing is blind to | mutating routes |
 | `CrudMasterDataTest` (3) | full HTTP round trip | create → update → delete on master data, per-role policy enforcement on each verb, duplicate and required-field validation | every other domain, which has no CRUD test of its own yet |
+| `AturanJenisGudangTest` (5) | service layer + policy | Gudang Rusak being terminal in both directions, Consider stock landing on hold, warehouse flags agreeing with their type's meaning, and issuing from quarantine or damage being closed | warehouse rules that are only in a controller |
+| `RevisiPesananPembelianTest` (2) | full HTTP round trip | a printed PO's revision being archived into the real history tables, and an unprinted one not being archived | other document revision paths |
 | domain feature tests | service layer, and HTTP where it matters | business rules, ledger invariants, FIFO, WIP, tax | see the route coverage gap below |
 
 ### Route coverage gap
 
 Measured with `php artisan route:list --json` against the named routes in `tests/`:
 
-- **146** named GET routes take no parameter — covered by the four GET nets above.
+- **148** named GET routes take no parameter — covered by the four GET nets above.
 - **51** named GET routes take parameters — covered only where `SmokeSemuaHalamanTest::nilaiParameter()` can resolve a value; the rest are counted as skipped and the skip count is asserted.
-- **172** named routes mutate (`POST`/`PUT`/`PATCH`/`DELETE`). Since 2026-09-18 every one of them is exercised as a **guest** and must refuse; but only **57** are named by any test as an authorised user, leaving **115** whose behaviour is unverified.
+- **175** named routes mutate (`POST`/`PUT`/`PATCH`/`DELETE`). Since 2026-09-18 every one of them is exercised as a **guest** and must refuse, and since the same date every one of them is proven to resolve to a real controller method; but only **59** are named by any test as an authorised user, leaving **116** whose behaviour is unverified.
 
 That last figure is the honest state of coverage, and it is why **trap 8** matters: a feature spanning HTTP → service → ledger needs at least one test that enters through the route. Reproduce the figure by extracting route names from `route:list --json` and grepping `tests/` for each one.
 
@@ -483,9 +526,42 @@ Do not "fix" either of these by touching one file — they are the shape of the 
 
 ## Reconciliation invariants — the sell side is watched too (2026-09-18)
 
-`AccountingReconciliationService::checks()` now returns **seven** invariants: `stock`, `journal`, `invoice`, `grni`, `ap`, **`ar`**, `wip`. The `ar` check compares the sum of `sisa_tagihan` on POSTED/PARTIALLY_PAID sales invoices against the GL balance of `PIUTANG_USAHA`.
+`AccountingReconciliationService::checks()` now returns **eight** invariants: `stock`, `journal`, `invoice`, `grni`, `ap`, **`ar`**, **`transit`**, `wip`. The `ar` check compares the sum of `sisa_tagihan` on POSTED/PARTIALLY_PAID sales invoices against the GL balance of `PIUTANG_USAHA`.
 
 It was added because the set was **asymmetric**: the buy side had two watchdogs (`grni` for goods received not invoiced, `ap` for unpaid supplier invoices) and the sell side had none. The receivable figures tied perfectly when measured by hand, so this fixed no data — it closed the hole where a *future* drift would have gone unreported on the reconciliation page while the identical drift on payables raised an alarm. Treat a new balance-sheet subledger the same way: if a document type can accumulate a balance, give it an invariant when you build it, not after.
+
+## What the 2026-09-18 A–Z audit checked, and what it found
+
+Run against the live seeded database on Laravel 12.69 / PHP 8.3. Recorded so the next reader knows which questions are already answered and does not re-ask them.
+
+### Architecture — verified clean
+
+- **784 `$fillable`/`$casts` entries** across every model resolve to real columns; **no model points at a missing table**. Rename drift inside models is zero.
+- **No `create($request->all())` anywhere** — every write goes through a Form Request's validated array, which is why the 11 models still on `$guarded = []` are not the hole they look like.
+- **Zero orphan rows** across ten parent/child relationships that were spot-checked (deliveries, invoice lines, receipt lines, journal lines, layers, WIP cost rows, cross-dock).
+- Three controllers (`Kit`, `GelombangPengambilan`, `PengeluaranBarang`) have **no Policy but are not unguarded** — they use `Gate::allows('operateWarehouse')` plus explicit `canAccessGudang()` scoping. A different idiom, not a hole.
+
+### Architecture — fixed in the same pass
+
+- **11 `hasMany`/`hasOne` relations named no foreign key.** All eleven happened to resolve correctly *today*, which is exactly what makes trap 3 dangerous. All now pass the FK explicitly, and `test_every_has_many_relation_names_its_foreign_key` blocks new ones.
+- **Two phantom tables** — see trap 11.
+- **Asset status was a magic string in nine places** (`'ACTIVE'`, `'SOLD'`, `'TRADED_IN'`, `'DISPOSED'`) while every other document model declares its statuses as constants. Now `Aset::ACTIVE` and friends. Checking each literal before replacing mattered: three of the matches were reservation statuses, one was a lot's `quality_status`, and one a picking order — replacing by pattern would have broken three unrelated models.
+
+### Architecture — measured, deliberately not changed
+
+- **`$guarded = []` on 11 models.** Tightening to `['id']` was tried and **reverted**: with a non-empty `$guarded` and an empty `$fillable`, Eloquent consults the schema on every `fill()`, which adds a DB round-trip to model hydration and breaks pure unit tests that construct models without booting Laravel. No code mass-assigns `id`, so the change bought nothing real.
+- **16 services read `Auth::id()`/`Auth::user()` directly.** That is a hidden dependency which is null in a seeder, a queue worker, or any service-level call — it already bit `WarehouseExecutionService::reserve()` once. Pass the user explicitly in new code.
+- **21 domain tables carry no `wms_` prefix** (`bahans`, `gudangs`, `suppliers`, `pelanggans`, `requests`, `stok_gudangs`, `mutasi_stoks`, `transfer_gudangs`, and others). The History section's claim that the sweep gave "every domain table" the prefix is **wrong, and is corrected there**. Renaming them now would cross trap 6 (Yajra column and table names reaching JS) for cosmetic gain; it needs a decision, not a drive-by.
+- **Statuses on `ReservasiPersediaan`, lot `quality_status` and picking orders are still literals** (roughly 30 across ten files). The same cleanup as the asset one applies, but the literals overlap between models, so it must be done per model with the same file-by-file check, not by pattern.
+
+### Business rules — verified against the seeded data
+
+- **Chart of accounts**: 48 accounts, first digit matches category in every one (1 aset, 2 liabilitas, 3 ekuitas, 4 pendapatan, 5 beban). Three accounts carry a normal balance opposite to their category — `1591 Akumulasi Penyusutan`, `4102 Retur Penjualan`, `5201 Diskon Pembelian` — and all three are **correct contra accounts**, not defects. No journal line posts to a non-postable or inactive account. Every `AccountingSetting` mapping points at an account of the category its constant requires.
+- **The ledger balances**: posted debits equal posted credits exactly, and assets equal liabilities + equity + current earnings exactly.
+- **Tax rates match the regulations**: PPN 11%, PPh 23 2%, PPh 22 1.5%, PPh 4(2) final 10% for land/building rent.
+- **FIFO is honoured**: zero cases of a newer layer being consumed while an older untouched layer of the same material and warehouse still had stock.
+- **Warehouse types behave as documented, and are enforced in the service, not just by flags.** Gudang Rusak is terminal in *both* directions — stock cannot leave it, and cannot be transferred straight into it either, because it must pass through Consider first. Stock arriving in Consider is written as `QC_HOLD`, never `AVAILABLE`. `AturanJenisGudangTest` now pins all of this, plus the flag/meaning agreement and the rule that quarantined or damaged stock can never be issued. Before this pass **no test mentioned `RUSAK` or `CONSIDER` at all**.
+- **LPB has no separate posting trace and does not need one**: `PenerimaanBarangService::terima()` creates the draft and posts it inside one transaction for one user, so `id_user` plus `created_at` is the trace. Do not "fix" this by adding `diposting_oleh`.
 
 ## Known repo quirks
 
@@ -499,7 +575,7 @@ Kept short on purpose. None of this is work to resume.
 
 **The original 4-phase modernization plan (approved 2026-09-01) is fully done.** Phase 1 was Tailwind/daisyUI/Alpine replacing Bootstrap/jQuery/DataTables (2026-09-01); `composer.json` declared Laravel 12 then, but the installed `vendor/` stayed on Laravel 10 until the framework was actually upgraded and the skeleton converted on **2026-09-18** — see **Application skeleton** above. Indonesian `snake_case` DB naming (phase 2); file/class naming matching `make:model -a` (phase 3). Phase 4 — thin controllers, validation in Form Requests, authorization in Policies, reusable logic in Services — was never a discrete task; it is the standing convention now written into **Architecture rules** above.
 
-**Phases 2 and 3 were done together in 11 clusters on branch `refactor/rename-baku-indonesia`** (finished 2026-09-04), going further than planned: jargon (LPB, BAP, NPK, PO) became full *baku* Indonesian and every domain table got the `wms_` prefix. The conventions it produced are in **Architecture rules**; the technical traps it exposed are in **Traps**. The branch was never merged or pushed — the user asked to keep it local. **If someone asks to "continue the rename", confirm what they mean: the sweep as scoped is finished.**
+**Phases 2 and 3 were done together in 11 clusters on branch `refactor/rename-baku-indonesia`** (finished 2026-09-04), going further than planned: jargon (LPB, BAP, NPK, PO) became full *baku* Indonesian and most domain tables got the `wms_` prefix. **"Every" overstated it** — measuring on 2026-09-18 found 21 domain tables that never got it, including `bahans`, `gudangs`, `suppliers`, `pelanggans` and `stok_gudangs`; see **Measured debt** for why renaming them now is a decision rather than a cleanup. The conventions it produced are in **Architecture rules**; the technical traps it exposed are in **Traps**. The branch was never merged or pushed — the user asked to keep it local. **If someone asks to "continue the rename", confirm what they mean: the sweep as scoped is finished.**
 
 Historical names, for anyone tracing one: `Asset`→`Aset`, `Lpb`→`PenerimaanBarang`, `ServiceBap`→`PenerimaanJasa`, `ServicePurchase`→`PesananJasa`, `ServiceCategory`→`KategoriJasa`, `Pembelian`→`PesananPembelian`, `Npk`→`PemakaianBarang`, `InvoiceLpb`→`FakturPembelian`, `InvoicePayment`→`PembayaranFaktur`, `ChartOfAccount`→`BaganAkun`, `InventoryLayer`→`LayerPersediaan`, `WarehouseLocation`→`LokasiGudang`, `PickingOrder`→`PesananPengambilan`, `QualityInspection`→`PemeriksaanKualitas`, `LandedCost`→`BiayaTambahan`, plus ten more in the WMS-control cluster.
 

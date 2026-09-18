@@ -174,6 +174,13 @@
                                     </a>
                                 </li>
                             @endcan
+                            @can('controlInventoryFinance')
+                                <li class="{{ request()->routeIs('revaluasi-kurs.*') ? 'active' : '' }}">
+                                    <a href="{{ route('revaluasi-kurs.index') }}" class="svg-icon">
+                                        <i class="fa-solid fa-money-bill-transfer"></i><span>Revaluasi Kurs</span>
+                                    </a>
+                                </li>
+                            @endcan
                             @can('viewFinancialStatements')
                                 <li class="{{ request()->routeIs('financial-statements.*') ? 'active' : '' }}">
                                     <a href="{{ route('financial-statements.neraca-saldo') }}" class="svg-icon">
@@ -247,6 +254,13 @@
                                 <li class="{{ request()->routeIs('bom.*') ? 'active' : '' }}">
                                     <a href="{{ route('bom.index') }}" class="svg-icon">
                                         <i class="fa-solid fa-sitemap"></i><span>BOM</span>
+                                    </a>
+                                </li>
+                            @endcan
+                            @can('viewAny', App\Models\PusatKerja::class)
+                                <li class="{{ request()->routeIs('routing-produksi.*') ? 'active' : '' }}">
+                                    <a href="{{ route('routing-produksi.index') }}" class="svg-icon">
+                                        <i class="fa-solid fa-diagram-project"></i><span>Routing Produksi</span>
                                     </a>
                                 </li>
                             @endcan

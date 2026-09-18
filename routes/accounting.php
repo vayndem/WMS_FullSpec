@@ -8,6 +8,7 @@ use App\Http\Controllers\FinancialStatementController;
 use App\Http\Controllers\JurnalController;
 use App\Http\Controllers\JurnalDetailController;
 use App\Http\Controllers\PermintaanPersetujuanController;
+use App\Http\Controllers\RevaluasiKursController;
 use App\Http\Controllers\TaxRateController;
 use Illuminate\Support\Facades\Route;
 
@@ -60,6 +61,10 @@ Route::middleware('auth')->group(function () {
     Route::get('financial-statements/perubahan-ekuitas', [FinancialStatementController::class, 'perubahanEkuitas'])->name('financial-statements.perubahan-ekuitas');
     Route::get('financial-statements/perubahan-ekuitas/pdf', [FinancialStatementController::class, 'perubahanEkuitasPdf'])->name('financial-statements.perubahan-ekuitas.pdf');
     Route::get('financial-statements/perubahan-ekuitas/excel', [FinancialStatementController::class, 'perubahanEkuitasExcel'])->name('financial-statements.perubahan-ekuitas.excel');
+    Route::get('revaluasi-kurs', [RevaluasiKursController::class, 'index'])->name('revaluasi-kurs.index');
+    Route::post('revaluasi-kurs/kurs', [RevaluasiKursController::class, 'simpanKurs'])->name('revaluasi-kurs.kurs');
+    Route::post('revaluasi-kurs/posting', [RevaluasiKursController::class, 'posting'])->name('revaluasi-kurs.posting');
+
     Route::get('financial-statements/calk', [FinancialStatementController::class, 'calk'])->name('financial-statements.calk');
     Route::post('financial-statements/calk', [FinancialStatementController::class, 'simpanCalk'])->name('financial-statements.calk.simpan');
     Route::get('financial-statements/calk/pdf', [FinancialStatementController::class, 'calkPdf'])->name('financial-statements.calk.pdf');

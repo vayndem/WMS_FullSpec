@@ -231,32 +231,76 @@ class WmsAccountingService
         );
     }
 
-    public function postTransferGudang(TransferGudang $transfer): ?Jurnal
+    public function postRevaluasiKurs(string $periode, string $tanggal, float $selisih): ?Jurnal
     {
-        $this->periods->assertOpen($transfer->tanggal, 'Transfer gudang');
-        $transfer->loadMissing('details.bahan.tipeBarang');
+        $selisih = round($selisih, 2);
 
-        $nilaiPerKategori = [];
-
-        foreach ($transfer->details as $detail) {
-            $kategori = $detail->bahan?->tipeBarang;
-            $this->assertCategoryMapping($kategori);
-
-            $nilai = (float) AlokasiTransferGudang::where('detail_transfer_gudang_id', $detail->id)
-                ->join('wms_layer_persediaan as tujuan', 'tujuan.id', '=', 'alokasi_transfer_gudangs.inventory_layer_tujuan_id')
-                ->sum(DB::raw('tujuan.initial_quantity * tujuan.unit_cost'));
-
-            if ($nilai <= 0) {
-                continue;
-            }
-
-            $nilaiPerKategori[$kategori->id] ??= ['kategori' => $kategori, 'nilai' => 0.0];
-            $nilaiPerKategori[$kategori->id]['nilai'] += $nilai;
+        if (abs($selisih) < 0.005) {
+            return null;
         }
+
+        $this->periods->assertOpen($tanggal, 'Revaluasi kurs');
+
+        $hutang = AccountingSetting::accountId(AccountingSetting::HUTANG_USAHA);
+        $lines = [];
+
+        if ($selisih > 0) {
+            $this->line($lines, AccountingSetting::accountId(AccountingSetting::RUGI_SELISIH_KURS), $selisih, 0,
+                "Rugi selisih kurs periode {$periode}");
+            $this->line($lines, $hutang, 0, $selisih, "Penyesuaian hutang usaha periode {$periode}");
+        } else {
+            $nilai = abs($selisih);
+            $this->line($lines, $hutang, $nilai, 0, "Penyesuaian hutang usaha periode {$periode}");
+            $this->line($lines, AccountingSetting::accountId(AccountingSetting::LABA_SELISIH_KURS), 0, $nilai,
+                "Laba selisih kurs periode {$periode}");
+        }
+
+        return $this->post(
+            "FX-{$periode}",
+            $tanggal,
+            'REVALUASI_KURS',
+            (int) str_replace('-', '', $periode),
+            "Revaluasi kurs pos moneter periode {$periode}",
+            $lines,
+        );
+    }
+
+    public function postPembatalanPerintahKerja(DataPesanan $pesanan, float $nilai): ?Jurnal
+    {
+        $nilai = round($nilai, 2);
+
+        if ($nilai <= 0) {
+            return null;
+        }
+
+        $this->periods->assertOpen(now(), 'Pembatalan perintah kerja');
 
         $lines = [];
 
-        foreach ($nilaiPerKategori as $baris) {
+        $this->line($lines, AccountingSetting::accountId(AccountingSetting::RUGI_PEMBATALAN_PRODUKSI), $nilai, 0,
+            "Kerugian pembatalan perintah kerja {$pesanan->nomor}", $pesanan->gudang_id);
+        $this->line($lines, AccountingSetting::accountId(AccountingSetting::BARANG_DALAM_PROSES), 0, $nilai,
+            "Pelepasan barang dalam proses {$pesanan->nomor}", $pesanan->gudang_id);
+
+        return $this->post(
+            "WOC-{$pesanan->nomor}",
+            now(),
+            'PEMBATALAN_PERINTAH_KERJA',
+            $pesanan->id,
+            "Pembatalan perintah kerja {$pesanan->nomor}",
+            $lines,
+        );
+    }
+
+    public function postPengirimanTransfer(TransferGudang $transfer): ?Jurnal
+    {
+        $this->periods->assertOpen($transfer->tanggal, 'Pengiriman transfer gudang');
+        $transfer->loadMissing('details.bahan.tipeBarang');
+
+        $transitId = AccountingSetting::accountId(AccountingSetting::PERSEDIAAN_DALAM_PERJALANAN);
+        $lines = [];
+
+        foreach ($this->nilaiTransferPerKategori($transfer, 'asal') as $baris) {
             $kategori = $baris['kategori'];
             $nilai = round($baris['nilai'], 2);
 
@@ -264,8 +308,8 @@ class WmsAccountingService
                 continue;
             }
 
-            $this->line($lines, $kategori->coa_persediaan_id, $nilai, 0,
-                "Persediaan masuk {$kategori->katnama}", $transfer->gudang_tujuan_id);
+            $this->line($lines, $transitId, $nilai, 0,
+                "Persediaan dalam perjalanan {$kategori->katnama}", $transfer->gudang_tujuan_id);
             $this->line($lines, $kategori->coa_persediaan_id, 0, $nilai,
                 "Persediaan keluar {$kategori->katnama}", $transfer->gudang_asal_id);
         }
@@ -275,13 +319,74 @@ class WmsAccountingService
         }
 
         return $this->post(
-            "TRF-{$transfer->nomor_transfer}",
+            "TRF-{$transfer->nomor_transfer}-KIRIM",
+            $transfer->tanggal,
+            'TRANSFER_GUDANG_KIRIM',
+            $transfer->id,
+            "Pengiriman transfer gudang {$transfer->nomor_transfer}",
+            $lines,
+        );
+    }
+
+    public function postPenerimaanTransfer(TransferGudang $transfer): ?Jurnal
+    {
+        $this->periods->assertOpen($transfer->tanggal, 'Penerimaan transfer gudang');
+        $transfer->loadMissing('details.bahan.tipeBarang');
+
+        $transitId = AccountingSetting::accountId(AccountingSetting::PERSEDIAAN_DALAM_PERJALANAN);
+        $lines = [];
+
+        foreach ($this->nilaiTransferPerKategori($transfer, 'tujuan') as $baris) {
+            $kategori = $baris['kategori'];
+            $nilai = round($baris['nilai'], 2);
+
+            if ($nilai <= 0) {
+                continue;
+            }
+
+            $this->line($lines, $kategori->coa_persediaan_id, $nilai, 0,
+                "Persediaan masuk {$kategori->katnama}", $transfer->gudang_tujuan_id);
+            $this->line($lines, $transitId, 0, $nilai,
+                "Pelepasan persediaan dalam perjalanan {$kategori->katnama}", $transfer->gudang_tujuan_id);
+        }
+
+        if ($lines === []) {
+            return null;
+        }
+
+        return $this->post(
+            "TRF-{$transfer->nomor_transfer}-TERIMA",
             $transfer->tanggal,
             'TRANSFER_GUDANG',
             $transfer->id,
-            "Transfer gudang {$transfer->nomor_transfer}",
+            "Penerimaan transfer gudang {$transfer->nomor_transfer}",
             $lines,
         );
+    }
+
+    private function nilaiTransferPerKategori(TransferGudang $transfer, string $sisi): array
+    {
+        $nilaiPerKategori = [];
+
+        foreach ($transfer->details as $detail) {
+            $kategori = $detail->bahan?->tipeBarang;
+            $this->assertCategoryMapping($kategori);
+
+            $nilai = $sisi === 'asal'
+                ? (float) AlokasiTransferGudang::where('detail_transfer_gudang_id', $detail->id)->sum('total_nilai')
+                : (float) AlokasiTransferGudang::where('detail_transfer_gudang_id', $detail->id)
+                    ->join('wms_layer_persediaan as tujuan', 'tujuan.id', '=', 'alokasi_transfer_gudangs.inventory_layer_tujuan_id')
+                    ->sum(DB::raw('tujuan.initial_quantity * tujuan.unit_cost'));
+
+            if ($nilai <= 0) {
+                continue;
+            }
+
+            $nilaiPerKategori[$kategori->id] ??= ['kategori' => $kategori, 'nilai' => 0.0];
+            $nilaiPerKategori[$kategori->id]['nilai'] += $nilai;
+        }
+
+        return $nilaiPerKategori;
     }
 
     public function postSuratJalan(SuratJalan $suratJalan): Jurnal

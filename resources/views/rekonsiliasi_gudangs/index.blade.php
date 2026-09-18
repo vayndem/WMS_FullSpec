@@ -62,7 +62,7 @@
                     </table>
                 </div>
                 <div class="p-4 text-xs text-base-content/50">
-                    Stok yang sedang dalam perjalanan tidak dihitung di sini: jurnal transfer baru terbentuk saat barang diterima, jadi sampai penerimaan nilainya masih melekat pada gudang asal.
+                    Stok yang sedang dalam perjalanan tidak dihitung di sini karena memang tidak berada di gudang mana pun: sejak pengiriman nilainya pindah ke akun Persediaan Dalam Perjalanan, dan baru mendarat di gudang tujuan saat barang diterima. Saldo akun itu dijaga invarian tersendiri di Rekonsiliasi WMS.
                 </div>
             </div>
         @endif
