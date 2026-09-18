@@ -1,7 +1,7 @@
 <dialog id="userEditModal" class="modal">
     <div class="modal-box max-w-2xl overflow-hidden p-0">
         <div class="flex items-center gap-3 bg-warning px-6 py-4 text-warning-content">
-            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary-content/20">
                 <i class="fa-solid fa-user-pen"></i>
             </div>
             <div>

@@ -10,7 +10,7 @@ Warehouse • Procurement • Sales • Production • Finance • Accounting �
 [![PHP](https://img.shields.io/badge/PHP-8.3-777BB4?style=for-the-badge&logo=php&logoColor=white)](https://php.net)
 [![MySQL](https://img.shields.io/badge/MySQL-Database-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com)
 [![Tailwind](https://img.shields.io/badge/Tailwind%20%2B%20daisyUI%20%2B%20Alpine-UI-38BDF8?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
-[![Tests](https://img.shields.io/badge/tests-245%20passed-22C55E?style=for-the-badge&logo=php&logoColor=white)](#-pengujian)
+[![Tests](https://img.shields.io/badge/tests-261%20passed-22C55E?style=for-the-badge&logo=php&logoColor=white)](#-pengujian)
 
 </div>
 
@@ -362,8 +362,8 @@ php artisan schedule:work
 
 <div align="center">
 
-![Tests](https://img.shields.io/badge/tests-245%20passed-22C55E?style=flat-square)
-![Assertions](https://img.shields.io/badge/assertions-4%2C584-38BDF8?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-261%20passed-22C55E?style=flat-square)
+![Assertions](https://img.shields.io/badge/assertions-4%2C622-38BDF8?style=flat-square)
 ![Case Sensitive](https://img.shields.io/badge/case--sensitivity-verified-A78BFA?style=flat-square)
 
 </div>
@@ -392,6 +392,9 @@ Suite saat ini mencakup:
 - ⏳ umur piutang: penempatan ember, tanggal acuan mundur, tie-out subledger vs buku besar, dan sales yang ikut tersalin ke faktur
 - 🔁 cross dock: reservasi saat ditandai, pelepasan saat surat jalan diposting, dan pemecahan tanda saat kirim sebagian
 - 🧩 BOM dan varians pemakaian, termasuk perintah kerja tanpa BOM
+- 🎨 konsistensi tema: tak ada warna mati di seluruh sumber, grafik mengikuti tema, kontras WCAG kedua tema
+- 🛡️ setiap route mutasi wajib menolak tamu; aksi destruktif tak boleh dipicu lewat GET
+- 🗂️ CRUD master data lewat HTTP: buat–ubah–hapus, policy per role, dan validasi duplikat
 
 > ⚠️ Jalankan `npm install && npm run build` sebelum `php artisan test`. Tanpa manifest Vite, setiap halaman melempar 500 dan suite gagal massal tanpa ada cacat kode.
 

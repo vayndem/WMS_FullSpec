@@ -86,7 +86,7 @@
                                 <td class="font-bold text-primary" x-text="row.no_request"></td>
                                 <td x-text="row.requester_nama"></td>
                                 <td class="text-center">
-                                    <span class="badge text-white"
+                                    <span class="badge"
                                         :class="{
                                             'badge-warning': row.status === 'PENDING',
                                             'badge-success': row.status === 'APPROVED',

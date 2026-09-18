@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AccountingSetting;
 use App\Models\DataPesanan;
 use App\Models\FakturPembelian;
+use App\Models\FakturPenjualan;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -73,6 +74,20 @@ class AccountingReconciliationService
             $wipLedger = null;
         }
 
+        $arLedger = null;
+        try {
+            $arId = AccountingSetting::accountId(AccountingSetting::PIUTANG_USAHA);
+            $arLedger = (float) DB::table('wms_jurnal_detail')->join('wms_jurnal', 'wms_jurnal.id', '=', 'wms_jurnal_detail.jurnal_id')
+                ->whereIn('wms_jurnal.status', ['POSTED', 'REVERSED'])->where('wms_jurnal_detail.coa_id', $arId)
+                ->selectRaw('COALESCE(SUM(debit-kredit),0) balance')->value('balance');
+        } catch (\RuntimeException) {
+            $arLedger = null;
+        }
+
+        $arSubledger = round((float) DB::table('wms_faktur_penjualan')
+            ->whereIn('status', [FakturPenjualan::POSTED, FakturPenjualan::PARTIALLY_PAID])
+            ->sum('sisa_tagihan'), 2);
+
         $wipPerintah = round(
             DataPesanan::berjalan()->get()->sum(fn (DataPesanan $pesanan) => $pesanan->saldoWip()),
             2
@@ -118,6 +133,14 @@ class AccountingReconciliationService
                 'invalid' => $apLedger !== null && abs((float) $invoice->outstanding - $apLedger) <= .01 ? 0 : 1,
                 'amount' => $apLedger,
                 'expected' => (float) $invoice->outstanding,
+            ],
+            [
+                'key' => 'ar',
+                'label' => 'Faktur penjualan belum lunas vs piutang usaha',
+                'total' => 1,
+                'invalid' => $arLedger !== null && abs($arSubledger - $arLedger) <= .01 ? 0 : 1,
+                'amount' => $arLedger,
+                'expected' => $arSubledger,
             ],
             [
                 'key' => 'wip',

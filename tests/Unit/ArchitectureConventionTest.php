@@ -104,6 +104,239 @@ class ArchitectureConventionTest extends TestCase
         }
     }
 
+    public function test_display_paths_never_allocate_a_document_number(): void
+    {
+        $pelanggar = [];
+
+        foreach ($this->phpFiles(app_path('Http/Controllers')) as $file) {
+            $isi = file_get_contents($file);
+            $nama = basename($file);
+
+            preg_match_all(
+                '/public function (index|create|edit|show|preview|print|report\w*|pdf|excel)\s*\([^)]*\)[^{]*\{(.*?)\n    \}/s',
+                $isi,
+                $metode,
+                PREG_SET_ORDER
+            );
+
+            foreach ($metode as $m) {
+                if (preg_match('/->(external|internal|financial)\(/', $m[2], $panggilan)) {
+                    $pelanggar[] = "{$nama}::{$m[1]}() memanggil ->{$panggilan[1]}() yang MENGALOKASIKAN nomor; jalur tampilan wajib memakai ->preview()";
+                }
+            }
+        }
+
+        $this->assertSame(
+            [],
+            $pelanggar,
+            "Nomor dokumen hanya boleh dialokasikan saat dokumen benar-benar disimpan:\n" . implode("\n", $pelanggar)
+        );
+    }
+
+    public function test_every_blade_form_targets_an_existing_route_with_a_matching_verb(): void
+    {
+        $rute = $this->rutePerNama();
+        $pelanggar = [];
+
+        foreach ($this->bladeFiles() as $rel => $path) {
+            $isi = file_get_contents($path);
+
+            preg_match_all('/route\(\s*[\'"]([a-zA-Z0-9_.\-]+)[\'"]/', $isi, $rujukan);
+
+            foreach (array_unique($rujukan[1]) as $nama) {
+                if (!isset($rute[$nama])) {
+                    $pelanggar[] = "{$rel}: route('{$nama}') tidak terdaftar";
+                }
+            }
+
+            preg_match_all(
+                '/<form\b[^>]*?action="\{\{\s*route\(\s*[\'"]([a-zA-Z0-9_.\-]+)[\'"][^}]*\}\}"(.*?)<\/form>/s',
+                $isi,
+                $formulir,
+                PREG_SET_ORDER
+            );
+
+            foreach ($formulir as $form) {
+                $nama = $form[1];
+                $badan = $form[2];
+
+                if (!isset($rute[$nama])) {
+                    continue;
+                }
+
+                $verb = preg_match('/@method\(\s*[\'"](\w+)[\'"]/', $badan, $m) ? strtoupper($m[1]) : 'POST';
+
+                if (str_contains($form[0], 'method="GET"') || str_contains($form[0], "method=\"get\"")) {
+                    continue;
+                }
+
+                if (!str_contains($rute[$nama], $verb)) {
+                    $pelanggar[] = "{$rel}: form ke '{$nama}' memakai {$verb}, route hanya menerima {$rute[$nama]}";
+                }
+
+                if (!str_contains($badan, '@csrf')) {
+                    $pelanggar[] = "{$rel}: form ke '{$nama}' tidak memasang @csrf";
+                }
+            }
+        }
+
+        $this->assertSame([], $pelanggar, implode("\n", $pelanggar));
+    }
+
+    public function test_no_dangling_route_or_view_reference_in_app_code(): void
+    {
+        $rute = $this->rutePerNama();
+        $pelanggar = [];
+
+        foreach ($this->phpFiles(app_path()) as $file) {
+            $isi = file_get_contents($file);
+            $rel = str_replace(base_path() . DIRECTORY_SEPARATOR, '', $file);
+
+            if (preg_match_all('/(?<![>:$\w])route\(\s*[\'"]([a-zA-Z0-9_.\-]+)[\'"]/', $isi, $m)) {
+                foreach (array_unique($m[1]) as $nama) {
+                    if (!isset($rute[$nama])) {
+                        $pelanggar[] = "{$rel}: route('{$nama}') tidak terdaftar";
+                    }
+                }
+            }
+
+            if (preg_match_all('/(?<![>:$\w])view\(\s*[\'"]([a-zA-Z0-9_.\-]+)[\'"]/', $isi, $m)) {
+                foreach (array_unique($m[1]) as $v) {
+                    $berkas = resource_path('views/' . str_replace('.', '/', $v) . '.blade.php');
+
+                    if (!file_exists($berkas)) {
+                        $pelanggar[] = "{$rel}: view('{$v}') tidak ada";
+                    }
+                }
+            }
+        }
+
+        $this->assertSame([], $pelanggar, implode("\n", $pelanggar));
+    }
+
+    public function test_every_form_request_is_authorized_somewhere(): void
+    {
+        $endpointTamu = [
+            'LoginRequest',
+            'ResetPasswordRequest',
+            'SendResetLinkRequest',
+        ];
+
+        $kontroler = '';
+
+        foreach ($this->phpFiles(app_path('Http/Controllers')) as $file) {
+            $kontroler .= file_get_contents($file);
+        }
+
+        $pelanggar = [];
+
+        foreach ($this->phpFiles(app_path('Http/Requests')) as $file) {
+            $isi = file_get_contents($file);
+            $nama = pathinfo($file, PATHINFO_FILENAME);
+            if (in_array($nama, $endpointTamu, true)) {
+                continue;
+            }
+
+            if (!preg_match('/function authorize\(\)[^{]*\{(.*?)\n    \}/s', $isi, $m)) {
+                continue;
+            }
+
+            if (!preg_match('/^\s*return\s+true\s*;\s*$/m', $m[1])) {
+                continue;
+            }
+
+            preg_match_all(
+                '/public function (\w+)\s*\(\s*' . preg_quote($nama, '/') . '\s+\$\w+[^)]*\)[^{]*\{(.*?)\n    \}/s',
+                $kontroler,
+                $pemakai,
+                PREG_SET_ORDER
+            );
+
+            if ($pemakai === []) {
+                $pelanggar[] = "{$nama}: authorize() mengembalikan true dan tidak ada controller yang memakainya";
+                continue;
+            }
+
+            foreach ($pemakai as $metode) {
+                if (!str_contains($metode[2], '$this->authorize(') && !str_contains($metode[2], 'abort_unless')) {
+                    $pelanggar[] = "{$nama}: authorize() mengembalikan true dan {$metode[1]}() juga tidak mengotorisasi apa pun";
+                }
+            }
+        }
+
+        $this->assertSame(
+            [],
+            $pelanggar,
+            "Setiap endpoint wajib dijaga, entah di Form Request atau di controller:\n" . implode("\n", $pelanggar)
+        );
+    }
+
+    public function test_destructive_actions_are_never_reachable_by_get(): void
+    {
+        $bahaya = [];
+        $verbSalah = [];
+
+        foreach (\Illuminate\Support\Facades\Route::getRoutes() as $rute) {
+            $nama = $rute->getName();
+
+            if (!$nama) {
+                continue;
+            }
+
+            $metode = implode('|', $rute->methods());
+
+            if (preg_match('/(destroy|delete|hapus|batalkan|void|reverse|reversal|cancel)/i', $nama)
+                && str_contains($metode, 'GET')) {
+                $bahaya[] = "{$nama} [{$metode}]";
+            }
+
+            if (str_ends_with($nama, '.destroy') && !str_contains($metode, 'DELETE')) {
+                $verbSalah[] = "{$nama} [{$metode}]";
+            }
+        }
+
+        $this->assertSame(
+            [],
+            $bahaya,
+            "Aksi destruktif tidak boleh dapat dipicu lewat GET; crawler, prefetch browser, atau sekadar klik tautan akan menjalankannya:\n"
+                . implode("\n", $bahaya)
+        );
+
+        $this->assertSame(
+            [],
+            $verbSalah,
+            "Route bernama *.destroy harus memakai verb DELETE:\n" . implode("\n", $verbSalah)
+        );
+    }
+
+    private function rutePerNama(): array
+    {
+        $peta = [];
+
+        foreach (\Illuminate\Support\Facades\Route::getRoutes() as $rute) {
+            if ($nama = $rute->getName()) {
+                $peta[$nama] = implode('|', $rute->methods());
+            }
+        }
+
+        return $peta;
+    }
+
+    private function bladeFiles(): array
+    {
+        $daftar = [];
+        $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(resource_path('views')));
+
+        foreach ($iterator as $file) {
+            if ($file->isFile() && str_ends_with($file->getFilename(), '.blade.php')) {
+                $rel = str_replace(resource_path('views') . DIRECTORY_SEPARATOR, '', $file->getPathname());
+                $daftar[str_replace(DIRECTORY_SEPARATOR, '/', $rel)] = $file->getPathname();
+            }
+        }
+
+        return $daftar;
+    }
+
     private function phpFiles(string $directory): array
     {
         $files = [];

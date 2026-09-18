@@ -200,6 +200,16 @@ The UI was fully migrated off Bootstrap 5 / jQuery / DataTables.js — there is 
 - **`.modal-box` must scroll, never clip**: it has a global `max-height` + `overflow-y: auto` in `app.css` specifically so a tall form's footer buttons stay reachable instead of being cut off — don't override that with a fixed height or `overflow-hidden` on a per-view basis.
 - **Responsiveness is a hard requirement, not an afterthought.** Every new or edited view must be checked at mobile width, not just desktop: use Tailwind's responsive prefixes (`sm:`/`md:`/`lg:`) on grids and flex layouts instead of a single fixed multi-column layout, wrap any wide table in `overflow-x-auto`, and actually resize the browser (or check devtools' responsive mode) before calling a view done — do not assume a desktop-only render is good enough.
 
+### Theming — two themes, and colour never gets hardcoded (tightened 2026-09-18)
+
+`tailwind.config.js` defines exactly two daisyUI themes, `wms` (light) and `wms-dark`. The active one is set as `data-theme` on `<html>` **inline in the `<head>` of `layouts/app.blade.php`**, before any CSS loads, so a dark-mode user never sees a white flash; `app-shell.js` only keeps the toggle and `localStorage` in step and fires `inventory:theme-changed`.
+
+- **Never write a colour literal in a view.** No `bg-white`, `text-gray-500`, `bg-slate-800`, no inline `style="color:#…"`. Use the daisyUI tokens: `base-100` for surfaces, `base-200` for the page, `base-300` for borders, `base-content` for text, `primary`/`primary-content` and friends for accents. `KualitasTampilanTest::test_no_page_hardcodes_colors_outside_the_theme` renders every page and fails on any of these, so a regression is caught the same day. The **only** exception is `resources/views/reports/**` and `stock_opname/pdf`, which are printed on paper and are correctly hardcoded — the test never opens them because it skips `.pdf`/`.excel`/`report` routes.
+- **Do not force a content colour onto a themed component.** `badge text-white` looks fine in light mode and becomes white-on-amber — unreadable — the moment `badge-warning` renders on `wms-dark`, whose warning is a light `#fbbf24` with dark content. daisyUI already picks the right content colour per variant; adding one overrides it.
+- **The elevation ramp must read the same way in both themes.** Light: page `base-200` `#f4f7fc` with cards `base-100` `#ffffff` sitting *above* it. Dark was inverted until 2026-09-18 — cards were darker than the page, and `base-100` was byte-identical to `neutral`, so the sidebar and the cards were literally the same colour and the boundary vanished. Dark now runs page `#0b1220` → cards `#17233d` → borders `#2a3a56`, with the sidebar's `neutral` `#0f172a` distinct from all three. Text contrast is 13.3:1 dark and 14.6:1 light, both far past the 4.5:1 AA floor; keep it that way if you touch the palette.
+- **Canvas cannot inherit a CSS class, so charts must read the tokens themselves.** `task-chart.js` pulls daisyUI's HSL custom properties (`--bc`, `--n`, `--nc`, `--b1`) via `getComputedStyle`, applies them to ticks, grid, legend and tooltip, **and re-applies them on `inventory:theme-changed`**. Without that a chart keeps Chart.js's default mid-grey axes, which are invisible on the dark background, and toggling the theme does not repaint them.
+- **SweetAlert2 ships and injects its own light stylesheet**, so its popups ignore the theme entirely. The overrides at the bottom of `app.css` re-skin it from the tokens, and its buttons are real daisyUI buttons (`buttonsStyling: false` + `customClass`). **Those rules sit outside `@layer components` on purpose** — Tailwind purges custom classes declared inside a layer when it cannot find them in the scanned content, and `swal2-*` only ever appears inside the vendored JS bundle. Put them in a layer and they silently disappear from the build; the tell is that `app.css` output does not grow.
+
 Cross-model processes (posting a document, reversing it, computing FIFO cost) belong in `app/Services`, not controllers. Gates (`AuthServiceProvider`) are used only for capabilities that span multiple models (e.g. `viewWmsControl`, `operateWarehouse`); everything else uses per-model Policies.
 
 Stock and accounting mutations are wrapped in `DB::transaction()`; operations prone to races use `lockForUpdate()`.
@@ -402,6 +412,8 @@ Decisions from those fixes worth keeping: a sales return on an **uninvoiced** de
 
 Things that were once on the backlog and are **no longer wanted**. They are recorded here rather than deleted, because a gap that is simply removed gets rediscovered by the next read-through of the code and quietly re-added. **Do not put these back without the user asking.**
 
+- **The `debits` and `kredits` master tables and their CRUD API.** Removed on 2026-09-18 after an audit found them unreachable: two `(id, kode, nama)` lookup tables scaffolded on 2026-07-21, never linked from any menu, empty in every environment, referenced by no domain code, and — being domain tables without the `wms_` prefix — in breach of the naming rule as well. They nevertheless exposed ten routed CRUD endpoints that accepted writes. Deleted with their models, policies, form requests, controllers, routes and migration. **If debit/credit notes are wanted later, build them as a real document type with a journal path, not by restoring these stubs.**
+
 - **External API/EDI integration** (to suppliers, marketplaces, or other ERPs), beyond the bare Sanctum auth base that already exists. **Dropped by the user on 2026-09-16.** The absence of an integration layer is therefore a deliberate product decision, not an unfinished item — if a future survey of the code notices there is no public API, that is the expected state. Sanctum stays where it is; nothing needs removing.
 
 ## Open-items index (current as of 2026-09-18)
@@ -439,24 +451,26 @@ Numbers here are **snapshots taken 2026-09-18** on Laravel 12.69 / PHP 8.3. Re-m
 
 ### What each safety net actually catches
 
-The suite is not uniform — each net covers a different failure class, and knowing which is which saves you from writing a test that duplicates one and leaves the real gap open.
+The suite is not uniform — each net covers a different failure class, and knowing which is which saves you from writing a test that duplicates one and leaves the real gap open. Counts are tests in the class, taken 2026-09-18.
 
 | Net | Enters through | Catches | Cannot catch |
 |---|---|---|---|
-| `ArchitectureConventionTest` | static analysis + `git ls-files` | class/file casing, inline validation in controllers, route file split and `route:cache`-ability, lowercase status codes, floating point in migrations, legacy table names | anything about runtime behaviour |
-| `SmokeSemuaHalamanTest` | HTTP GET, as Super Admin | any 5xx on a named GET route; also caps how many routes may be skipped for unresolvable parameters, so coverage cannot rot quietly | non-GET routes; anything that returns 200 while being wrong; per-role access, because `Gate::before` opens everything for Super Admin |
-| `KualitasTampilanTest` | HTTP GET + raw HTML | views that do not compile, raw Blade directives or uncompiled `{{ $x }}` reaching the browser, a silently empty listing, a wide table with no scroll wrapper | correctness of the numbers on the page |
+| `ArchitectureConventionTest` (11) | static analysis, `git ls-files`, and the route table | class/file casing; inline validation in controllers; route file split and `route:cache`-ability; lowercase status codes; floating point in migrations; legacy table names; **document numbers allocated on a display path**; **Blade forms pointing at a missing route, the wrong verb, or omitting `@csrf`**; **dangling `route()`/`view()` references**; **a Form Request neither it nor its controller authorizes**; **a destructive action reachable by GET** | anything about runtime behaviour |
+| `SmokeSemuaHalamanTest` (2) | HTTP GET as Super Admin; HTTP mutations as a guest | any 5xx on a named GET route; a ceiling on how many routes may be skipped for unresolvable parameters; **any mutating route a guest can reach, or that 5xx's instead of refusing** | a page that returns 200 while being wrong; per-role access, because `Gate::before` opens everything for Super Admin |
+| `KualitasTampilanTest` (6) | HTTP GET + raw HTML | views that do not compile; raw Blade directives or uncompiled expressions reaching the browser; a silently empty listing; a wide table with no scroll wrapper; **hardcoded colour classes on any rendered page** | correctness of the numbers on the page |
+| `KonsistensiTemaTest` (3) | Blade/JS/CSS sources + `tailwind.config.js` | **hardcoded colour anywhere in source**, including files no test ever renders — numbered Tailwind palette classes, `white`/`black`, arbitrary `[#hex]`, `theme('colors.*')`, inline styles, raw colours in CSS; a chart that stops reading theme tokens or stops re-applying them on `inventory:theme-changed`; both themes' elevation ramp and WCAG contrast | a layout that is ugly while using the right tokens |
+| `HalamanTanpaEfekSampingTest` (1) | HTTP GET + query log | a GET page that issues `insert`/`update`/`delete` | writes on mutating routes, which are legitimate |
 | `AksesPerRoleTest` | HTTP GET, per role | pages a role must reach and pages it must be refused — the one class Super Admin smoke-testing is blind to | mutating routes |
-| `HalamanTanpaEfekSampingTest` | HTTP GET + query log | a GET page that issues `insert`/`update`/`delete`. Added 2026-09-18; on its first run it found twelve create forms burning document numbers and the cross-dock page creating `stok_gudangs` rows | writes on non-GET routes, which are legitimate |
+| `CrudMasterDataTest` (3) | full HTTP round trip | create → update → delete on master data, per-role policy enforcement on each verb, duplicate and required-field validation | every other domain, which has no CRUD test of its own yet |
 | domain feature tests | service layer, and HTTP where it matters | business rules, ledger invariants, FIFO, WIP, tax | see the route coverage gap below |
 
 ### Route coverage gap
 
 Measured with `php artisan route:list --json` against the named routes in `tests/`:
 
-- **148** named GET routes take no parameter — covered by the four GET nets above.
-- **53** named GET routes take parameters — covered only where `SmokeSemuaHalamanTest::nilaiParameter()` can resolve a value; the rest are counted as skipped and the skip count is asserted.
-- **178** named routes mutate (`POST`/`PUT`/`PATCH`/`DELETE`). No GET net touches any of them, and **129 of the 178 are not named by a single test**.
+- **146** named GET routes take no parameter — covered by the four GET nets above.
+- **51** named GET routes take parameters — covered only where `SmokeSemuaHalamanTest::nilaiParameter()` can resolve a value; the rest are counted as skipped and the skip count is asserted.
+- **172** named routes mutate (`POST`/`PUT`/`PATCH`/`DELETE`). Since 2026-09-18 every one of them is exercised as a **guest** and must refuse; but only **57** are named by any test as an authorised user, leaving **115** whose behaviour is unverified.
 
 That last figure is the honest state of coverage, and it is why **trap 8** matters: a feature spanning HTTP → service → ledger needs at least one test that enters through the route. Reproduce the figure by extracting route names from `route:list --json` and grepping `tests/` for each one.
 
@@ -466,6 +480,12 @@ Do not "fix" either of these by touching one file — they are the shape of the 
 
 - **18 controllers contain `DB::transaction`, and 7 of those write more than one kind of model** inside it (`JurnalController`, `MaterialRequestController`, `PemeriksaanConsiderController`, `PesananPembelianController`, `ReturPembelianController`, `StockOpnameController`, `TransferGudangController`). The layering rule says cross-model processes live in `app/Services`, and the newer domains obey it (sales, production, cross-dock, BOM, kitting, landed cost). Extracting the older ones is a deliberate project, not a drive-by.
 - **Models are split 53 `$guarded` to 40 `$fillable`** out of 94. This split is the root of **trap 1**, which has bitten four times. Check which one a model uses before adding a column.
+
+## Reconciliation invariants — the sell side is watched too (2026-09-18)
+
+`AccountingReconciliationService::checks()` now returns **seven** invariants: `stock`, `journal`, `invoice`, `grni`, `ap`, **`ar`**, `wip`. The `ar` check compares the sum of `sisa_tagihan` on POSTED/PARTIALLY_PAID sales invoices against the GL balance of `PIUTANG_USAHA`.
+
+It was added because the set was **asymmetric**: the buy side had two watchdogs (`grni` for goods received not invoiced, `ap` for unpaid supplier invoices) and the sell side had none. The receivable figures tied perfectly when measured by hand, so this fixed no data — it closed the hole where a *future* drift would have gone unreported on the reconciliation page while the identical drift on payables raised an alarm. Treat a new balance-sheet subledger the same way: if a document type can accumulate a balance, give it an invariant when you build it, not after.
 
 ## Known repo quirks
 

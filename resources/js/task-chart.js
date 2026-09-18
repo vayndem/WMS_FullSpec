@@ -2,13 +2,61 @@ import Chart from 'chart.js/auto';
 
 const PALETTE = ['#2563eb', '#f59e0b', '#dc2626', '#16a34a', '#7c3aed', '#0891b2', '#db2777', '#65a30d'];
 
+function tokenHsl(nama, alpha) {
+    const nilai = getComputedStyle(document.documentElement).getPropertyValue(nama).trim();
+
+    return nilai ? `hsl(${nilai} / ${alpha})` : null;
+}
+
+function warnaTema() {
+    return {
+        teks: tokenHsl('--bc', 0.75) || '#64748b',
+        teksRedup: tokenHsl('--bc', 0.55) || '#94a3b8',
+        grid: tokenHsl('--bc', 0.12) || 'rgba(100, 116, 139, 0.2)',
+        tooltipLatar: tokenHsl('--n', 0.95) || '#0f172a',
+        tooltipTeks: tokenHsl('--nc', 1) || '#e2e8f0',
+        garisTepi: tokenHsl('--b1', 1) || '#ffffff',
+    };
+}
+
+function terapkanWarna(chart, warna) {
+    const skala = chart.options.scales || {};
+
+    Object.values(skala).forEach((sumbu) => {
+        if (!sumbu || typeof sumbu !== 'object') return;
+        sumbu.ticks = Object.assign({}, sumbu.ticks, { color: warna.teksRedup });
+        sumbu.grid = Object.assign({}, sumbu.grid, { color: warna.grid, borderColor: warna.grid });
+        sumbu.border = Object.assign({}, sumbu.border, { color: warna.grid });
+    });
+
+    chart.options.plugins = chart.options.plugins || {};
+    chart.options.plugins.legend = Object.assign({}, chart.options.plugins.legend, {
+        labels: Object.assign({}, chart.options.plugins.legend?.labels, { color: warna.teks }),
+    });
+    chart.options.plugins.tooltip = Object.assign({}, chart.options.plugins.tooltip, {
+        backgroundColor: warna.tooltipLatar,
+        titleColor: warna.tooltipTeks,
+        bodyColor: warna.tooltipTeks,
+        borderColor: warna.grid,
+        borderWidth: 1,
+    });
+
+    chart.data.datasets.forEach((dataset) => {
+        if (dataset.type === 'line' || chart.config.type === 'line') return;
+        dataset.borderColor = warna.garisTepi;
+        dataset.borderWidth = chart.config.type === 'doughnut' || chart.config.type === 'pie' ? 2 : 0;
+    });
+}
+
 export default function taskChart(config) {
     return {
         chart: null,
+        pendengarTema: null,
         init() {
             const labels = config.labels || [];
             const data = config.data || [];
             const type = config.type || 'bar';
+            const warna = warnaTema();
 
             this.chart = new Chart(this.$refs.canvas, {
                 type,
@@ -25,6 +73,7 @@ export default function taskChart(config) {
                     responsive: true,
                     maintainAspectRatio: false,
                     indexAxis: config.horizontal ? 'y' : 'x',
+                    color: warna.teks,
                     plugins: {
                         legend: { display: type !== 'bar' && type !== 'line', position: 'bottom' },
                     },
@@ -34,6 +83,29 @@ export default function taskChart(config) {
                     } : {},
                 },
             });
+
+            terapkanWarna(this.chart, warna);
+            this.chart.update('none');
+
+            this.pendengarTema = () => {
+                if (!this.chart) return;
+                const baru = warnaTema();
+                this.chart.options.color = baru.teks;
+                terapkanWarna(this.chart, baru);
+                this.chart.update('none');
+            };
+
+            window.addEventListener('inventory:theme-changed', this.pendengarTema);
+        },
+        destroy() {
+            if (this.pendengarTema) {
+                window.removeEventListener('inventory:theme-changed', this.pendengarTema);
+            }
+
+            if (this.chart) {
+                this.chart.destroy();
+                this.chart = null;
+            }
         },
     };
 }

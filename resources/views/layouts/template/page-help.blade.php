@@ -343,7 +343,7 @@
         <i class="fa-solid fa-question"></i>
     </button>
 
-    <div x-show="open" x-cloak class="fixed inset-0 z-50 bg-black/40" @click="open = false"
+    <div x-show="open" x-cloak class="fixed inset-0 z-50 bg-neutral/60" @click="open = false"
         x-transition.opacity></div>
 
     <div x-show="open" x-cloak

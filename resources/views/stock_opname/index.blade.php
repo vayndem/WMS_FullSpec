@@ -191,7 +191,7 @@
                             window.Swal.fire({
                                 title: `Detail ${esc(r.number)}`,
                                 width: 'min(1100px, 96vw)',
-                                html: `<div class="text-start text-sm text-gray-500 mb-3">${esc(r.warehouse)} · ${esc(r.status)}</div>
+                                html: `<div class="text-start text-sm text-base-content/60 mb-3">${esc(r.warehouse)} · ${esc(r.status)}</div>
                                     <div style="overflow-x:auto"><table class="table table-sm" style="width:100%">
                                     <thead><tr><th>No.</th><th>Barang</th><th class="text-end">Sistem</th>
                                     <th class="text-end">Fisik</th><th class="text-end">Selisih</th>

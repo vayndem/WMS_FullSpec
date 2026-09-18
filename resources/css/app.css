@@ -21,7 +21,7 @@
     }
 
     .mm-sidebar {
-        @apply bg-neutral text-neutral-content border-r border-white/10;
+        @apply bg-neutral text-neutral-content border-r border-neutral-content/10;
         position: fixed;
         inset: 0 auto 0 0;
         z-index: 1040;
@@ -30,7 +30,7 @@
     }
 
     .mm-sidebar-logo {
-        @apply border-b border-white/10 overflow-hidden;
+        @apply border-b border-neutral-content/10 overflow-hidden;
         height: var(--inventory-navbar-height);
         padding: 0 1.1rem;
     }
@@ -54,13 +54,12 @@
 
     .side-menu > li > a:hover,
     .submenu > li > a:hover {
-        @apply bg-white/5 text-neutral-content;
+        @apply bg-neutral-content/5 text-neutral-content;
     }
 
     .side-menu > li.active > a,
     .submenu > li.active > a {
-        @apply bg-primary/20 text-primary-content;
-        color: theme('colors.white');
+        @apply bg-primary/25 text-primary-content;
     }
 
     .side-menu svg.svg-icon {
@@ -87,7 +86,7 @@
     }
 
     .submenu {
-        @apply ml-6 mt-1 flex flex-col gap-1 border-l border-white/10 pl-3 list-none;
+        @apply ml-6 mt-1 flex flex-col gap-1 border-l border-neutral-content/10 pl-3 list-none;
         display: none;
     }
 
@@ -107,7 +106,7 @@
     }
 
     .sidebar-overlay {
-        @apply fixed inset-0 z-[1035] hidden border-0 bg-black/40;
+        @apply fixed inset-0 z-[1035] hidden border-0 bg-neutral/60;
     }
 
     @media (max-width: 991.98px) {
@@ -293,3 +292,50 @@
         display: none !important;
     }
 }
+
+/* SweetAlert2 menyuntik CSS terangnya sendiri; aturan ini ditulis di luar @layer
+   agar tidak dipangkas Tailwind, sebab kelas swal2-* tidak muncul di sumber. */
+
+    .swal2-container .swal2-popup {
+        @apply bg-base-100 text-base-content rounded-box border border-base-300 shadow-xl;
+    }
+
+    .swal2-container .swal2-title,
+    .swal2-container .swal2-html-container,
+    .swal2-container #swal2-html-container {
+        @apply text-base-content;
+    }
+
+    .swal2-container .swal2-html-container {
+        @apply text-base-content/80;
+    }
+
+    .swal2-container .swal2-actions {
+        @apply gap-2;
+    }
+
+    .swal2-container .swal2-close {
+        @apply text-base-content/50;
+    }
+
+    .swal2-container .swal2-close:hover {
+        @apply text-base-content;
+    }
+
+    .swal2-container .swal2-input,
+    .swal2-container .swal2-textarea,
+    .swal2-container .swal2-select {
+        @apply bg-base-100 text-base-content border-base-300;
+    }
+
+    .swal2-container .swal2-validation-message {
+        @apply bg-error/10 text-error;
+    }
+
+    .swal2-container.swal2-backdrop-show {
+        @apply bg-neutral/60;
+    }
+
+    .swal2-container .swal2-timer-progress-bar {
+        @apply bg-primary/60;
+    }

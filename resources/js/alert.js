@@ -1,12 +1,16 @@
 import Swal from 'sweetalert2';
 
 const swalDefaults = Swal.mixin({
-    buttonsStyling: true,
+    buttonsStyling: false,
     reverseButtons: true,
-    confirmButtonColor: '#0d6efd',
-    cancelButtonColor: '#64748b',
     confirmButtonText: 'Mengerti',
     allowEscapeKey: true,
+    customClass: {
+        popup: 'app-swal',
+        confirmButton: 'btn btn-primary',
+        cancelButton: 'btn btn-ghost',
+        denyButton: 'btn btn-error',
+    },
 });
 
 function normalizeMessage(message) {

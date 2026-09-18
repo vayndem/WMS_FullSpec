@@ -365,6 +365,27 @@ Empat hal yang sebelumnya tidak bisa dicatat sistem:
 - Konsekuensi untuk tes: tes yang memanggil route store **tidak boleh memilih nomornya sendiri**, melainkan membacanya dari respons (`->json('data.no_po')`, `->json('data.id_lpb')`).
 - `StokGudangService::saldo()` juga bukan pembacaan murni — ia melakukan `insertOrIgnore` dan `lockForUpdate()`. Jalur baca harus query `StokGudang` langsung.
 
+### 6.15 Tema terang/gelap (dirapikan 2026-09-18)
+
+- Hanya ada dua tema daisyUI: `wms` (terang) dan `wms-dark`. Tema aktif dipasang sebagai `data-theme` **inline di `<head>`** sebelum CSS dimuat, jadi pengguna mode gelap tidak melihat kilatan putih.
+- **Warna tidak pernah ditulis mati di view.** Pakai token: `base-100` untuk permukaan, `base-200` untuk halaman, `base-300` untuk garis, `base-content` untuk teks. Dijaga `KualitasTampilanTest::test_no_page_hardcodes_colors_outside_the_theme`. Pengecualian sah hanya `resources/views/reports/**` dan `stock_opname/pdf`, karena dicetak di kertas.
+- Jangan memaksakan warna teks ke komponen bertema. `badge text-white` terbaca di mode terang lalu menjadi putih-di-atas-kuning saat `badge-warning` tampil di `wms-dark`.
+- Tangga elevasi kini sama arah di kedua tema. Sebelumnya di mode gelap kartu **lebih gelap** daripada halaman, dan `base-100` sama persis dengan `neutral` sehingga sidebar menyatu dengan kartu. Sekarang: halaman `#0b1220` → kartu `#17233d` → garis `#2a3a56`, sidebar `#0f172a`. Kontras teks 13,3:1 (gelap) dan 14,6:1 (terang).
+- **Grafik harus membaca token sendiri** karena canvas tidak mewarisi kelas CSS. `task-chart.js` mengambil variabel HSL daisyUI lewat `getComputedStyle` dan memasang ulang saat `inventory:theme-changed`. Tanpa itu sumbu grafik memakai abu-abu bawaan Chart.js yang tak terlihat di latar gelap.
+- **SweetAlert2 menyuntik CSS terangnya sendiri.** Override-nya ada di akhir `app.css` dan sengaja **di luar `@layer components`** — Tailwind memangkas kelas kustom di dalam layer bila tidak ditemukan di konten yang dipindai, dan `swal2-*` hanya muncul di bundel JS vendor. Tandanya bila salah: ukuran `app.css` hasil build tidak bertambah.
+
+### 6.16 Invarian rekonsiliasi (sisi jual ikut diawasi, 2026-09-18)
+
+`AccountingReconciliationService::checks()` mengembalikan **tujuh** invarian: `stock`, `journal`, `invoice`, `grni`, `ap`, **`ar`**, `wip`.
+
+- `ar` membandingkan jumlah `sisa_tagihan` faktur penjualan berstatus POSTED/PARTIALLY_PAID dengan saldo buku besar `PIUTANG_USAHA`.
+- Ditambahkan karena himpunannya **timpang**: sisi beli punya dua penjaga (`grni` dan `ap`), sisi jual nol. Angkanya sudah cocok saat diukur manual, jadi ini tidak memperbaiki data — ia menutup lubang di mana penyimpangan **di masa depan** akan lewat tanpa laporan, padahal penyimpangan serupa di hutang langsung berbunyi.
+- Aturan turunannya: setiap jenis dokumen yang bisa menumpuk saldo di neraca wajib diberi invarian saat dibangun, bukan belakangan.
+
+### 6.17 Fitur yang dihapus: `debits` dan `kredits` (2026-09-18)
+
+Dua tabel master `(id, kode, nama)` dari 21 Juli 2026 dihapus beserta model, policy, form request, controller, route, dan migrationnya. Alasannya: tidak pernah ditaut dari menu mana pun, kosong di semua environment, tidak dirujuk kode domain mana pun, dan sebagai tabel domain tanpa awalan `wms_` juga melanggar aturan penamaan — sementara tetap membuka **sepuluh endpoint CRUD** yang menerima tulisan. Bila nota debit/kredit dibutuhkan nanti, bangun sebagai jenis dokumen sungguhan dengan jalur jurnal, jangan menghidupkan kembali stub ini.
+
 ## 7. Dashboard
 
 Dashboard aktif:
@@ -494,39 +515,56 @@ Catatan:
 
 ## 11. Testing
 
-Status terakhir (16 September 2026):
-
-- 227 tests passed, 4.370 assertions
-- architecture convention test: 6 passed
-- diverifikasi berturut-turut setelah `migrate:fresh --seed`, bukan sekali jalan
-
 Perintah:
 
 ```bash
+npm install && npm run build                  # WAJIB dulu: tanpa manifest Vite semua halaman 500
 php artisan test                              # full suite
 php artisan test --filter=TestClassName       # satu class
-composer test:case-sensitive                  # cek casing ala Linux CI, dari Windows
+composer test:case-sensitive                  # strict PSR-4 + architecture test, ala runner Linux
 ```
 
-Cakupan utama:
+### 11.1 Jaring pengaman: apa yang ditangkap masing-masing
 
-- accounting control policy, chart of account safety, financial statement (Neraca Saldo/Buku Besar/Laba Rugi/Neraca/Arus Kas/Perubahan Ekuitas/CALK — Arus Kas dan Perubahan Ekuitas punya tie-out sendiri ke buku besar dan ke neraca)
-- maker-checker jurnal manual, pembalikan dokumen, dan perubahan COA/mapping; pemohon tidak bisa menyetujui permintaannya sendiri
-- dimensi gudang pada baris jurnal: nilai persediaan per gudang, dan transfer internal yang netral secara total
-- lacak pembelian per penerimaan dan kartu skor supplier
-- penjualan end-to-end: pesanan, surat jalan (FIFO + HPP), faktur (piutang + PPN Keluaran), penerimaan pembayaran, retur penjualan
-- produksi: perintah kerja, akumulasi WIP dari NPK, penguncian harga pokok saat selesai, pelepasan WIP proporsional saat kirim, dan invarian WIP vs buku besar
-- asset and service policy, depresiasi otomatis
-- inventory cost calculator, material unit conversion
-- multi-warehouse policy, transfer in-transit, reservation/picking, three-way match, landed cost, reversal, rekonsiliasi
-- payment allocation, PPh 23/22/4(2) Final, supplier advance generation & consumption
-- stock opname policy, retur pembelian pasca-invoice
-- warehouse role policy, feature auth dasar
-- role `Produksi`
-- maker-checker approval invoice (`accounting_manager`)
-- Material Request lintas role + auto-`FULFILLED`
-- dashboard per role (task grid + chart), Dashboard Eksekutif
-- export Excel (generic table + financial statement)
+Setiap jaring menutup kelas kegagalan yang berbeda. Tahu mana menangkap apa mencegah orang menulis tes yang menduplikasi jaring lain sementara celah aslinya tetap menganga.
+
+| Jaring | Masuk lewat | Menangkap | Tidak bisa menangkap |
+|---|---|---|---|
+| `ArchitectureConventionTest` (11 tes) | analisis statis + `git ls-files` + tabel route | casing class/berkas, validasi inline di controller, pemisahan route per domain dan `route:cache`, status huruf kecil, floating point di migration, nama tabel legacy, **alokasi nomor dokumen di jalur tampilan**, **form Blade yang salah route/verb/tanpa `@csrf`**, **`route()`/`view()` menggantung**, **Form Request yang tidak diotorisasi di mana pun**, **aksi destruktif yang bisa dipicu GET** | perilaku saat berjalan |
+| `SmokeSemuaHalamanTest` (2 tes) | HTTP GET sebagai Super Admin, dan HTTP mutasi sebagai tamu | 5xx pada route GET bernama; plafon jumlah route yang boleh dilewati karena parameternya tak teresolusi; **route mutasi yang tembus tanpa login atau meledak** | halaman yang balas 200 tapi isinya salah; akses per role, karena `Gate::before` membuka segalanya untuk Super Admin |
+| `KualitasTampilanTest` (6 tes) | HTTP GET + HTML mentah | view yang tidak terkompilasi, directive Blade mentah atau `{{ $x }}` bocor ke browser, listing kosong tanpa pesan, tabel lebar tanpa pembungkus scroll, **kelas warna mati pada halaman yang dirender** | kebenaran angka di halaman |
+| `KonsistensiTemaTest` (3 tes) | berkas sumber Blade/JS/CSS + `tailwind.config.js` | **warna mati di seluruh sumber** termasuk berkas yang tidak dirender tes mana pun, `theme('colors.*')`, nilai arbitrer `[#hex]`, gaya inline, warna mentah di CSS; grafik yang tidak membaca token atau tidak memasang ulang saat tema berganti; tangga elevasi dan kontras WCAG kedua tema | tampilan yang jelek tapi memakai token yang benar |
+| `HalamanTanpaEfekSampingTest` (1 tes) | HTTP GET + query log | halaman GET yang menjalankan `insert`/`update`/`delete` | penulisan pada route mutasi, yang memang sah |
+| `AksesPerRoleTest` | HTTP GET per role | halaman yang wajib terbuka dan wajib ditolak per role | route mutasi |
+| `CrudMasterDataTest` (3 tes) | HTTP penuh | siklus buat–ubah–hapus, penegakan policy per role, dan validasi duplikat/wajib pada master data | domain lain yang belum punya tes CRUD sendiri |
+| tes domain | service, dan HTTP bila penting | aturan bisnis, invarian buku besar, FIFO, WIP, pajak | lihat celah cakupan di bawah |
+
+### 11.2 Celah cakupan yang diketahui
+
+Diukur 18 September 2026 dengan `php artisan route:list --json` dibandingkan nama route yang disebut di `tests/`:
+
+- **146** route GET tanpa parameter — tertutup jaring GET di atas.
+- **51** route GET berparameter — hanya tertutup bila `SmokeSemuaHalamanTest::nilaiParameter()` bisa meresolusi nilainya; sisanya dihitung sebagai terlewat dan jumlahnya diassert.
+- **172** route mutasi. Sejak 2026-09-18 semuanya diuji **menolak tamu**, tapi hanya **57** yang disebut tes mana pun sebagai pengguna berwenang; **115** belum diverifikasi perilakunya. Reproduksi angkanya dengan mengambil nama route dari `route:list --json` lalu mencarinya di `tests/`.
+
+Itulah alasan **trap 8** di `CLAUDE.md`: fitur yang membentang dari HTTP sampai buku besar butuh minimal satu tes yang masuk lewat route.
+
+### 11.3 Cakupan domain
+
+- laporan keuangan PSAK 1 lengkap (Neraca Saldo, Buku Besar, Laba Rugi, Neraca, Arus Kas, Perubahan Ekuitas, CALK) — Arus Kas dan Perubahan Ekuitas punya tie-out sendiri
+- maker-checker jurnal manual, pembalikan dokumen, perubahan COA/mapping; pemohon tidak bisa menyetujui permintaannya sendiri
+- dimensi gudang pada baris jurnal, transfer internal yang netral secara total
+- lacak pembelian per penerimaan (termasuk ember **terjual**) dan kartu skor supplier
+- penjualan end-to-end: pesanan, surat jalan (FIFO + HPP), faktur (piutang + PPN Keluaran), pembayaran, retur
+- **umur piutang**: penempatan ember, tanggal acuan mundur, tie-out subledger vs buku besar, sales yang tersalin ke faktur
+- **cross dock**: reservasi saat ditandai, pelepasan saat surat jalan diposting, pemecahan tanda saat kirim sebagian, penegakan akses gudang
+- **BOM dan varians pemakaian**, termasuk perintah kerja tanpa BOM
+- produksi: WIP dari NPK, penguncian harga pokok, pelepasan proporsional, invarian WIP vs buku besar
+- aset dan jasa, depresiasi otomatis, kapitalisasi
+- multi-warehouse, transfer in-transit, reservasi/picking, three-way match, landed cost, reversal, rekonsiliasi
+- payment allocation, PPh 23/22/4(2) Final, uang muka supplier
+- stock opname, retur pembelian pasca-invoice
+- Material Request lintas role + auto-`FULFILLED`, dashboard per role, Dashboard Eksekutif, export Excel
 
 ## 12. Technical debt
 

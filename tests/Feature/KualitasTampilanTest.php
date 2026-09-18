@@ -155,6 +155,33 @@ class KualitasTampilanTest extends TestCase
         $this->assertSame([], $masalah, implode("\n", $masalah));
     }
 
+    public function test_no_page_hardcodes_colors_outside_the_theme(): void
+    {
+        $admin = User::factory()->create(['type' => User::ROLE_SUPER_ADMIN]);
+        $masalah = [];
+
+        $terlarang = [
+            'bg-white', 'bg-black', 'text-white', 'text-black',
+            'bg-gray-', 'text-gray-', 'border-gray-',
+            'bg-slate-', 'text-slate-', 'border-slate-',
+            'bg-zinc-', 'text-zinc-',
+        ];
+
+        foreach ($this->halamanHtml($admin) as $nama => $isi) {
+            foreach ($terlarang as $kelas) {
+                if (preg_match('/class="[^"]*\b' . preg_quote($kelas, '/') . '/', $isi)) {
+                    $masalah[] = "{$nama} => memakai kelas warna mati '{$kelas}'; pakai token daisyUI (base-100/base-content/primary-content)";
+                }
+            }
+
+            if (preg_match('/style="[^"]*(?:color|background)[^"]*#[0-9a-fA-F]{3,6}/', $isi, $m)) {
+                $masalah[] = "{$nama} => warna heksadesimal ditulis inline: {$m[0]}";
+            }
+        }
+
+        $this->assertSame([], $masalah, implode("\n", array_unique($masalah)));
+    }
+
     public function test_every_page_keeps_its_wide_tables_horizontally_scrollable(): void
     {
         $admin = User::factory()->create(['type' => User::ROLE_SUPER_ADMIN]);

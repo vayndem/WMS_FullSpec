@@ -1,9 +1,7 @@
 <?php
 
 use App\Http\Controllers\BahanController;
-use App\Http\Controllers\DebitController;
 use App\Http\Controllers\KategoriBahanController;
-use App\Http\Controllers\KreditController;
 use App\Http\Controllers\LacakPembelianController;
 use App\Http\Controllers\PesananPembelianController;
 use App\Http\Controllers\PesananPembelianDetailController;
@@ -52,8 +50,6 @@ Route::middleware('auth')->group(function () {
     Route::patch('pembelian/{no_po}/close', [PesananPembelianController::class, 'close'])->name('pembelian.close');
     Route::post('pembelian/{no_po}/cetak', [PesananPembelianController::class, 'cetak'])->name('pembelian.cetak');
 
-    Route::resource('kredit', KreditController::class)->except(['create', 'edit']);
-    Route::resource('debit', DebitController::class)->except(['create', 'edit']);
     Route::get('tipe-pembebanan-report/pdf', [TipePembebananController::class, 'reportPdf'])->name('tipe-pembebanan.report.pdf');
     Route::get('tipe-pembebanan-report/excel', [TipePembebananController::class, 'reportExcel'])->name('tipe-pembebanan.report.excel');
     Route::resource('tipe-pembebanan', TipePembebananController::class);

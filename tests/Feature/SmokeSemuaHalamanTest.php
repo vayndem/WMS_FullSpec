@@ -26,7 +26,6 @@ class SmokeSemuaHalamanTest extends TestCase
             'aset' => ['wms_asets', 'id'],
             'bahan' => ['bahans', 'id'],
             'chart_of_account' => ['wms_bagan_akun', 'id'],
-            'debit' => ['wms_jurnal_detail', 'id'],
             'faktur' => ['wms_faktur_penjualan', 'id'],
             'faktur_pembelian' => ['wms_faktur_pembelian', 'id'],
             'gudang' => ['gudangs', 'id'],
@@ -34,7 +33,6 @@ class SmokeSemuaHalamanTest extends TestCase
             'jurnal' => ['wms_jurnal', 'id'],
             'kategori_bahan' => ['kategori_bahans', 'id'],
             'kit' => ['wms_kit', 'id'],
-            'kredit' => ['wms_jurnal_detail', 'id'],
             'lampiran' => ['wms_lampiran_dokumen', 'id'],
             'lpb' => ['wms_penerimaan_barang', 'id'],
             'no_po' => ['wms_pesanan_pembelian', 'no_po'],
@@ -208,6 +206,79 @@ Tambahkan datanya di siapkanDokumen() atau petakan parameternya di nilaiParamete
             $meledak,
             "Halaman berikut menghasilkan error server:\n" . implode("\n", $meledak)
                 . "\n\n(dilewati karena parameternya tidak bisa diresolusi: " . implode(', ', $dilewati) . ')'
+        );
+    }
+
+    public function test_no_mutating_route_is_reachable_without_authentication(): void
+    {
+        $publik = ['login.attempt', 'password.email', 'password.update'];
+        $tembus = [];
+        $meledak = [];
+        $dicoba = 0;
+
+        foreach (Route::getRoutes() as $route) {
+            $nama = $route->getName();
+            $metode = array_values(array_diff($route->methods(), ['HEAD']));
+
+            if (!$nama || in_array('GET', $metode, true)) {
+                continue;
+            }
+
+            if (in_array($nama, self::DILEWATI, true) || in_array($nama, $publik, true)) {
+                continue;
+            }
+
+            $parameter = [];
+            $lengkap = true;
+
+            foreach ($route->parameterNames() as $param) {
+                $nilai = $this->nilaiParameter($param);
+
+                if ($nilai === null) {
+                    $lengkap = false;
+                    break;
+                }
+
+                $parameter[$param] = $nilai;
+            }
+
+            if (!$lengkap) {
+                continue;
+            }
+
+            $verb = strtolower($metode[0]);
+            $dicoba++;
+
+            try {
+                $response = $this->call($verb, route($nama, $parameter));
+                $status = $response->getStatusCode();
+            } catch (\Throwable $e) {
+                $meledak[] = "{$nama} => " . get_class($e) . ': ' . $e->getMessage();
+                continue;
+            }
+
+            if ($status >= 500) {
+                $meledak[] = "{$nama} => HTTP {$status} untuk tamu";
+                continue;
+            }
+
+            if ($status < 300) {
+                $tembus[] = "{$nama} ({$verb}) => HTTP {$status}; tamu seharusnya ditolak";
+            }
+        }
+
+        $this->assertGreaterThan(100, $dicoba, 'Terlalu sedikit route mutasi yang diuji.');
+
+        $this->assertSame(
+            [],
+            $meledak,
+            "Route mutasi meledak alih-alih menolak tamu:\n" . implode("\n", $meledak)
+        );
+
+        $this->assertSame(
+            [],
+            $tembus,
+            "Route mutasi berikut dapat dijalankan tanpa login:\n" . implode("\n", $tembus)
         );
     }
 }
